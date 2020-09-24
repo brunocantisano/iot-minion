@@ -1,0 +1,218 @@
+$wh: #fff;
+$bk: #000;
+$yellow: #ffcd01;
+$grey: #878787;
+$brown: #402E1D;
+$shadow: #C2BEAD;
+
+.SwitchButtonMinion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1rem 0 0 0; 
+}
+
+@mixin transition ($prop: all, $time: 0.3s, $effect: ease-out) {
+	-webkit-transition: $prop $time $effect;
+	transition: $prop $time $effect;
+}
+*{
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+.clearfix{clear: both;margin: 40px;}
+.minion-switcher {
+    width: 120px;
+    height: 60px;
+    display: inline-block;
+    position: relative;
+
+    .check {
+        width: 120px;
+        height: 60px;
+        padding: 0;
+        cursor: pointer;
+        opacity: 0;
+        outline: 0;
+        border: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 10;
+    }
+
+    .btn {
+        background: $yellow;
+        width: 120px;
+        height: 60px;
+        border-radius: 120px;
+        overflow: hidden;
+        position: absolute;
+        top: 0;
+        box-shadow: 0 1px $shadow;
+
+        &:before,
+        &:after {
+            font-family: sans-serif;
+            color: white;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            @include transition();
+        }
+        &:before {
+            content: "\2713";
+            left: 22px;
+            font-size: 26px;
+        }
+        &:after {
+            content: "X";
+            right: 22px;
+            font-size: 0;
+        }
+    }
+    &.reverse {
+        .btn {
+            &:before {
+                font-size: 0;
+            }
+            &:after {
+                font-size: 26px;
+            }
+        }
+        .eye {
+            left: 3px;
+            right: auto;
+
+            .eye-inner {
+                .eye-brown {
+                    margin-right: 10px;
+                    margin-top: 61%;
+                    @include transition();
+                }
+            }
+            .eye-cover {
+                top: 0;
+            }
+        }
+    }
+}
+
+.eye {
+    width: 54px;
+    height: 54px;
+    border-radius: 54px;
+    border: 7px solid $grey;
+    overflow: hidden;
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    z-index: 1;
+    @include transition();
+    .eye-back {
+        width: 44px;
+        height: 44px;
+        border-radius: 440px;
+        margin: -2px;
+        background-color: $wh;
+        -webkit-transform: scaleY(0.75);
+        -ms-transform: scaleY(0.75);
+        transform: scaleY(0.75);
+        position: absolute;
+    }
+    .eye-inner {
+        position: relative;
+        height: 100%;
+        width: 100%;
+        text-align: center;
+
+        .eye-brown {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            background-color: $brown;
+            border-radius: 12px;
+            margin-top: 50%;
+            transform: translateY(-50%);
+            position: relative;
+            @include transition();
+            &:before {
+                content: "";
+                width: 6px;
+                height: 6px;
+                border-radius: 6px;
+                background-color: $bk;
+                position: absolute;
+                top: 3px;
+                left: 3px;
+            }
+            &:after {
+                content: "";
+                width: 6px;
+                height: 6px;
+                border-radius: 6px;
+                background-color: $wh;
+                position: absolute;
+                top: -1px;
+                left: -1px;
+            }
+        }
+    }
+
+    .eye-cover {
+        width: 60px;
+        height: 20px;
+        margin-right: -10px;
+        background-color: $yellow;
+        position: absolute;
+        top: -20px;
+        @include transition();
+    }
+}
+
+.check:checked {
+    & + .btn {
+        &:before {
+            font-size: 0;
+        }
+        &:after {
+            font-size: 26px;
+        }
+        .eye {
+            right: 62px;
+            .eye-inner {
+                .eye-brown {
+                    margin-right: 10px;
+                    margin-top: 61%;
+                }
+            }
+            .eye-cover {
+                top: 0;
+            }
+        }
+    }
+    .reverse & {
+        & + .btn {
+            &:before {
+                font-size: 26px;
+            }
+            &:after {
+                font-size: 0;
+            }
+            .eye {
+                left: 62px;
+
+                .eye-inner {
+                    .eye-brown {
+                        margin-right: 0;
+                        margin-top: 50%;
+                    }
+                }
+                .eye-cover {
+                    top: -20px;
+                }
+            }
+        }
+    }
+}

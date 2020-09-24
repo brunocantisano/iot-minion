@@ -1,0 +1,7 @@
+curl --location --request POST '192.168.0.10/list' \
+--header 'Content-Type: application/json' \
+-d '{
+    "name": "garagem-auth",
+    "language": "java",
+    "description": "quebrou"
+}'

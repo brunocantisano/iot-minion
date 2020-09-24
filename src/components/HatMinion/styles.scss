@@ -1,0 +1,18 @@
+#hat-minion {
+   padding: 1rem 0 0 0;
+}
+
+.hat {
+   margin-left: auto;
+   margin-right: auto;
+   width: 235px;
+   height: 150px;
+}
+
+.hat-not-moving {
+   background-image: url("../../assets/hat.gif");
+}
+
+.hat-move {
+   background-image: url("../../assets/hat-move.gif");
+}

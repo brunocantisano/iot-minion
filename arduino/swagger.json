@@ -1,0 +1,491 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Minion Soap Esp8266 using REST api server.  You can find out more about Minion Server at [minion-server](https://github.com/brunocantisano/iot-minion)",
+    "version": "1.0.0",
+    "title": "Swagger Minion",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "email": "bruno.cantisano@gmail.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "host": "192.168.0.10",
+  "basePath": "/",
+  "tags": [
+    {
+      "name": "comando",
+      "description": "Comandos",
+      "externalDocs": {
+        "description": "Descubra mais sobre a garagem digital",
+        "url": "https://www.garagemdigital.io"
+      }
+    }
+  ],
+  "schemes": [
+    "https",
+    "http"
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Checagem Health",
+        "description": "Faz checagem da saúde da aplicação",
+        "operationId": "health",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/ports": {
+      "get": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Busca as portas utilizadas",
+        "description": "",
+        "operationId": "getPorta",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Não foi possível encontrar as informações"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/talk": {
+      "post": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Fala através do Google Home",
+        "description": "",
+        "operationId": "postTalk",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Mensagem a ser passada para o Google Home",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Mensagem"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Comando inválido fornecido"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },    
+    "/eye": {
+      "put": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Acende ou apaga os olhos",
+        "description": "",
+        "operationId": "updateEye",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Alterado o comando",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Comando"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Comando inválido fornecido"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/eyes": {
+      "get": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Busca o estado dos olhos",
+        "description": "",
+        "operationId": "getEye",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Não foi possível encontrar as informações"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/laugh": {
+      "post": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Toca um audio pelo nome",
+        "description": "",
+        "operationId": "postLaugh",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Nome do audio",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Midia"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Comando inválido fornecido"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/hat": {
+      "put": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Gira o chapéu ou para",
+        "description": "",
+        "operationId": "updateHat",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Alterado o comando",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Comando"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Comando inválido fornecido"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/hats": {
+      "get": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Busca o estado do chapéu",
+        "description": "",
+        "operationId": "getHat",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Não foi possível encontrar as informações"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/blink": {
+      "put": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Pisca ou para de piscar o corpo",
+        "description": "",
+        "operationId": "updateBlink",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Alterado o comando",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Comando"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Comando inválido fornecido"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/blinks": {
+      "get": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Busca o estado do corpo",
+        "description": "",
+        "operationId": "getBlink",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Não foi possível encontrar as informações"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },    
+    "/list": {
+      "post": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Insere item na lista",
+        "description": "",
+        "operationId": "insertList",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Inserido na lista",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Lista"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Comando inválido fornecido"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/lists": {
+      "get": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Busca o estado da lista",
+        "description": "",
+        "operationId": "getLista",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Não foi possível encontrar as informações"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/list/del": {
+      "delete": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Apaga item da lista",
+        "description": "",
+        "operationId": "deleteItemFromList",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Apagado item da lista",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Lista"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Comando inválido fornecido"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    },
+    "/temperature": {
+      "get": {
+        "tags": [
+          "comando"
+        ],
+        "summary": "Busca a temperatura e umidade",
+        "description": "",
+        "operationId": "temperature",
+        "produces": [
+          "application/xml",
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Não foi possível encontrar as informações"
+          },
+          "200": {
+            "description": "Comando executado com sucesso"
+          }
+        }
+      }
+    }
+  }, 
+  "definitions": {
+    "Comando": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "format": "int64",
+          "description": "1-inicia, 0-para"
+        }
+      },
+      "xml": {
+        "name": "Comando"
+      }
+    },
+    "Lista": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "nome da aplicação"
+        },
+        "language": {
+          "type": "string",
+          "description": "nome da linguagem de programação"
+        },
+        "description": {
+          "type": "string",
+          "description": "descrição de execução"
+        }       
+      },
+      "xml": {
+        "name": "Lista"
+      }
+    },    
+    "Mensagem": {
+      "type": "object",
+      "properties": {
+        "mensagem": {
+          "type": "string",
+          "description": "mensagem a ser passada para o Google Home"
+        }
+      },
+      "xml": {
+        "name": "Mensagem"
+      }
+    },
+    "Midia": {
+      "type": "object",
+      "properties": {
+        "midia": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Nome do audio a ser tocado",
+          "enum": [
+            1,
+            2
+          ]
+        }   
+      },
+      "xml": {
+        "name": "Midia"
+      }
+    }    
+  },
+  "externalDocs": {
+    "description": "Descubra mais sobre a garagem digital",
+    "url": "https://www.garagemdigital.io"
+  }
+}

@@ -1,0 +1,111 @@
+.App {
+  text-align: center;
+}
+
+body { 
+  overflow-x: hidden; /* Hide horizontal scrollbar */
+}
+
+#page-body {
+  height: 100vh;
+}
+
+
+
+#page-body .temperature-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  margin: 1rem 0 0 0;
+}
+
+#page-body .humidity-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  margin: 1rem 0 0 0;
+}
+
+#page-body .garagem-ipiranga {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  margin: 1rem 0 0 0;
+}
+
+#logo {
+  position: relative;
+  width: 120px;
+  height: 60px;
+}
+
+
+
+@media(min-width: 900px) {
+  #page-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 25% 25% 25% 25%;
+    grid-template-areas:
+      "temperature hat humidity"
+      "minion-button minion banana"
+      "switch-minion input switch-hat"
+      "logo logo logo" ;
+  }
+
+  #page-body .temperature-container {
+    grid-area: temperature;
+  }
+
+  #page-body .hat-minion-container {
+    grid-area: hat;
+    padding: 5% 0 0 0;
+  }
+
+  #page-body .humidity-container {
+    grid-area: humidity;
+  }
+
+  #page-body .button-minion-container {
+    grid-area: minion-button;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #page-body .minion-container {
+    grid-area: minion;
+  }
+
+  #page-body .banana-container {
+    grid-area: banana;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #page-body .switch-minion-container {
+    grid-area: switch-minion;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #page-body .input-container {
+    grid-area: input;
+  }
+
+  #page-body .switch-hat-container {
+    grid-area: switch-hat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #page-body .garagem-ipiranga {
+    grid-area: logo;
+    
+  }
+}
