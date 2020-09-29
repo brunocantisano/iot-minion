@@ -114,6 +114,7 @@ A aplicação consiste em três desenvolvimentos:
 
 ### Adafruit☁️
 
+![Key](assets/adafruit-key.png)
 ![Feeds](assets/adafruit-feeds.png)
 ![Feed Temperature](assets/adafruit-feed-temperature.png)
 ![Dashboards](assets/adafruit-dashboards.png)
@@ -146,7 +147,8 @@ npm run dev
 ### Configurações de código
 
 ![adafruit user/pass](assets/codigo1.png)
-![google text2speech token](assets/codigo2.png)
+![google text2speech key](assets/google-cloud-platform-text2speech.png)
+![google text2speech código](assets/codigo2.png)
 ![wifi settings](assets/codigo3.png)
 ![mqtt settings](assets/codigo4.png)
 
