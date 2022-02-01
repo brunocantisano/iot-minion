@@ -14,7 +14,14 @@ const Minion: React.FC<MinionProps> = (props: MinionProps) => {
 
   async function getEyes() {
     try {
-      let eyes = await axios.get(rota + '/eyes');
+      let eyes = await axios.get(rota + '/eyes',
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+        }
+      });
       props.minionBehavior.wakeUp = !Boolean(eyes.status);
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
@@ -23,7 +30,14 @@ const Minion: React.FC<MinionProps> = (props: MinionProps) => {
 
   async function getBody() {
     try {
-      let body = await axios.get(rota + '/blinks');
+      let body = await axios.get(rota + '/blinks',
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+        }
+      });
       props.minionBehavior.hungry = !Boolean(body.status);
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
@@ -32,15 +46,37 @@ const Minion: React.FC<MinionProps> = (props: MinionProps) => {
 
   async function getHat() {
     try {
-      let hat = await axios.get(rota + '/hats');
+      let hat = await axios.get(rota + '/hats',
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+        }
+      });
       props.minionBehavior.stress = !Boolean(hat.status);
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }
   }
 
-  useEffect(() => {
-    // console.log("Minion Behavior foi alterado");
+  async function getShake() {
+    try {
+      let hat = await axios.get(rota + '/shakes',
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+        }
+      });
+      props.minionBehavior.freezing = !Boolean(hat.status);
+    } catch (e) {
+      console.log(`😱 Axios request failed: ${e}`);
+    }
+  }
+
+  useEffect(() => {    
     setMinionBehavior(props.minionBehavior);
   }, [props.minionBehavior]);
 
@@ -64,6 +100,7 @@ const Minion: React.FC<MinionProps> = (props: MinionProps) => {
     await getEyes();
     await getBody();
     await getHat();
+    await getShake();
   }
   return (
       <div onLoad={handleLoad} className={minionBehavior.hungry ? "jerry jerry_hungry Jerry" : "jerry Jerry"}>

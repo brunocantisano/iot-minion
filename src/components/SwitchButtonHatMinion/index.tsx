@@ -27,7 +27,8 @@ const SwitchButtonHatMinion: React.FC<SwitchButtonMinionProps> = (props: SwitchB
         {
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
           }
         });
       console.log('👉 Returned data:', response);

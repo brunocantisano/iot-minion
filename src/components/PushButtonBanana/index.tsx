@@ -27,7 +27,8 @@ const PushButtonBanana: React.FC<SwitchButtonMinionProps> = (props: SwitchButton
         {
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
           }
         });
       console.log('👉 Returned data:', response);
@@ -36,10 +37,10 @@ const PushButtonBanana: React.FC<SwitchButtonMinionProps> = (props: SwitchButton
     }
   }
   function ShakingBanana() {
-    return <img id="banana" alt="clique para fome" className='shake' onClick={handleClick} src="http://res.cloudinary.com/dpbh2bgsn/image/upload/v1496906677/banana_b1jf9l.gif" />;
+    return <img id="banana" alt="clique para fome" className='shake' onClick={handleClick} src="https://res.cloudinary.com/dpbh2bgsn/image/upload/v1496906677/banana_b1jf9l.gif" />;
   }
   function StopShakingBanana() {
-    return <img id="banana" alt="clique para saciar a fome" onClick={handleClick} src="http://res.cloudinary.com/dpbh2bgsn/image/upload/v1496906677/banana_b1jf9l.gif" />;
+    return <img id="banana" alt="clique para saciar a fome" onClick={handleClick} src="https://res.cloudinary.com/dpbh2bgsn/image/upload/v1496906677/banana_b1jf9l.gif" />;
   }
   function DrawBanana() {
     if (props.minionBehavior.hungry) {

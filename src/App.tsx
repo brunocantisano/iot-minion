@@ -5,6 +5,7 @@ import InputMinion from './components/InputMinion';
 import SwitchButtonMinion from './components/SwitchButtonMinion';
 import SwitchButtonHatMinion from './components/SwitchButtonHatMinion';
 import PushButtonBanana from './components/PushButtonBanana';
+import PushButtonFreezing from './components/PushButtonFreezing';
 import HatMinion from './components/HatMinion';
 import { MinionBehavior } from "./models/MinionBehavior";
 import { Climate } from "./models/Climate";
@@ -16,16 +17,37 @@ import './App.css';
 import './assets/styles/global.css';
 
 function App() {
-  const [minionBehavior, setMinionBehavior] = useState<MinionBehavior>({ hungry: false, stress: false, wakeUp: false });
+  const [minionBehavior, setMinionBehavior] = useState<MinionBehavior>({ freezing: false, hungry: false, stress: false, wakeUp: false });
   const [climate, setClimate] = useState<Climate>({ celsius: 25, fahrenheit: 75, humidity: 80 });
-
-  let rota: string = process.env.REACT_APP_URL + '/temperature';
-
-  async function getTemperature() {
+  
+  async function getTemperatureCelsius() {
     try {
-      let data: Climate = await axios.get(rota);
+      let rota: string = process.env.REACT_APP_URL + '/celsius';
+      let data: Climate = await axios.get(rota,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+          }
+        });
       climate.celsius = data.celsius;
-      climate.fahrenheit = data.fahrenheit;
+      setClimate(climate);
+    } catch (e) {
+      console.log(`😱 Axios request failed: ${e}`);
+    }
+  }
+  async function getHumidity() {
+    try {
+      let rota: string = process.env.REACT_APP_URL + '/humidity';
+      let data: Climate = await axios.get(rota,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+          }
+        });
       climate.humidity = data.humidity;
       setClimate(climate);
     } catch (e) {
@@ -33,20 +55,20 @@ function App() {
     }
   }
   useEffect(() => {
-    // console.log("clima foi alterado");
     setClimate(climate);
   }, [climate]);
 
   useEffect(() => {
     console.log("Iniciando componente");
-    setMinionBehavior({ hungry: false, stress: false, wakeUp: false });
+    setMinionBehavior({ freezing: false, hungry: false, stress: false, wakeUp: false });
   }, []);
 
   const changeBehavior = (newMinionBehavior: MinionBehavior) => {
     setMinionBehavior(newMinionBehavior);
   }
   async function handleLoad() {
-    await getTemperature();
+    await getTemperatureCelsius();
+    await getHumidity();
   }
   return (
     <div id="page-body" onLoad={handleLoad} >
@@ -58,22 +80,23 @@ function App() {
       </div>
       <div className="input-container">
         <InputMinion />
-      </div>
+        <PushButtonMinion />
+      </div>      
       <div className="switch-minion-container">
-        <SwitchButtonMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
+        <SwitchButtonMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />        
       </div>
       <div className="switch-hat-container">
         <SwitchButtonHatMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
       </div>
-      <div className="banana-container">
-        <PushButtonBanana minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
-      </div>
-      <div className="button-minion-container">
-        <PushButtonMinion />
+      <div className="banana-container">        
+        <PushButtonFreezing minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
       </div>
       <div className="temperature-container">
         <Temperature height={120} value={climate.celsius} />
         <span className="tooltipTemperatureHumidity">{climate.celsius}°C</span>
+      </div>
+      <div className="button-minion-container">
+      <PushButtonBanana minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />        
       </div>
       <div className="humidity-container">
         <Humidity tips={['seco', 'médio', 'úmido']} height={100} value={climate.humidity} />

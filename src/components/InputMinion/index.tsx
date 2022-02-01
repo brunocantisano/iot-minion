@@ -9,7 +9,17 @@ const InputMinion: React.FC = () => {
   
   async function talk(message: string){
     try {
-      const response = await axios.post(rota, { mensagem: message });
+      const response = await axios.post(rota, 
+        { 
+          mensagem: message
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+          }
+        });
       console.log('👉 Returned data:', response);
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
