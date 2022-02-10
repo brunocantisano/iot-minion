@@ -1,0 +1,76 @@
+# This is a basic workflow that is manually triggered
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+name: Build React Firebase
+on:
+  workflow_dispatch:
+    branches: [ ESP32, ESP8266 ]
+    inputs:
+      name:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Iniciar a geração de frontend no firebase'
+        # Default value if no value is explicitly provided
+        default: 'Iniciar'
+        # Input has to be provided for the workflow to run
+        required: true
+jobs:
+  build:
+    name: Build, Scan with SonarCloud and Deploy
+    runs-on: ubuntu-latest
+    env:
+      Version: "1.0.${{ github.run_number }}"
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@master
+
+      - name: Change pwa version
+        uses: microsoft/variable-substitution@v1 
+        with:
+          files: "pwa/package.json"
+        env:
+          version: ${{ env.Version }}
+
+      - name: Install Dependencies
+        run: npm install --prefix ./pwa
+
+      - name: Build
+        run: npm run build --prefix ./pwa
+
+      - name: Archive Production Artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: build
+          path: ./pwa/build
+
+      - name: Change sonarcloud version
+        uses: jacobtomlinson/gha-find-replace@master
+        with:
+          find: <VERSION>
+          replace: ${{ env.Version }}
+          include: "sonarcloud/frontend/sonar-project.properties"
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+            projectBaseDir: .
+            args: >
+              -Dproject.settings=sonarcloud/frontend/sonar-project.properties
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@master
+        with:
+          name: build
+          path: ./pwa/build
+
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --message \"${{ github.event.head_commit.message }}\" --only hosting
+        env:
+          PROJECT_PATH : ./pwa
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          REACT_APP_URL: ${{ secrets.REACT_APP_URL }}
+          REACT_APP_API_MINION_TOKEN: ${{ secrets.REACT_APP_API_MINION_TOKEN }}

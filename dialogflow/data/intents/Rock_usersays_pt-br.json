@@ -1,0 +1,30 @@
+[
+  {
+    "id": "cd0c6a2d-5253-4d86-929d-370a34fa6d9b",
+    "data": [
+      {
+        "text": "rock",
+        "meta": "@sys.music-genre",
+        "alias": "music-genre",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "a4ccc865-8297-47a2-aba6-acf7e12bdc5b",
+    "data": [
+      {
+        "text": "música",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 1,
+    "lang": "pt-br",
+    "updated": 0
+  }
+]

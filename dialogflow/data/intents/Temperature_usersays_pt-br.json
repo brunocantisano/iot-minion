@@ -1,0 +1,67 @@
+[
+  {
+    "id": "6c9e23be-c9c9-499c-b8c8-9e918eab213a",
+    "data": [
+      {
+        "text": "frio",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "0ecb058f-b937-4dd5-b6e0-f88b1b0dd227",
+    "data": [
+      {
+        "text": "calor",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "86f153e1-07b1-407d-bef2-b038fe072d6f",
+    "data": [
+      {
+        "text": "clima",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "89147026-daaa-42b2-92df-0a544893532e",
+    "data": [
+      {
+        "text": "umidade",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "07074925-6188-410e-98c8-c561a8a79b91",
+    "data": [
+      {
+        "text": "temperatura",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  }
+]

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "bebd2621-fc1a-42de-987b-23865ea241a0",
+    "data": [
+      {
+        "text": "Você já jantou",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "805daa53-3e7a-47ed-8de0-a8d9d4d83174",
+    "data": [
+      {
+        "text": "Você já lanchou",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "d1935520-5269-49a0-a150-e76e4b18d934",
+    "data": [
+      {
+        "text": "Você já almoçou",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "2e39ae6a-13e9-40d6-8d64-bdd9504e183b",
+    "data": [
+      {
+        "text": "Você já comeu",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  }
+]

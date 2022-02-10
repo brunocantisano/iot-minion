@@ -1,0 +1,21 @@
+[
+  {
+    "id": "fea565a7-09c4-4725-9a14-be58a5f503b6",
+    "data": [
+      {
+        "text": "repita ",
+        "userDefined": false
+      },
+      {
+        "text": "mensagem",
+        "meta": "@sys.any",
+        "alias": "message",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  }
+]

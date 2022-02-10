@@ -4,16 +4,18 @@
 ![versão](https://img.shields.io/github/v/release/brunocantisano/iot-minion)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Naereen/StrapDown.js/blob/master/LICENSE)
 
-![working](assets/Working.gif)
+![working](../others/imgs/Working.gif)
 
 Robô caseiro feito na época da [quarentena](https://bigdata-covid19.icict.fiocruz.br/) com uma garrafa de sabonete líquido com o tema dos minions. [API](https://www.youtube.com/watch?v=OVvTv9Hy91Q&feature=emb_rel_pause) feita em REST e não SOAP. 😁
+
+![3 Laughing](../others/imgs/3laughing.gif)
 
 [SOAP 🆚 REST](https://www.infoq.com/br/articles/rest-soap-when-to-use-each/)
 
 A aplicação consiste em três desenvolvimentos: 
 
 - Backend feito na linguagem `C++` para rodar na placa [ESP32](https://pt.wikipedia.org/wiki/ESP32). Seu código-fonte encontra-se dentro da pasta `iot-minion`
-- Frontend feito com a metodologia de desenvolvimento de software chamada de [PWA](https://www.garagemdigital.io/nativo-hibrido-ou-pwa), usando a linguagem `React`. Seu código-fonte encontra-se na pasta raíz do projeto.
+- Frontend feito com a metodologia de desenvolvimento de software chamada de [PWA](https://www.garagemdigital.io/nativo-hibrido-ou-pwa), usando a linguagem `React`. Seu código-fonte encontra-se nhttps://picsart.com/i/323283806361211 pasta raíz do projeto.
 - Interfaces de Conversação feita na linguagem `javascript` para ser utilizada no [Dialog Flow](https://en.wikipedia.org/wiki/Dialogflow) da Google. Encontra-se dentro da pasta `arduino/dialogFlow`
 
 ## Pre-requisitos
@@ -29,7 +31,7 @@ A aplicação consiste em três desenvolvimentos:
 ```python
 sudo apt-get install python3-serial -y
 ```
-<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="imgs/book.png" /></a>
+<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="../others/imgs/book.png" /></a>
 
 - **Não se esqueça de alterar as variáveis abaixo, que aparecem nos códigos do arduino (`credentials.h`) e dialogflow, para as suas chaves:**
 
@@ -54,35 +56,13 @@ sudo apt-get install python3-serial -y
 - Firebase para armazenamento dos áudios utilizados neste projeto
 - `sonar-project.properties` para configurar o projeto a ser analisado pelo sonar-scanner.
 
-## Google Home e Google Assistente
-
-### Configurar rotinas do Google Assistant
-
-**Comandos de voz do google assistente** 👂
-
-  * `Ok Google, falar com o sentinela da garagem` 📣
-  * `Acordar` 🌄
-  * `Durma` 🌛
-  * `Estressar` 😠
-  * `Relaxar` 😆
-  * `Como está o clima na garagem?`, `Qual a umidade?`, `Qual a temperatura?` ⛅
-  * `Repita garagem` 🚗
-  * `Sorria 1`, `Sorria 2` 😃
-  * `Ola` 👋
-  * `Café da manhã`, `Lanche`, `Janta`, `Almoço`, `Fome` 🍌
-  * `Você já comeu`, `Você já jantou`, `Você já almoçou`, `Você já lanchou` 😊
-  * `Rock`, `Música`, `Toca uma música aí` 🎸 🤘
-  * `Lista de aplicações` 📜
-
-[![eruption minions](https://res.cloudinary.com/marcomontalbano/image/upload/v1594316625/video_to_markdown/images/youtube--5OQWZ3kCnpA-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://www.youtube.com/watch?v=5OQWZ3kCnpA "eruption minions")
-
 ## Minimizando o Html e o Json para o Swagger
 
 [Minifier](https://www.willpeavy.com/tools/minifier/)
  
 ### Adafruit☁️
 
-<a href="https://brunocantisano.github.io/minion/adafruit.html" target="_blank"><img src="imgs/book.png" /></a>
+<a href="https://brunocantisano.github.io/minion/adafruit.html" target="_blank"><img src="../others/imgs/book.png" /></a>
 
 ## APP 📱
 
@@ -91,7 +71,7 @@ npm run dev
 ```
 ## Referencias da placa ESP32
 
-![Pinout](assets/ESP32_PINOUT.png)
+![Pinout](../others/imgs/ESP32_PINOUT.png)
 
  📣 No código arduino foram utilizadas as seguintes portas
 
@@ -110,40 +90,24 @@ npm run dev
  * [Swagger](http://minion.local/swaggerUI)
  * [Swagger API](http://minion.local/swagger.json)
  
-<a href="https://brunocantisano.github.io/minion/index.html#page/22#" target="_blank"><img src="imgs/webserver.png" /></a>
+<a href="https://brunocantisano.github.io/minion/index.html#page/22#" target="_blank"><img src="../others/imgs/webserver.png" /></a>
 
 ### Upload de firmware
 
-![firmware e filesystem](assets/firmware_filesystem.png)
+![firmware e filesystem](../others/imgs/firmware_filesystem.png)
 
-![firmware e filesystem](assets/Elegant-OTA.png)
+![firmware e filesystem](../others/imgs/Elegant-OTA.png)
 
 ### Configurações de código
 
-![google text2speech key](assets/google-cloud-platform-text2speech.png)
-
-### Informação Opcional 📣
-
-Como o IFTTT, até a presente data, não possui suporte para Google Assistant em Português, **se você não quiser usar o dialogflow com as funcionalidades de chatbot** e quiser somente mandar comandos como: `acender luz`, você pode utilizar o [IFTTT](https://www.bluelux.com.br/o-que-e-ifttt-como-ele-funciona/).
-
-👀 **Deve-se utilizar a opção `Rotinas` do Google Home, para criar comandos em Português que direcionam para as frases em inglês do IFTTT.**
-
-### Passos 📓
-
-- Acesse as configurações do Google Assistant
-- Selecione a opção `Rotinas`
-- Cadastre a frase em português e depois a ação em inglês. Para isso é necessário utilizar o aplicativo de Celular `Home`, que é utilizado para configurar o Google Home:
-
-<a href="https://brunocantisano.github.io/minion/index.html#page/22" target="_blank"><img src="imgs/google.png" /></a>
-
-   **Faça isso com as frases para ter o comando de voz em português, por outro lado os comandos só funcionarão em inglês**
+![google text2speech key](../others/imgs/google-cloud-platform-text2speech.png)
 
 ### Conversões de áudio 📓
 
 - Utilize o audacity para realizar as conversões para o caso de utilizar os seus audios customizados
 - Os arquivos devem estar no formato wav com unsigned 8 bits PCM, 16000 Hz, mono e com qualidade de 128kbps.
 
-<a href="https://brunocantisano.github.io/minion/index.html#page/22" target="_blank"><img src="imgs/audacity.png" /></a>
+<a href="https://brunocantisano.github.io/minion/index.html#page/22" target="_blank"><img src="../others/imgs/audacity.png" /></a>
 
    **Os audios utilizados já foram convertidos, basta subir para o seu storage no firebase**
 
@@ -152,7 +116,6 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
 - [x] [Git](https://pt.wikipedia.org/wiki/Git)
 - [x] [REST](https://pt.wikipedia.org/wiki/REST)
 - [x] [MQTT-Adafruit](https://io.adafruit.com/api/docs/#adafruit-io-http-api)
-- [x] [Chat Bot-Dialog Flow](https://en.wikipedia.org/wiki/Dialogflow)
 - [x] [IOT-Arduino ESP32](https://pt.wikipedia.org/wiki/ESP32)
 - [x] [React](https://pt.wikipedia.org/wiki/React_(JavaScript))
 - [x] [Swagger](https://swagger.io/)
@@ -170,7 +133,7 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
 
 ## Modelos 3D 👻
 
-[![Modelos 3D](imgs/3dmodels.png)](https://brunocantisano.github.io/minion/3d.html)
+[![Modelos 3D](../others/imgs/3dmodels.png)](https://brunocantisano.github.io/minion/3d.html)
 
 
 <table>
@@ -200,9 +163,6 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
 - [Github Emoticons](https://gist.github.com/rxaviers/7360908)
 - [API Rest - Antonio Mancuso](https://mancusoa74.blogspot.com/2018/02/simple-http-rest-server-on-esp8266.html)
 - [Temperatura e umidade - DHT11](https://github.com/amiroffme/esp8266-dht11-webserver)
-- [O que é DialogFlow](https://www.youtube.com/watch?v=_jCHgH9rJbI)
-- [Ambiente DialogFlow](https://www.youtube.com/watch?v=Y1is5XDoiSM)
-- [Integrando Dialogflow com APIs externas](https://www.youtube.com/watch?v=n4IPOeFCDxI&feature=youtu.be)
 - [Audio files - Minion](https://www.soundboard.com/sb/minions "Minion_Audio_Files")
 - [Firebase - Storage](https://firebase.google.com/docs/storage "Subir arquivos no Storage")
 - [Conexão Wifi selecionada pelo Bluetooth](https://robotzero.one/esp32-wi-fi-connection-bluetooth/)
@@ -232,11 +192,6 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
 ## Vídeos de referência 🎥
 
 * [Site DC motor](https://techtutorialsx.com/2019/03/31/esp32-arduino-controlling-a-dc-motor-remotely-using-http)
-* [DialogFlow1](https://www.youtube.com/watch?v=VX7SSnvpj-8&feature=youtu.be)
-* [DialogFlow2](https://www.youtube.com/watch?v=5SoSjkK1OYM&feature=youtu.be)
-* [DialogFlow3](https://www.youtube.com/watch?v=7iMwmZgjX6o&feature=youtu.be)
-* [DialogFlow4](https://www.youtube.com/watch?v=n4IPOeFCDxI&feature=youtu.be)
-* [Google Actions](https://codelabs.developers.google.com/codelabs/actions-1/#0)
 
 ## Peças
 
@@ -281,10 +236,23 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
 
 ## Certificado
 
-- [text2speech.crt](docs/Builtin_Object_Token_GTS_Root_R1.crt)
+- [text2speech.crt](iot-minion/data/text2speech.crt)
 
 ## Bugs 🐛
 
 - Em caso de encontrar algum bug, abra um pull request
 
-## Lembrem-se: enquanto esperamos pela vacina, 💉 devemos lavar bem as mãos 💦👏🙌 e usar máscara 😷, a pandemia vai passar!
+![Doctor](../others/imgs/minion-doctor.png)
+
+## Lembrem-se:
+
+**Devemos:**
+* Lavar bem as mãos 💦👏🙌
+* Evitar aglomerações
+    ![Aglomeracao](../others/imgs/aglomeracao.gif)
+* Usar máscara 😷
+
+A pandemia vai passar!
+
+**💉 VACINA SIM 💉**
+

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "3f0819ad-e01c-4ec7-a954-df0f8543dc47",
+    "data": [
+      {
+        "text": "Sorria ",
+        "userDefined": false
+      },
+      {
+        "text": "tipo",
+        "meta": "@sys.number-integer",
+        "alias": "tipo",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  }
+]
