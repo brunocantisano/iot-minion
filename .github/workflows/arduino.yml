@@ -36,10 +36,8 @@ jobs:
       App_Packages_Archive: iot-minion
       Version: 1.0.${{ github.run_number }}
       Actions_Allow_Unsecure_Commands: true # Allows AddPAth and SetEnv commands
-      SONAR_SCANNER_VERSION: 4.4.0.2170
-      SONAR_SERVER_URL: "https://sonarcloud.io"
-      BUILD_WRAPPER_OUT_DIR: sonarcloud/arduino/build_wrapper_output_directory # Directory where build-wrapper output will be placed
-    
+      BUILD_OUT_DIR: sonarcloud/arduino/build_wrapper_output_directory
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -191,36 +189,12 @@ jobs:
       with:
         java-version: 11
 
-    - name: Download and set up sonar-scanner
-      env:
-        SONAR_SCANNER_DOWNLOAD_URL: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${{ env.SONAR_SCANNER_VERSION }}-linux.zip
-      run: |
-        mkdir -p $HOME/.sonar
-        curl -sSLo $HOME/.sonar/sonar-scanner.zip ${{ env.SONAR_SCANNER_DOWNLOAD_URL }} 
-        unzip -o $HOME/.sonar/sonar-scanner.zip -d $HOME/.sonar/
-        echo "$HOME/.sonar/sonar-scanner-${{ env.SONAR_SCANNER_VERSION }}-linux/bin" >> $GITHUB_PATH
-
-    - name: Download and set up build-wrapper
-      env:
-        BUILD_WRAPPER_DOWNLOAD_URL: ${{ env.SONAR_SERVER_URL }}/static/cpp/build-wrapper-linux-x86.zip
-      run: |
-        curl -sSLo $HOME/.sonar/build-wrapper-linux-x86.zip ${{ env.BUILD_WRAPPER_DOWNLOAD_URL }}
-        unzip -o $HOME/.sonar/build-wrapper-linux-x86.zip -d $HOME/.sonar/
-        echo "$HOME/.sonar/build-wrapper-linux-x86" >> $GITHUB_PATH
-
     - name: Build-wrapper ${{ matrix.iot-minion }} ${{ matrix.board }}
       run: |
         arduino-cli cache clean
-        build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} bash sonarcloud/arduino/build.sh ${{ matrix.board }} ${{ matrix.iot-minion }} ${{ env.BUILD_WRAPPER_OUT_DIR }}
-        docker run -v $(pwd):$(pwd) -t mgos/esp32-build:4.2-r2 mkspiffs -b 4096 -p 256 -s 0x100000 $(pwd)/${{ matrix.iot-minion }}/data -f $(pwd)/${{ env.BUILD_WRAPPER_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}-fs.bin
-        mv ${{ env.BUILD_WRAPPER_OUT_DIR }}/${{ env.App_Packages_Archive }}.ino.bin ${{ env.BUILD_WRAPPER_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}.bin
-
-    - name: Run sonar-scanner
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: |
-        sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" --define project.settings="sonarcloud/arduino/sonar-project.properties"
+        bash sonarcloud/arduino/build.sh ${{ matrix.board }} ${{ matrix.iot-minion }} ${{ env.BUILD_OUT_DIR }}
+        docker run -v $(pwd):$(pwd) -t mgos/esp32-build:4.2-r2 mkspiffs -b 4096 -p 256 -s 0x100000 $(pwd)/${{ matrix.iot-minion }}/data -f $(pwd)/${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}-fs.bin
+        mv ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}.ino.bin ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}.bin
 
     # Archive the package
     - name: Create archive
@@ -228,7 +202,7 @@ jobs:
       id: step1
       with:
         file-suffix: 'bin'
-        target-directory-path: ${{ env.BUILD_WRAPPER_OUT_DIR }}
+        target-directory-path: ${{ env.BUILD_OUT_DIR }}
         compress-tool: 'gzip'
 
     - name: Get archive
