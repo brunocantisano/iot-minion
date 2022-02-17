@@ -62,7 +62,7 @@ sudo apt-get install python3-serial -y
  
 ### Adafruit☁️
 
-<a href="https://brunocantisano.github.io/minion/adafruit.html" target="_blank"><img src="../others/imgs/book.png" /></a>
+<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="../others/imgs/book.png" /></a>
 
 ## APP 📱
 
