@@ -1,6 +1,6 @@
 # IOT-Minion
 
-[![build-arduino](https://github.com/brunocantisano/iot-minion/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/brunocantisano/iot-minion/actions/workflows/build.yml)
+[![build-arduino](https://github.com/brunocantisano/iot-minion/actions/workflows/arduino.yml/badge.svg?branch=master)](https://github.com/brunocantisano/iot-minion/actions/workflows/arduino.yml)
 ![versão](https://img.shields.io/github/v/release/brunocantisano/iot-minion)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Naereen/StrapDown.js/blob/master/LICENSE)
 
