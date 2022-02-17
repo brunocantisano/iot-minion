@@ -2,7 +2,7 @@
 
 [![build-firebase](https://github.com/brunocantisano/iot-minion/actions/workflows/firebase.yml/badge.svg?branch=master)](https://github.com/brunocantisano/iot-minion/actions/workflows/firebase.yml)
 
-[![build-arduino](https://github.com/brunocantisano/iot-minion/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/brunocantisano/iot-minion/actions/workflows/build.yml)
+[![build-arduino](https://github.com/brunocantisano/iot-minion/actions/workflows/arduino.yml/badge.svg?branch=master)](https://github.com/brunocantisano/iot-minion/actions/workflows/build.yml)
 
 ![Stars](https://img.shields.io/github/stars/brunocantisano/iot-minion.svg)
 ![Forks](https://img.shields.io/github/forks/brunocantisano/iot-minion.svg)
