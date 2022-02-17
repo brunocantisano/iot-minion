@@ -133,7 +133,7 @@ npm run dev
 
 ## Modelos 3D 👻
 
-[![Modelos 3D](../others/imgs/3dmodels.png)](https://brunocantisano.github.io/minion/3d.html)
+[![Modelos 3D](../others/imgs/3dmodels.png)](https://brunocantisano.github.io/minion/index.html)
 
 
 <table>
