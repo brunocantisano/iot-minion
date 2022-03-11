@@ -193,7 +193,7 @@ jobs:
       run: |
         arduino-cli cache clean
         bash sonarcloud/arduino/build.sh ${{ matrix.board }} ${{ matrix.iot-minion }} ${{ env.BUILD_OUT_DIR }}
-        mv ${{ env.App_Packages_Archive }}/*.ino ${{ env.App_Packages_Archive }}/.cpp
+        mv ${{ env.App_Packages_Archive }}/*.ino ${{ env.App_Packages_Archive }}/*.cpp
         docker run -v $(pwd):$(pwd) -t mgos/esp32-build:4.2-r2 mkspiffs -b 4096 -p 256 -s 0x100000 $(pwd)/${{ matrix.iot-minion }}/data -f $(pwd)/${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}-fs.bin
         mv ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}.ino.bin ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}.bin
 
