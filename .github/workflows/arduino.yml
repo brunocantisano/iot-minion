@@ -209,18 +209,18 @@ jobs:
         unzip -o $HOME/.sonar/build-wrapper-linux-x86.zip -d $HOME/.sonar/
         echo "$HOME/.sonar/build-wrapper-linux-x86" >> $GITHUB_PATH
 
+    - name: Generate cpp files for analysis en sonarcloud.io
+      run: |
+        cp arduino/iot-minion/iot-minion.ino arduino/iot-minion/iot-minion.cpp
+        cp arduino/iot-minion/prometheus.ino arduino/iot-minion/prometheus.cpp
+        cp arduino/iot-minion/webserver.ino arduino/iot-minion/webserver.cpp
+
     - name: Build-wrapper ${{ matrix.iot-minion }} ${{ matrix.board }}
       run: |
         arduino-cli cache clean
         bash sonarcloud/arduino/build.sh ${{ matrix.board }} ${{ matrix.iot-minion }} ${{ env.BUILD_OUT_DIR }}
         docker run -v $(pwd):$(pwd) -t mgos/esp32-build:4.2-r2 mkspiffs -b 4096 -p 256 -s 0x100000 $(pwd)/${{ matrix.iot-minion }}/data -f $(pwd)/${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}-fs.bin
         mv ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}.ino.bin ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}.bin
-
-    - name: Generate cpp files for analysis en sonarcloud.io
-      run: |
-        cp arduino/iot-minion/iot-minion.ino arduino/iot-minion/iot-minion.cpp
-        cp arduino/iot-minion/prometheus.ino arduino/iot-minion/prometheus.cpp
-        cp arduino/iot-minion/webserver.ino arduino/iot-minion/webserver.cpp
 
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@master
