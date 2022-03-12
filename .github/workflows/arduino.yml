@@ -222,13 +222,16 @@ jobs:
         cp arduino/iot-minion/prometheus.ino arduino/iot-minion/prometheus.cpp
         cp arduino/iot-minion/webserver.ino arduino/iot-minion/webserver.cpp
 
-    - name: Run sonar-scanner
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      with:
+          projectBaseDir: .
+          args: >
+            -Dproject.settings=sonarcloud/arduino/sonar-project.properties
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: |
-        sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_OUT_DIR }}"
-
+          
     # Archive the package
     - name: Create archive
       uses: coco-hkk/compress-action@v2.1
