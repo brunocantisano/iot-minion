@@ -209,12 +209,6 @@ jobs:
         unzip -o $HOME/.sonar/build-wrapper-linux-x86.zip -d $HOME/.sonar/
         echo "$HOME/.sonar/build-wrapper-linux-x86" >> $GITHUB_PATH
 
-    - name: Generate cpp files for analysis en sonarcloud.io
-      run: |
-        mv arduino/iot-minion/iot-minion.ino arduino/iot-minion/iot-minion.cpp
-        mv arduino/iot-minion/prometheus.ino arduino/iot-minion/prometheus.cpp
-        mv arduino/iot-minion/webserver.ino arduino/iot-minion/webserver.cpp
-
     - name: Build-wrapper ${{ matrix.iot-minion }} ${{ matrix.board }}
       run: |
         arduino-cli cache clean
