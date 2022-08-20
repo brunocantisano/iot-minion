@@ -25,7 +25,7 @@
 #include <ESP8266WiFiMulti.h>
 #include <WiFiClientSecureBearSSL.h>
 
-#include "LinkedList.h"
+#include "ListaEncadeada.h"
 
 #define SERIAL_PORT               115200
 #define TEMPERATURE_DELAY         60000
@@ -103,8 +103,8 @@ WiFiClient client;
   // Setup the MQTT client class by passing in the WiFi client and MQTT server and login details.
   Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_KEY);
   
-  // Setup feeds called 'eyes', 'hat', 'blink' and 'temperature' for subscribing to changes.
-  Adafruit_MQTT_Subscribe eyesReadFeed = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME"/feeds/eyes"); // set adafruit FeedName
+  // Setup feeds called 'eye', 'hat', 'blink' and 'temperature' for subscribing to changes.
+  Adafruit_MQTT_Subscribe eyesReadFeed = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME"/feeds/eye"); // set adafruit FeedName
   Adafruit_MQTT_Subscribe hatReadFeed = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME"/feeds/hat"); // set adafruit FeedName
   Adafruit_MQTT_Subscribe listReadFeed = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME"/feeds/list"); // set adafruit FeedName
   Adafruit_MQTT_Subscribe blinkReadFeed = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME"/feeds/blink"); // set adafruit FeedName
@@ -119,10 +119,10 @@ bool inicio = true;
 DHT dht(D6, DHT11);
 
 // Lista de sensores
-LinkedList<ArduinoSensorPort*> sensorLinkedList = LinkedList<ArduinoSensorPort*>();
+ListaEncadeada<ArduinoSensorPort*> sensorLinkedList = ListaEncadeada<ArduinoSensorPort*>();
 
 // Lista de aplicacoes do jenkins
-LinkedList<Application*> applicationLinkedList = LinkedList<Application*>();
+ListaEncadeada<Application*> applicationLinkedList = ListaEncadeada<Application*>();
 
 std::unique_ptr<BearSSL::WiFiClientSecure> clientSecureBearSSL (new BearSSL::WiFiClientSecure);
 
@@ -218,6 +218,7 @@ void readBodySensorData(JsonObject& jsonBody, byte gpio) {
 
 /* D5 */
 void putEye() {
+  /*
   StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;    
   JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
   char JSONmessageBuffer[MAX_STRING_LENGTH];
@@ -234,6 +235,7 @@ void putEye() {
     jsonBody.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
     sendResponseJson(HTTP_OK, "/eye", JSONmessageBuffer);
  }
+ */
 }
 
 void readSensor(char * name, byte port){
@@ -255,6 +257,7 @@ void getEyes() {
 
 /* ByPass mensagem para o google text to speech e depois enviar para o google home via bluetooth */
 void postTalk() {  
+  /*
   StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;    
   JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
   char urlText2Speech[MAX_STRING_LENGTH]="";
@@ -275,6 +278,7 @@ void postTalk() {
     char * payload = postUtil(urlText2Speech, data);
     sendResponseJson(HTTP_OK, "/talk", payload);
   }
+  */
 }
 
 char * postUtil(char * url, char * httpRequestData) { 
@@ -306,6 +310,7 @@ char * postUtil(char * url, char * httpRequestData) {
 
 /* ByPass mensagem para o google home */
 void postLaugh() {
+  /*
   char data[MAX_STRING_LENGTH]="";
   StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
   String post_body = http_rest_server.arg("plain");
@@ -326,10 +331,12 @@ void postLaugh() {
     jsonBody.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
     sendResponseJson(HTTP_OK, "/laugh", JSONmessageBuffer);
   }
+  */
 }
 
 /* D7 */
 void putHat() {
+  /*
   char data[MAX_STRING_LENGTH]="";
   StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
   String put_body = http_rest_server.arg("plain");
@@ -351,6 +358,7 @@ void putHat() {
     jsonBody.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
     sendResponseJson(HTTP_OK, "/hat", JSONmessageBuffer);
   }
+  */
 }
 
 void getHats() {
@@ -402,6 +410,7 @@ void addApplication(const char * name, const char * language, const char * descr
 }
 
 void loadListFromAdafruit() {
+  /*
   StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
   char json[MAX_STRING_LENGTH];
 
@@ -423,6 +432,7 @@ void loadListFromAdafruit() {
   for(int i = 0; i < applicationLinkedList.size(); i++) {
     addApplication(item->name, item->language, item->description);  
   }
+  */
 }
 
 int searchListAdafruit(JsonObject& json) {  
@@ -438,6 +448,7 @@ int searchListAdafruit(JsonObject& json) {
 }
 
 void postList() {
+  /*
   char data[MAX_STRING_LENGTH]="";
   StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
   String post_body = http_rest_server.arg("plain");
@@ -478,54 +489,57 @@ void postList() {
     }
     sendResponseJson(ret, "/list", JSONmessageBuffer);
   }
+  */
 }
 
 void delList() {
-  char data[MAX_STRING_LENGTH]="";
-  StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
+  /*
   String delete_body = http_rest_server.arg("plain");
   Serial.println(delete_body);
   int ret = HTTP_NOT_FOUND;
-
-  JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
-  char JSONmessage[MAX_STRING_LENGTH]="[";
-  char JSONmessageTemp[MAX_STRING_LENGTH];
-  Serial.print("Metodo HTTP: ");
-  Serial.println(http_rest_server.method());
-  if (!jsonBody.success()) {
-    char mensagem[]="Erro ao fazer parser do json";    
-    sprintf(data, "{\"message\": \"%s\"}", mensagem);
-    sendResponseJson(HTTP_BAD_REQUEST, "/list/del", data);
-  }
+  DynamicJsonDocument doc = treatData(delete_body, len);
+  if(doc.isNull()) http_rest_server.send(HTTP_BAD_REQUEST);
   else {
-    //busco pela aplicacao a ser removida
-    int index = searchListAdafruit(jsonBody);
-    if(index != -1) {
-      //removo
-      applicationLinkedList.remove(index);      
-      ret = HTTP_OK;
-
-      Application *app;
-      sprintf(JSONmessage, "[");
-      for(int i = 0; i < applicationLinkedList.size(); i++){
-        // Obtem a aplicação da lista
-        app = applicationLinkedList.get(i);
-        sprintf(JSONmessageTemp, "{\"name\": \"%s\",\"language\": \"%s\",\"description\": \"%s\"}", app->name, app->language, app->description);
-        strcat(JSONmessage, JSONmessageTemp);
-        if((i < applicationLinkedList.size()) && (i < applicationLinkedList.size()-1)) {
-          strcat(JSONmessage, ",");
-        }
-      }
-      strcat(JSONmessage, "]");
-
-      #ifdef MQTT
-      // Grava no Adafruit
-      writeFeedToAdafruitList(JSONmessage);
-      #endif
+    char JSONmessage[MAX_STRING_LENGTH]="[";
+    char JSONmessageTemp[MAX_STRING_LENGTH];
+    Serial.print("Metodo HTTP: ");
+    Serial.println(http_rest_server.method());
+    if (!jsonBody.success()) {
+      char mensagem[]="Erro ao fazer parser do json";    
+      sprintf(data, "{\"message\": \"%s\"}", mensagem);
+      sendResponseJson(HTTP_BAD_REQUEST, "/list/del", data);
     }
-    jsonBody.prettyPrintTo(JSONmessage, sizeof(JSONmessage));
-    sendResponseJson(HTTP_BAD_REQUEST, "/list/del", JSONmessage);
+    else {
+      //busco pela aplicacao a ser removida
+      int index = searchListAdafruit(jsonBody);
+      if(index != -1) {
+        //removo
+        applicationLinkedList.remove(index);      
+        ret = HTTP_OK;
+  
+        Application *app;
+        sprintf(JSONmessage, "[");
+        for(int i = 0; i < applicationLinkedList.size(); i++){
+          // Obtem a aplicação da lista
+          app = applicationLinkedList.get(i);
+          sprintf(JSONmessageTemp, "{\"name\": \"%s\",\"language\": \"%s\",\"description\": \"%s\"}", app->name, app->language, app->description);
+          strcat(JSONmessage, JSONmessageTemp);
+          if((i < applicationLinkedList.size()) && (i < applicationLinkedList.size()-1)) {
+            strcat(JSONmessage, ",");
+          }
+        }
+        strcat(JSONmessage, "]");
+  
+        #ifdef MQTT
+        // Grava no Adafruit
+        writeFeedToAdafruitList(JSONmessage);
+        #endif
+      }
+      jsonBody.prettyPrintTo(JSONmessage, sizeof(JSONmessage));
+      sendResponseJson(HTTP_BAD_REQUEST, "/list/del", JSONmessage);
+    }
   }
+  */
 }
 
 char * getTemperatureAndHumidity() {
@@ -555,26 +569,21 @@ void getTemperature() {
   Serial.println("Mensagem:"+String(JSONmessageBuffer));
   sendResponseJson(HTTP_OK, "/temperature", JSONmessageBuffer);
 }
-
+  
 /* D8 */
 void putBlink() {
-  StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;    
-  JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
-  char JSONmessageBuffer[MAX_STRING_LENGTH];
-  
+  /*
   Serial.print("Metodo HTTP: ");
   Serial.println(http_rest_server.method());
-  
-  if (!jsonBody.success()) {
-      Serial.println("erro ao fazer parser do json");
-      http_rest_server.send(HTTP_BAD_REQUEST);
-  }
+  String dado = http_rest_server.arg("plain");
+  DynamicJsonDocument doc = treatData(dado, dado.length());
+  if(doc.isNull()) http_rest_server.send(HTTP_BAD_REQUEST);
   else {
-    readBodySensorData(jsonBody, D8);
-    jsonBody.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));      
+    readBodySensorData(doc, D8);
     http_rest_server.sendHeader("Location", "/blink");
-    http_rest_server.send(HTTP_OK, "application/json", JSONmessageBuffer);
- }
+    http_rest_server.send(HTTP_OK, "application/json", dado);    
+  }
+  */
 }
 
 void getBlinks() {
@@ -759,6 +768,28 @@ void writeFeedTemperature(){
   char temperatureData[MAX_STRING_LENGTH]="";
   strcat(temperatureData,getTemperatureAndHumidity());
   writeFeedToAdafruitTemperatureAndHumidity(temperatureData);
+}
+
+String getData(uint8_t *data, size_t len) {
+  char raw[len];
+  for (size_t i = 0; i < len; i++) {
+    //Serial.write(data[i]);
+    raw[i] = data[i];
+  }
+  return String(raw);
+}
+
+DynamicJsonDocument treatData(uint8_t *data, size_t len) {
+  DynamicJsonDocument doc(MAX_STRING_LENGTH);
+  String JSONmessageBody = getData(data, len);
+  DeserializationError error = deserializeJson(doc, JSONmessageBody);
+  return doc;
+}
+
+DynamicJsonDocument treatDataString(String JSONmessageBody) {
+  DynamicJsonDocument doc(MAX_STRING_LENGTH);
+  DeserializationError error = deserializeJson(doc, JSONmessageBody);
+  return doc;
 }
 
 void setup(void) {
