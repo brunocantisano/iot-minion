@@ -206,36 +206,35 @@ void handleNotFound() {
   sendResponseJson(HTTP_NOT_FOUND, "", "{\"message\":\" + message + \"}");
 }
 
-void readBodySensorData(JsonObject& jsonBody, byte gpio) {
-  byte status = jsonBody["status"];
-  Serial.println(status);
+bool readBodySensorData(DynamicJsonDocument doc, byte gpio) {
+  byte status = doc["status"];  
+  #ifdef DEBUG
+    Serial.println(status);
+  #endif
   ArduinoSensorPort * arduinoSensorPort = searchListSensor(gpio);
-  if(arduinoSensorPort) {    
-    digitalWrite(arduinoSensorPort->gpio, status);
+  if(arduinoSensorPort!=NULL) {    
     arduinoSensorPort->status = status;
+    return true;
   }
+  return false;
 }
 
 /* D5 */
 void putEye() {
-  /*
-  StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;    
-  JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
+  DynamicJsonDocument doc(MAX_STRING_LENGTH);    
   char JSONmessageBuffer[MAX_STRING_LENGTH];
   
   Serial.print("Metodo HTTP: ");
   Serial.println(http_rest_server.method());
-  
-  if (!jsonBody.success()) {
+  DeserializationError error = deserializeJson(doc, http_rest_server.arg("plain"));
+  if (error) {
     char mensagem[]="Erro ao fazer parser do json";
     sendResponseJson(HTTP_BAD_REQUEST, "/eye", mensagem);
   }
   else {
-    readBodySensorData(jsonBody, D5);    
-    jsonBody.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+    readBodySensorData(doc, D5);    
     sendResponseJson(HTTP_OK, "/eye", JSONmessageBuffer);
  }
- */
 }
 
 void readSensor(char * name, byte port){
@@ -257,28 +256,25 @@ void getEyes() {
 
 /* ByPass mensagem para o google text to speech e depois enviar para o google home via bluetooth */
 void postTalk() {  
-  /*
-  StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;    
-  JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
+  DynamicJsonDocument doc(MAX_STRING_LENGTH);
   char urlText2Speech[MAX_STRING_LENGTH]="";
   char data[MAX_STRING_LENGTH]="";
 
   Serial.print("Metodo HTTP: ");
   Serial.println(http_rest_server.method());
-  
-  if (!jsonBody.success()) {
+  DeserializationError error = deserializeJson(doc, http_rest_server.arg("plain"));
+  if (error) {
     char mensagem[]="Erro ao fazer parser do json";
     sprintf(data, "{\"message\": \"%s\"}", mensagem);
     sendResponseJson(HTTP_BAD_REQUEST, "/talk", data);
   }
   else {    
     sprintf(urlText2Speech,"https://%s/v1beta1/text:synthesize?key=%s", text2SpeechHost, API_TEXT2SPEECH_KEY);
-    const char* mensagem = jsonBody.get<const char*>("mensagem");
+    const char* mensagem = doc["mensagem"];
     sprintf(data, "{\"input\": {\"text\": \"%s\"},\"voice\": {\"languageCode\": \"%s\",\"name\": \"%s\",\"ssmlGender\": \"%s\"},\"audioConfig\": {\"audioEncoding\": \"%s\"}}", mensagem, languageCode, voiceName, ssmlGender, audioEncoding);
     char * payload = postUtil(urlText2Speech, data);
     sendResponseJson(HTTP_OK, "/talk", payload);
   }
-  */
 }
 
 char * postUtil(char * url, char * httpRequestData) { 
@@ -310,55 +306,44 @@ char * postUtil(char * url, char * httpRequestData) {
 
 /* ByPass mensagem para o google home */
 void postLaugh() {
-  /*
   char data[MAX_STRING_LENGTH]="";
-  StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
+  DynamicJsonDocument doc(MAX_STRING_LENGTH);
   String post_body = http_rest_server.arg("plain");
   Serial.println(post_body);
 
-  JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
+  DeserializationError error = deserializeJson(doc, http_rest_server.arg("plain"));
   char JSONmessageBuffer[MAX_STRING_LENGTH];
-  
   Serial.print("Metodo HTTP: ");
   Serial.println(http_rest_server.method());
-
-  if (!jsonBody.success()) {
+  if (error) {
     char mensagem[]="Erro ao fazer parser do json";    
     sprintf(data, "{\"message\": \"%s\"}", mensagem);
     sendResponseJson(HTTP_BAD_REQUEST, "/laugh", data);
   }
   else {
-    jsonBody.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
     sendResponseJson(HTTP_OK, "/laugh", JSONmessageBuffer);
   }
-  */
 }
 
 /* D7 */
 void putHat() {
-  /*
   char data[MAX_STRING_LENGTH]="";
-  StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
+  DynamicJsonDocument doc(MAX_STRING_LENGTH);
   String put_body = http_rest_server.arg("plain");
   Serial.println(put_body);
-
-  JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
+  DeserializationError error = deserializeJson(doc, http_rest_server.arg("plain"));
   char JSONmessageBuffer[MAX_STRING_LENGTH];
-  
   Serial.print("Metodo HTTP: ");
   Serial.println(http_rest_server.method());
-
-  if (!jsonBody.success()) {
+  if (error) {
     char mensagem[]="Erro ao fazer parser do json";    
     sprintf(data, "{\"message\": \"%s\"}", mensagem);
-    sendResponseJson(HTTP_BAD_REQUEST, "/hat", data);
+    sendResponseJson(HTTP_BAD_REQUEST, "/hat", data);    
   }
   else {
-    readBodySensorData(jsonBody, D7);
-    jsonBody.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+    readBodySensorData(doc, D7);
     sendResponseJson(HTTP_OK, "/hat", JSONmessageBuffer);
   }
-  */
 }
 
 void getHats() {
@@ -410,21 +395,17 @@ void addApplication(const char * name, const char * language, const char * descr
 }
 
 void loadListFromAdafruit() {
-  /*
-  StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
+  DynamicJsonDocument doc(MAX_STRING_LENGTH);
   char json[MAX_STRING_LENGTH];
 
   #ifdef MQTT
   // ler do feed list no adafruit
   strcat(json,readFeedFromAdafruitList());
   #endif
-
-  // retira \r\n
-  // fazer o parser do array json
-  JsonArray& aplicacoes = jsonBuffer.parseArray(json);
+  DeserializationError error = deserializeJson(doc, json);
   // Test if parsing succeeds.
-  if (!aplicacoes.success()) {
-    Serial.println("falha ao fazer o parseObject()");
+  if (error) {
+    Serial.println("falha ao fazer o deserializeJson()");
     return;
   }  
   // para cada objeto no array
@@ -432,15 +413,14 @@ void loadListFromAdafruit() {
   for(int i = 0; i < applicationLinkedList.size(); i++) {
     addApplication(item->name, item->language, item->description);  
   }
-  */
 }
 
-int searchListAdafruit(JsonObject& json) {  
+int searchListAdafruit(DynamicJsonDocument doc) {  
   Application *app;
   for(int i = 0; i < applicationLinkedList.size(); i++){
     // Obtem a aplicação da lista
     app = applicationLinkedList.get(i);
-    if ((strcmp(json["name"], app->name) == 0) && (strcmp(json["language"], app->language) == 0)) {
+    if (doc["name"] == app->name && doc["language"]==app->language) {
       return i;
     }
   }
@@ -448,34 +428,29 @@ int searchListAdafruit(JsonObject& json) {
 }
 
 void postList() {
-  /*
   char data[MAX_STRING_LENGTH]="";
-  StaticJsonBuffer<MAX_STRING_LENGTH> jsonBuffer;
+  DynamicJsonDocument doc(MAX_STRING_LENGTH);
   String post_body = http_rest_server.arg("plain");
   Serial.println(post_body);
   int ret = HTTP_CONFLICT;
-    
-  JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
-  
-  JsonObject& jsonObj = jsonBuffer.createObject();
   char JSONmessageBuffer[MAX_STRING_LENGTH] = "[]";
   Serial.print("Metodo HTTP: ");
   Serial.println(http_rest_server.method());
-
-  if (!jsonBody.success()) {
+  DeserializationError error = deserializeJson(doc, post_body);
+  if (error) {
     char mensagem[]="Erro ao fazer parser do json";    
     sprintf(data, "{\"message\": \"%s\"}", mensagem);
     sendResponseJson(HTTP_BAD_REQUEST, "/list", data);
   }
   else {
     //busco para checar se aplicacao já existe
-    int index = searchListAdafruit(jsonBody);
+    int index = searchListAdafruit(doc);
     if(index == -1) {
       // não existe, então posso inserir
       // adiciona item na lista de aplicações jenkins
-      const char* name = jsonBody.get<const char*>("name");
-      const char* language = jsonBody.get<const char*>("language");
-      const char* description = jsonBody.get<const char*>("description");
+      const char* name = doc["name"];
+      const char* language = doc["language"];
+      const char* description = doc["description"];
       addApplication(name, language, description);
       ret = HTTP_OK;
       sprintf(JSONmessageBuffer, "{\"name\": \"%s\",\"language\": \"%s\",\"description\": \"%s\"}", name, language, description);
@@ -489,57 +464,47 @@ void postList() {
     }
     sendResponseJson(ret, "/list", JSONmessageBuffer);
   }
-  */
+
 }
 
 void delList() {
-  /*
   String delete_body = http_rest_server.arg("plain");
   Serial.println(delete_body);
   int ret = HTTP_NOT_FOUND;
-  DynamicJsonDocument doc = treatData(delete_body, len);
+  DynamicJsonDocument doc = treatDataString(delete_body);
   if(doc.isNull()) http_rest_server.send(HTTP_BAD_REQUEST);
   else {
     char JSONmessage[MAX_STRING_LENGTH]="[";
     char JSONmessageTemp[MAX_STRING_LENGTH];
     Serial.print("Metodo HTTP: ");
     Serial.println(http_rest_server.method());
-    if (!jsonBody.success()) {
-      char mensagem[]="Erro ao fazer parser do json";    
-      sprintf(data, "{\"message\": \"%s\"}", mensagem);
-      sendResponseJson(HTTP_BAD_REQUEST, "/list/del", data);
-    }
-    else {
-      //busco pela aplicacao a ser removida
-      int index = searchListAdafruit(jsonBody);
-      if(index != -1) {
-        //removo
-        applicationLinkedList.remove(index);      
-        ret = HTTP_OK;
-  
-        Application *app;
-        sprintf(JSONmessage, "[");
-        for(int i = 0; i < applicationLinkedList.size(); i++){
-          // Obtem a aplicação da lista
-          app = applicationLinkedList.get(i);
-          sprintf(JSONmessageTemp, "{\"name\": \"%s\",\"language\": \"%s\",\"description\": \"%s\"}", app->name, app->language, app->description);
-          strcat(JSONmessage, JSONmessageTemp);
-          if((i < applicationLinkedList.size()) && (i < applicationLinkedList.size()-1)) {
-            strcat(JSONmessage, ",");
-          }
+    //busco pela aplicacao a ser removida
+    int index = searchListAdafruit(doc);
+    if(index != -1) {
+      //removo
+      applicationLinkedList.remove(index);      
+      ret = HTTP_OK;
+
+      Application *app;
+      sprintf(JSONmessage, "[");
+      for(int i = 0; i < applicationLinkedList.size(); i++){
+        // Obtem a aplicação da lista
+        app = applicationLinkedList.get(i);
+        sprintf(JSONmessageTemp, "{\"name\": \"%s\",\"language\": \"%s\",\"description\": \"%s\"}", app->name, app->language, app->description);
+        strcat(JSONmessage, JSONmessageTemp);
+        if((i < applicationLinkedList.size()) && (i < applicationLinkedList.size()-1)) {
+          strcat(JSONmessage, ",");
         }
-        strcat(JSONmessage, "]");
-  
-        #ifdef MQTT
-        // Grava no Adafruit
-        writeFeedToAdafruitList(JSONmessage);
-        #endif
       }
-      jsonBody.prettyPrintTo(JSONmessage, sizeof(JSONmessage));
-      sendResponseJson(HTTP_BAD_REQUEST, "/list/del", JSONmessage);
+      strcat(JSONmessage, "]");
+
+      #ifdef MQTT
+      // Grava no Adafruit
+      writeFeedToAdafruitList(JSONmessage);
+      #endif
     }
+    sendResponseJson(HTTP_BAD_REQUEST, "/list/del", JSONmessage);
   }
-  */
 }
 
 char * getTemperatureAndHumidity() {
@@ -572,18 +537,16 @@ void getTemperature() {
   
 /* D8 */
 void putBlink() {
-  /*
   Serial.print("Metodo HTTP: ");
   Serial.println(http_rest_server.method());
   String dado = http_rest_server.arg("plain");
-  DynamicJsonDocument doc = treatData(dado, dado.length());
+  DynamicJsonDocument doc = treatDataString(dado);
   if(doc.isNull()) http_rest_server.send(HTTP_BAD_REQUEST);
   else {
     readBodySensorData(doc, D8);
     http_rest_server.sendHeader("Location", "/blink");
     http_rest_server.send(HTTP_OK, "application/json", dado);    
   }
-  */
 }
 
 void getBlinks() {
