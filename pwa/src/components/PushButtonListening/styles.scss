@@ -1,0 +1,38 @@
+.music {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1rem 0 0 0;
+    border-color: #2C2C2C;
+    border-radius: 10px 10px 10px 10px;
+    border-style: none;
+    border-width: 0 0 3px;
+    padding: 3px 1px;
+}
+
+.play {
+    box-shadow: 3px 3px 6px 0px #899599;
+    border-radius:26px;
+    border:1px solid #d6bcd6;
+    display:inline-block;
+    cursor:pointer;
+    text-decoration:none;
+    background-image: url("../../assets/playRemote.gif");
+}
+
+.play:hover {    
+    background-image: url("../../assets/playRemote2.gif");
+}
+
+.play:active {
+    position:relative;
+    top:1px;
+}
+
+#music {
+    position: relative;
+    width: 96px;
+    height: 104px;
+    vertical-align: top;
+    text-align: center;
+}
