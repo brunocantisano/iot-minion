@@ -1,0 +1,188 @@
+name: Build Arduino
+on:
+  workflow_dispatch:
+    branches: [ ESP32 ]
+    inputs:
+      name:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Iniciar a geração de firmware para arduino'
+        # Default value if no value is explicitly provided
+        default: 'Iniciar'
+        # Input has to be provided for the workflow to run
+        required: true
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        board:
+        - esp32:esp32:esp32thing
+        iot-minion:
+        - arduino/iot-minion
+    env:
+      ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: true
+      API_MINION_TOKEN: ${{secrets.API_MINION_TOKEN}}
+      WIFI_SSID: ${{secrets.WIFI_SSID}}
+      WIFI_PASSWORD: ${{secrets.WIFI_PASSWORD}}
+      USER_FIRMWARE: ${{secrets.USER_FIRMWARE}}
+      PASS_FIRMWARE: ${{secrets.PASS_FIRMWARE}}
+      AIO_USERNAME: ${{secrets.AIO_USERNAME}}
+      AIO_KEY: ${{secrets.AIO_KEY}}
+      App_Packages_Archive: iot-minion
+      Version: 1.0.${{ github.run_number }}
+      Actions_Allow_Unsecure_Commands: true # Allows AddPAth and SetEnv commands
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+   
+    - name: Cache Arduino CLI
+      uses: actions/cache@v2
+      with:
+        path: ~/.arduino15
+        key: ${{ runner.os }}-${{ hashFiles('*_index.json') }}
+      
+    - name: Setup Arduino CLI
+      uses: arduino/setup-arduino-cli@v1.1.1
+
+    - name: Install pyserial
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyserial       
+
+    - name: Install Arduino platforms and libraries
+      run: |   
+        arduino-cli core update-index
+        arduino-cli core update-index --additional-urls "https://dl.espressif.com/dl/package_esp32_index.json"
+        arduino-cli core install "esp32:esp32" --additional-urls "https://dl.espressif.com/dl/package_esp32_index.json" 
+        arduino-cli core install "esp32:esp32" --additional-urls "https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json"
+        arduino-cli lib install "ArduinoWebsockets"
+        arduino-cli lib install "Adafruit FONA Library"
+        arduino-cli lib install "Adafruit MQTT Library"
+        arduino-cli lib install "Adafruit SleepyDog Library"
+        arduino-cli lib install "Adafruit Unified Sensor"
+        arduino-cli lib install "ArduinoJson"
+        arduino-cli lib install "AsyncElegantOTA"
+        arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncWebServer.git
+        arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
+        arduino-cli lib install --git-url https://github.com/schreibfaul1/ESP32-audioI2S.git
+        arduino-cli lib install "DHT sensor library"
+        arduino-cli lib install "NTPClient"
+        arduino-cli lib install "PubSubClient"
+        arduino-cli lib install "WiFi101"
+        arduino-cli lib install "LittleFS_esp32"
+        arduino-cli config dump
+
+    - name: Change WiFi SSID
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <WIFI_SSID>
+        replace: ${{ env.WIFI_SSID }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change WiFi Password
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <WIFI_PASSWORD>
+        replace: ${{ env.WIFI_PASSWORD }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change Firmware Username
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <USER_FIRMWARE>
+        replace: ${{ env.USER_FIRMWARE }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change Firmware Password
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <PASS_FIRMWARE>
+        replace: ${{ env.PASS_FIRMWARE }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change Adafruit Username
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <AIO_USERNAME>
+        replace: ${{ env.AIO_USERNAME }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change Adafruit Key
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <AIO_KEY>
+        replace: ${{ env.AIO_KEY }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change Api Minion Token Key
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <API_MINION_TOKEN>
+        replace: ${{ env.API_MINION_TOKEN }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change firmware version
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <API_VERSION>
+        replace: ${{ env.Version }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+    
+    - name: Binários - ${{ matrix.iot-minion }} ${{ matrix.board }}
+      run: |
+        docker run -v $(pwd):$(pwd) -t mgos/esp32-build:4.2-r2 mklittlefs -b 4096 -p 256 -s 0x100000 $(pwd)/${{ matrix.iot-minion }}/data -f $(pwd)/${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}-fs.bin
+        mv ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}.ino.bin ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}.bin
+
+    # Archive the package
+    - name: Create archive
+      uses: coco-hkk/compress-action@v2.1
+      id: step1
+      with:
+        file-suffix: 'bin'
+        target-directory-path: ${{ env.BUILD_OUT_DIR }}
+        compress-tool: 'gzip'
+
+    - name: Get archive
+      run: |
+        if [ "0"x != "${{ steps.step1.outputs.state }}"x ]; then
+          echo "archive create failed, exit"
+        else
+          mv ${{ steps.step1.outputs.archive }} ${{ env.App_Packages_Archive }}-v${{env.Version}}.gz
+          tar -tzvf ${{ env.App_Packages_Archive }}-v${{env.Version}}.gz
+        fi
+
+    # Create the release:  https://github.com/actions/create-release
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: v${{ env.Version }}
+        release_name: minion-esp32-v${{ env.Version }}
+        draft: false
+        prerelease: false
+
+    # Upload release asset:   https://github.com/actions/upload-release-asset
+    - name: Update release asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}  # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+        asset_path: ${{ env.App_Packages_Archive }}-v${{env.Version}}.gz
+        asset_name: ${{ env.App_Packages_Archive }}-v${{env.Version}}.gz
+        asset_content_type: application/gzip

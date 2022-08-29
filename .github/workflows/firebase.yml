@@ -1,0 +1,59 @@
+# This is a basic workflow that is manually triggered
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+name: Build React Firebase
+on:
+  workflow_dispatch:
+    branches: [ ESP32 ]
+    inputs:
+      name:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Iniciar a geração de frontend no firebase'
+        # Default value if no value is explicitly provided
+        default: 'Iniciar'
+        # Input has to be provided for the workflow to run
+        required: true
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    env:
+      Version: "1.0.${{ github.run_number }}"
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@master
+
+      - name: Change pwa version
+        uses: microsoft/variable-substitution@v1 
+        with:
+          files: "pwa/package.json"
+        env:
+          version: ${{ env.Version }}
+
+      - name: Install Dependencies
+        run: npm install --prefix ./pwa
+
+      - name: Build
+        run: npm run build --prefix ./pwa
+
+      - name: Archive Production Artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: build
+          path: ./pwa/build
+
+      - name: Download Artifact
+        uses: actions/download-artifact@master
+        with:
+          name: build
+          path: ./pwa/build
+
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --message \"${{ github.event.head_commit.message }}\" --only hosting
+        env:
+          PROJECT_PATH : ./pwa
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          REACT_APP_URL: ${{ secrets.APP_URL }}
+          REACT_APP_API_MINION_TOKEN: ${{ secrets.API_MINION_TOKEN }}

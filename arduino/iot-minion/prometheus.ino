@@ -1,6 +1,5 @@
-float celsius = 0.0;
-float fahrenheit = 0.0;
-float humidity = 0.0;
+uint64_t sdcard_total;
+uint64_t sdcard_used;
 
 String getMetrics() {
   String p = "";
@@ -8,8 +7,13 @@ String getMetrics() {
   int sketch_size = ESP.getSketchSize();
   int flash_size =  ESP.getFreeSketchSpace();
   int available_size = flash_size - sketch_size;
+  int heap_size = ESP.getHeapSize();
+  int free_heap = ESP.getFreeHeap();
+  int psram_size = ESP.getPsramSize();
+  int free_psram_size = ESP.getFreePsram();
+  
   float temperature = ((temprature_sens_read() - 32) / 1.8);
-
+ 
   setMetric(&p, "esp32_uptime", String(millis()));
   setMetric(&p, "esp32_wifi_rssi", String(WiFi.RSSI()));
   setMetric(&p, "esp32_heap_size", String(ESP.getHeapSize()));
@@ -17,13 +21,40 @@ String getMetrics() {
   setMetric(&p, "esp32_sketch_size", String(sketch_size));
   setMetric(&p, "esp32_flash_size", String(flash_size));
   setMetric(&p, "esp32_available_size", String(available_size));
+  setMetric(&p, "esp32_heap_size", String(heap_size));
+  setMetric(&p, "esp32_free_heap", String(free_heap));
+  setMetric(&p, "esp32_psram_size", String(psram_size));
+  setMetric(&p, "esp32_free_psram_size", String(free_psram_size));
   setMetric(&p, "esp32_temperature", String(temperature));
   setMetric(&p, "esp32_boot_counter", String(getBootCounter()));  
-  setMetric(&p, "esp32_celsius", String(celsius));
-  setMetric(&p, "esp32_fahrenheit", String(fahrenheit));
-  setMetric(&p, "esp32_humidity", String(humidity));
-
+  setMetric(&p, "esp32_celsius", getTemperatureHumidity(celsius));
+  setMetric(&p, "esp32_fahrenheit", getTemperatureHumidity(fahrenheit));
+  setMetric(&p, "esp32_humidity", getTemperatureHumidity(humidity));
+  setMetric(&p, "esp32_eyes", readSensorStatus(RelayEyes));
+  setMetric(&p, "esp32_hat", readSensorStatus(RelayHat));
+  setMetric(&p, "esp32_blink", readSensorStatus(RelayBlink));
+  setMetric(&p, "esp32_shake", readSensorStatus(RelayShake));
+  setMetric(&p, "esp32_volume", String(getVolumeAudio()));
+  setMetric(&p, "esp32_sdcard_total", uint64ToString(sdcard_total));
+  setMetric(&p, "esp32_sdcard_used", uint64ToString(sdcard_used));
   return p;
+}
+
+String uint64ToString(uint64_t input) {
+  String result = "";
+  uint8_t base = 10;
+
+  do {
+    char c = input % base;
+    input /= base;
+
+    if (c < 10)
+      c +='0';
+    else
+      c += 'A' - 10;
+    result = c + result;
+  } while (input);
+  return result;
 }
 
 /**
@@ -40,6 +71,16 @@ void setMetric(String *p, String metric, String value) {
   *p += "" + metric + " ";
   *p += value;
   *p += "\n";
+}
+
+int getVolumeAudio() {
+  return preferences.getInt("volume");
+}
+
+void setVolumeAudio(int volume) { 
+  preferences.putInt("volume", volume);
+  //Ajusta o volume de saída
+  audio.setVolume(volume);
 }
 
 int getBootCounter() {
@@ -59,43 +100,40 @@ void closeStorage() {
   preferences.end();
 }
 
-void setCelsius() { 
-  // Leituras do sensor podem demorar até 5 segundos (o sensor e muito lento)
-  // Le a temperatura como Celsius (padrao)
-  celsius = dht.readTemperature();
-  delay(5000);
-  // Checa se qualquer leitura falha e saida mais cedo (para tentar de novo).
-  if (isnan(celsius)) {    
-    #ifdef DEBUG
-      Serial.println("Falha para ler temperatura em celsius do sensor DHT!");
-    #endif
-    celsius = 0.0;
+String getTemperatureHumidity(temperature_dht tipo) {
+  float valor = 0.0;
+  String feedName = "temperature";
+  if(dht.read()== 0){
+    // Leituras do sensor podem demorar até 2 segundos (o sensor DHT11 é muito lento)
+    switch(tipo) {
+      case celsius:
+        // Le a temperatura como Celsius (padrao)
+        valor = dht.readTemperature();
+        delay(2000);
+        break;
+      case fahrenheit:
+        valor = dht.readTemperature(true);
+        delay(2000);
+        break;
+      case humidity:
+        valor = dht.readHumidity();
+        feedName = "humidity";
+        delay(2000);
+        break;            
+    }  
+    // Checa se qualquer leitura falha e saida mais cedo (para tentar de novo).
+    if (isnan(valor)) {    
+      #ifdef DEBUG
+        Serial.println("Falha na leitura do tipo: "+String(tipo));
+      #endif
+      valor = 0.0;
+    }      
+  } else {
+    valor = 0.0;
   }
-}
-
-void setFahrenheit() {
-  // Leituras do sensor podem demorar até 5 segundos (o sensor e muito lento)
-  // Le a temperatura como Fahrenheit (isFahrenheit = true)
-  fahrenheit = dht.readTemperature(true);
-  delay(5000);
-  // Checa se qualquer leitura falha e saida mais cedo (para tentar de novo).
-  if (isnan(fahrenheit)) {    
-    #ifdef DEBUG
-      Serial.println("Falha para ler temperatura em fahrenheit do sensor DHT!");
-    #endif
-    fahrenheit = 0.0;
-  }
-}
-
-void setHumidity() {
-  // Leituras do sensor podem demorar até 5 segundos (o sensor e muito lento)
-  humidity = dht.readHumidity();
-  delay(5000);
-  // Checa se qualquer leitura falha e saida mais cedo (para tentar de novo).
-  if (isnan(humidity)){    
-    #ifdef DEBUG
-      Serial.println("Falha para ler umidade do sensor DHT!");
-    #endif
-    humidity = 0.0;
-  }
+  char buffer [MAX_PATH];
+  snprintf ( buffer, MAX_PATH, "%.1f", valor );   
+  // publish
+  client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
+  return String(buffer);
 }

@@ -1,19 +1,21 @@
 # IOT-Minion
 
-[![build-arduino](https://github.com/brunocantisano/iot-minion/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/brunocantisano/iot-minion/actions/workflows/build.yml)
+[![build-arduino](https://github.com/brunocantisano/iot-minion/actions/workflows/arduino.yml/badge.svg?branch=master)](https://github.com/brunocantisano/iot-minion/actions/workflows/arduino.yml)
 ![versão](https://img.shields.io/github/v/release/brunocantisano/iot-minion)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Naereen/StrapDown.js/blob/master/LICENSE)
 
-![working](assets/Working.gif)
+![working](../others/imgs/Working.gif)
 
 Robô caseiro feito na época da [quarentena](https://bigdata-covid19.icict.fiocruz.br/) com uma garrafa de sabonete líquido com o tema dos minions. [API](https://www.youtube.com/watch?v=OVvTv9Hy91Q&feature=emb_rel_pause) feita em REST e não SOAP. 😁
+
+![3 Laughing](../others/imgs/3laughing.gif)
 
 [SOAP 🆚 REST](https://www.infoq.com/br/articles/rest-soap-when-to-use-each/)
 
 A aplicação consiste em três desenvolvimentos: 
 
 - Backend feito na linguagem `C++` para rodar na placa [ESP32](https://pt.wikipedia.org/wiki/ESP32). Seu código-fonte encontra-se dentro da pasta `iot-minion`
-- Frontend feito com a metodologia de desenvolvimento de software chamada de [PWA](https://www.garagemdigital.io/nativo-hibrido-ou-pwa), usando a linguagem `React`. Seu código-fonte encontra-se na pasta raíz do projeto.
+- Frontend feito com a metodologia de desenvolvimento de software chamada de [PWA](https://garagem.ipiranga.io/nativo-hibrido-ou-pwa), usando a linguagem `React`. Seu código-fonte encontra-se na pasta raíz do projeto.
 - Interfaces de Conversação feita na linguagem `javascript` para ser utilizada no [Dialog Flow](https://en.wikipedia.org/wiki/Dialogflow) da Google. Encontra-se dentro da pasta `arduino/dialogFlow`
 
 ## Pre-requisitos
@@ -29,7 +31,7 @@ A aplicação consiste em três desenvolvimentos:
 ```python
 sudo apt-get install python3-serial -y
 ```
-<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="imgs/book.png" /></a>
+<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="../others/imgs/book.png" /></a>
 
 - **Não se esqueça de alterar as variáveis abaixo, que aparecem nos códigos do arduino (`credentials.h`) e dialogflow, para as suas chaves:**
 
@@ -37,11 +39,7 @@ sudo apt-get install python3-serial -y
 |--------------------------------|--------------------------------|
 | <AIO_USERNAME>                 | Adafruit                       |
 | <AIO_KEY>                      | Adafruit                       |
-| <API_TEXT2SPEECH_KEY>          | Google Text To Speech          |
 | <FIREBASE_API_KEY>             | Firebase API Key               |
-| <FIREBASE_USER_EMAIL>          | Firebase E-mail                |
-| <FIREBASE_USER_PASSWORD>       | Firebase Senha                 |
-| <FIREBASE_STORAGE_BUCKET_ID>   | Firebase Bucket Id             |
 | <WIFI_SSID>                    | WiFi SSID                      |
 | <WIFI_PASSWORD>                | WiFi Senha                     |
 | <API_MINION_TOKEN>             | Base64 Basic Auth              |
@@ -54,27 +52,9 @@ sudo apt-get install python3-serial -y
 - Firebase para armazenamento dos áudios utilizados neste projeto
 - `sonar-project.properties` para configurar o projeto a ser analisado pelo sonar-scanner.
 
-## Google Home e Google Assistente
+## Apresentação
 
-### Configurar rotinas do Google Assistant
-
-**Comandos de voz do google assistente** 👂
-
-  * `Ok Google, falar com o sentinela da garagem` 📣
-  * `Acordar` 🌄
-  * `Durma` 🌛
-  * `Estressar` 😠
-  * `Relaxar` 😆
-  * `Como está o clima na garagem?`, `Qual a umidade?`, `Qual a temperatura?` ⛅
-  * `Repita garagem` 🚗
-  * `Sorria 1`, `Sorria 2` 😃
-  * `Ola` 👋
-  * `Café da manhã`, `Lanche`, `Janta`, `Almoço`, `Fome` 🍌
-  * `Você já comeu`, `Você já jantou`, `Você já almoçou`, `Você já lanchou` 😊
-  * `Rock`, `Música`, `Toca uma música aí` 🎸 🤘
-  * `Lista de aplicações` 📜
-
-[![eruption minions](https://res.cloudinary.com/marcomontalbano/image/upload/v1594316625/video_to_markdown/images/youtube--5OQWZ3kCnpA-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://www.youtube.com/watch?v=5OQWZ3kCnpA "eruption minions")
+<a href="https://brunocantisano.github.io/apresentacao/index.html" target="_blank"><img src="../others/imgs/blah.gif" /></a>
 
 ## Minimizando o Html e o Json para o Swagger
 
@@ -82,7 +62,44 @@ sudo apt-get install python3-serial -y
  
 ### Adafruit☁️
 
-<a href="https://brunocantisano.github.io/minion/adafruit.html" target="_blank"><img src="imgs/book.png" /></a>
+<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="../others/imgs/book.png" /></a>
+
+## Gerando certificado auto assinado
+
+[Procedimento](https://www.ibm.com/docs/pt-br/api-connect/5.0.x?topic=profiles-generating-self-signed-certificate-using-openssl)
+Para gerar um certificado SSL autoassinado usando o OpenSSL, conclua as etapas a seguir:
+
+1) Anote o Nome comum (CN) do Certificado SSL. O CN é o nome completo do sistema que usa o certificado. Se você estiver usando DNS dinâmico, seu CN deverá ter um curinga, por exemplo: *.api.com. Caso contrário, use o nome do host ou o endereço IP configurado no Cluster de gateway (por exemplo: `minion.local`).
+
+2) Execute o comando OpenSSL a seguir para gerar sua chave privada e seu certificado público. Responda às perguntas e insira o Nome comum quando solicitado.
+
+```sh
+openssl genrsa -out key.pem 1024
+```
+
+3) Revise o certificado criado:
+
+```sh
+openssl req -x509 -out cert.pem -key key.pem -new -sha256 -subj /CN=minion.local/O=acme/C=BR/emailAddress=bruno.cantisano@gmail.com -addext "keyUsage=digitalSignature,keyEncipherment" -addext extendedKeyUsage=serverAuth
+```
+
+4) Combine sua chave e o certificado em um pacote configurável PKCS#12 (P12):
+
+```sh 
+openssl pkcs12 -inkey key.pem -in cert.pem -export -out certificate.p12
+```
+
+5) Valide seu arquivo P2.
+
+```sh
+openssl pkcs12 -in certificate.p12 -noout -info
+```
+
+6) Gerar arquivo `crt` a partir do arquivo `pem`
+
+```sh
+openssl x509 -outform der -in cert.pem -out cert.crt
+```
 
 ## APP 📱
 
@@ -91,7 +108,7 @@ npm run dev
 ```
 ## Referencias da placa ESP32
 
-![Pinout](assets/ESP32_PINOUT.png)
+![Pinout](../others/imgs/ESP32_PINOUT.png)
 
  📣 No código arduino foram utilizadas as seguintes portas
 
@@ -100,9 +117,15 @@ npm run dev
 | 13          | Chapéu       |
 | 14          | Olhos        |
 | 15          | Pisca        |
-| 25          | Audio        |
-| 26          | Treme        |
-| 27          | Temperatura  |
+| 22          | Treme        |
+| 33          | Temperatura  |
+| 5           | Cartão SD    |
+| 18          | Cartão SD    |
+| 19          | Cartão SD    |
+| 23          | Cartão SD    |
+| 25          | I2S - Audio  |
+| 26          | I2S - Audio  |
+| 27          | I2S - Audio  |
 
 ### Web Server
 
@@ -110,49 +133,19 @@ npm run dev
  * [Swagger](http://minion.local/swaggerUI)
  * [Swagger API](http://minion.local/swagger.json)
  
-<a href="https://brunocantisano.github.io/minion/index.html#page/22#" target="_blank"><img src="imgs/webserver.png" /></a>
+<a href="https://brunocantisano.github.io/minion/index.html#page/22#" target="_blank"><img src="../others/imgs/webserver.png" /></a>
 
 ### Upload de firmware
 
-![firmware e filesystem](assets/firmware_filesystem.png)
+![firmware e filesystem](../others/imgs/firmware_filesystem.png)
 
-![firmware e filesystem](assets/Elegant-OTA.png)
-
-### Configurações de código
-
-![google text2speech key](assets/google-cloud-platform-text2speech.png)
-
-### Informação Opcional 📣
-
-Como o IFTTT, até a presente data, não possui suporte para Google Assistant em Português, **se você não quiser usar o dialogflow com as funcionalidades de chatbot** e quiser somente mandar comandos como: `acender luz`, você pode utilizar o [IFTTT](https://www.bluelux.com.br/o-que-e-ifttt-como-ele-funciona/).
-
-👀 **Deve-se utilizar a opção `Rotinas` do Google Home, para criar comandos em Português que direcionam para as frases em inglês do IFTTT.**
-
-### Passos 📓
-
-- Acesse as configurações do Google Assistant
-- Selecione a opção `Rotinas`
-- Cadastre a frase em português e depois a ação em inglês. Para isso é necessário utilizar o aplicativo de Celular `Home`, que é utilizado para configurar o Google Home:
-
-<a href="https://brunocantisano.github.io/minion/index.html#page/22" target="_blank"><img src="imgs/google.png" /></a>
-
-   **Faça isso com as frases para ter o comando de voz em português, por outro lado os comandos só funcionarão em inglês**
-
-### Conversões de áudio 📓
-
-- Utilize o audacity para realizar as conversões para o caso de utilizar os seus audios customizados
-- Os arquivos devem estar no formato wav com unsigned 8 bits PCM, 16000 Hz, mono e com qualidade de 128kbps.
-
-<a href="https://brunocantisano.github.io/minion/index.html#page/22" target="_blank"><img src="imgs/audacity.png" /></a>
-
-   **Os audios utilizados já foram convertidos, basta subir para o seu storage no firebase**
+![firmware e filesystem](../others/imgs/Elegant-OTA.png)
 
 ## Tecnologias 💡
 
 - [x] [Git](https://pt.wikipedia.org/wiki/Git)
 - [x] [REST](https://pt.wikipedia.org/wiki/REST)
 - [x] [MQTT-Adafruit](https://io.adafruit.com/api/docs/#adafruit-io-http-api)
-- [x] [Chat Bot-Dialog Flow](https://en.wikipedia.org/wiki/Dialogflow)
 - [x] [IOT-Arduino ESP32](https://pt.wikipedia.org/wiki/ESP32)
 - [x] [React](https://pt.wikipedia.org/wiki/React_(JavaScript))
 - [x] [Swagger](https://swagger.io/)
@@ -164,13 +157,30 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
 - [x] [OTA para atualização do ESP32 pelo wifi](https://www.filipeflop.com/blog/atualizacao-de-software-ota-over-the-air-no-esp32/)
 - [x] [ElegantOTA-update de firmware e filesystem](https://randomnerdtutorials.com/esp32-ota-over-the-air-arduino/)
 
-## Roadmap 🚗
+## Google Home e Google Assistente
 
-- [ ] [Adicionar código Bluetooth - comunicação com o google home](https://howtomechatronics.com/tutorials/arduino/how-to-configure-pair-two-hc-05-bluetooth-module-master-slave-commands/)
+**Comandos de voz do google assistente** 👂
+
+  * `Ok Google, falar com o minion` 📣
+  * `Acordar` 🌄
+  * `Durma` 🌛
+  * `Estressar` 😠
+  * `Relaxar` 😆
+  * `Como está o clima?`, `Qual a temperatura?` ⛅
+  * `Qual a umidade?` ⛅
+  * `Repita garagem` 🚗
+  * `Sorria 1`, `Sorria 2` 😃
+  * `Ola` 👋
+  * `Café da manhã`, `Lanche`, `Janta`, `Almoço`, `Fome` 🍌
+  * `Você já comeu`, `Você já jantou`, `Você já almoçou`, `Você já lanchou` 😊
+  * `Rock`, `Música`, `Toca uma música aí` 🎸 🤘
+  * `Lista de aplicações` 📜
+
+[![eruption minions](https://res.cloudinary.com/marcomontalbano/image/upload/v1594316625/video_to_markdown/images/youtube--5OQWZ3kCnpA-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://www.youtube.com/watch?v=5OQWZ3kCnpA "eruption minions")
 
 ## Modelos 3D 👻
 
-[![Modelos 3D](imgs/3dmodels.png)](https://brunocantisano.github.io/minion/3d.html)
+[![Modelos 3D](../others/imgs/3dmodels.png)](https://brunocantisano.github.io/minion/index.html)
 
 
 <table>
@@ -200,15 +210,13 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
 - [Github Emoticons](https://gist.github.com/rxaviers/7360908)
 - [API Rest - Antonio Mancuso](https://mancusoa74.blogspot.com/2018/02/simple-http-rest-server-on-esp8266.html)
 - [Temperatura e umidade - DHT11](https://github.com/amiroffme/esp8266-dht11-webserver)
-- [O que é DialogFlow](https://www.youtube.com/watch?v=_jCHgH9rJbI)
-- [Ambiente DialogFlow](https://www.youtube.com/watch?v=Y1is5XDoiSM)
-- [Integrando Dialogflow com APIs externas](https://www.youtube.com/watch?v=n4IPOeFCDxI&feature=youtu.be)
 - [Audio files - Minion](https://www.soundboard.com/sb/minions "Minion_Audio_Files")
 - [Firebase - Storage](https://firebase.google.com/docs/storage "Subir arquivos no Storage")
 - [Conexão Wifi selecionada pelo Bluetooth](https://robotzero.one/esp32-wi-fi-connection-bluetooth/)
 - [Tocando audio pelo Esp32](https://circuitdigest.com/microcontroller-projects/esp32-based-audio-player)
 - [Pipeline no github action para projetos arduino](https://medium.com/swlh/how-to-create-an-automated-build-pipeline-for-your-arduino-project-1df9826f2a5e)
 - [Async Web Server Upload de arquivos](https://github.com/smford/esp32-asyncwebserver-fileupload-example/blob/master/example-01/example-01.ino)
+- [Async get params](https://techtutorialsx.com/2017/12/17/esp32-arduino-http-server-getting-query-parameters/)
 - [Evitando apertar botão de reset para upload de código](https://randomnerdtutorials.com/solved-failed-to-connect-to-esp32-timed-out-waiting-for-packet-header/)
 - [Criptografia](https://portal.vidadesilicio.com.br/seguranca-de-dados-com-aes/)
 - [Bluetooth Google Assistant](https://support.google.com/assistant/answer/9281916#zippy=%2Cuse-your-voice)
@@ -227,16 +235,16 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
 - [Visualizar imagens como livro](http://www.turnjs.com/)
 - [ESP32 com métricas para prometheus](https://github.com/douglaszuqueto/esp32-prometheus)
 - [Write binary file to SPIFFS](https://github.com/zenmanenergy/ESP8266-Arduino-Examples/blob/master/helloworld_read_write_text_file/file.ino)
--[ESP32: HTTPS web server](https://techtutorialsx.com/2019/04/07/esp32-https-web-server/
-)
+- [Write binary file to LittleFS](https://iotespresso.com/esp32-captive-portal-fetching-html-using-littlefs/)
+- [LittleFS esp32 issues](https://wellys.com/posts/esp32_issues/)
+- [ESP32 HTTPS web server](https://techtutorialsx.com/2019/04/07/esp32-https-web-server/)
+- [I2S MP3 Player](https://www.fernandok.com/2020/02/mp3-player-com-esp32-e-i2s.html)
+
 ## Vídeos de referência 🎥
 
 * [Site DC motor](https://techtutorialsx.com/2019/03/31/esp32-arduino-controlling-a-dc-motor-remotely-using-http)
-* [DialogFlow1](https://www.youtube.com/watch?v=VX7SSnvpj-8&feature=youtu.be)
-* [DialogFlow2](https://www.youtube.com/watch?v=5SoSjkK1OYM&feature=youtu.be)
-* [DialogFlow3](https://www.youtube.com/watch?v=7iMwmZgjX6o&feature=youtu.be)
-* [DialogFlow4](https://www.youtube.com/watch?v=n4IPOeFCDxI&feature=youtu.be)
 * [Google Actions](https://codelabs.developers.google.com/codelabs/actions-1/#0)
+* [Utilizando Obsidian para fazer apresentações como código](https://www.youtube.com/watch?v=LtBK_iNcVEQ)
 
 ## Peças
 
@@ -250,41 +258,53 @@ Como o IFTTT, até a presente data, não possui suporte para Google Assistant em
         </td>
         <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-1735283882-40-jumpers-macho-fmea-20cm-cabo-fios-protoboard-jumper-_JM?matt_tool=56291529&matt_word=&matt_source=google&matt_campaign_id=14303413604&matt_ad_group_id=125984287157&matt_match_type=&matt_network=g&matt_device=c&matt_creative=539354956218&matt_keyword=&matt_ad_position=&matt_ad_type=pla&matt_merchant_id=280311926&matt_product_id=MLB1735283882&matt_product_partition_id=1404886571258&matt_target_id=aud-615548715344:pla-1404886571258&gclid=CjwKCAiArOqOBhBmEiwAsgeLmegdNyfSJLVYgYEmbQR87zuYKnnv_xfrjt4CkfrT8n_qvDAVwoB_MhoCU4cQAvD_BwE"><img src="https://http2.mlstatic.com/D_NQ_NP_766177-MLB44261620026_122020-O.webp" width="100px;" alt="" /><br /><sub><b>Jumpers Macho Fêmea 20cm</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-1558103893-cabo-carregador-micro-usb-reforcado-amazon-kindle-paperwhite-_JM#searchVariation=65550515777&position=8&search_layout=stack&type=pad&tracking_id=72b4bc71-d5d4-44a1-923a-e238b35bb2b1&is_advertising=true&ad_domain=VQCATCORE_LST&ad_position=8&ad_click_id=MWRiZjFkNWItMzhkYy00Mjg4LTlmMzItOGM5MmQwOTUwZDU2"><img src="https://http2.mlstatic.com/D_NQ_NP_968405-MLB46586324827_072021-O.webp" width="100px;" alt="" /><br /><sub><b>1-Cabo Carregador Micro Usb</b></sub></a><br />
-        </td>
     </tr>
     <tr>
+        <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-1558103893-cabo-carregador-micro-usb-reforcado-amazon-kindle-paperwhite-_JM#searchVariation=65550515777&position=8&search_layout=stack&type=pad&tracking_id=72b4bc71-d5d4-44a1-923a-e238b35bb2b1&is_advertising=true&ad_domain=VQCATCORE_LST&ad_position=8&ad_click_id=MWRiZjFkNWItMzhkYy00Mjg4LTlmMzItOGM5MmQwOTUwZDU2"><img src="https://http2.mlstatic.com/D_NQ_NP_968405-MLB46586324827_072021-O.webp" width="100px;" alt="" /><br /><sub><b>1-Cabo Carregador Micro Usb</b></sub></a><br />
+        </td>
         <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-2012169907-carregador-tomada-plug-adaptador-fonte-usb-5v-20a-bivolt-_JM#position=9&search_layout=stack&type=pad&tracking_id=b5581a28-4201-43aa-aae7-51d7b4fc0720&is_advertising=true&ad_domain=VQCATCORE_LST&ad_position=9&ad_click_id=NzY5ZWQxY2EtMTkxYy00ZjQ3LTliZjgtMzkxMmFhOTQ1ZjU3"><img src="https://http2.mlstatic.com/D_NQ_NP_746337-MLB47387323442_092021-O.webp" width="100px;" alt="" /><br /><sub><b>1-Carregador Usb 5v 2A</b></sub></a><br />
         </td>
         <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-1992594677-motor-dc-pdvd-c-clump-_JM#position=1&search_layout=stack&type=item&tracking_id=4c89883c-e7af-4b0e-b7ad-7df39b293cd2"><img src="https://http2.mlstatic.com/D_NQ_NP_845648-MLB47249057175_082021-O.webp" width="100px;" alt="" /><br /><sub><b>1-Motor Dc</b></sub></a><br />
         </td>
         <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-2043197044-esp32-doit-devkit-com-esp32-wroom-32d-e-certif-anatel-_JM#position=3&search_layout=grid&type=item&tracking_id=2c3c3ec4-ef59-470a-995f-79bef8f8936f"><img src="https://http2.mlstatic.com/D_NQ_NP_880203-MLB47737034800_102021-O.webp" width="100px;" alt="" /><br /><sub><b>1-Esp32</b></sub></a><br />
-        </td>
+        </td>        
+    </tr>
+    <tr>
         <td align="center"><a href="https://www.mercadolivre.com.br/google-home-mini-com-asistente-virtual-google-assistant-charcoal-110v220v/p/MLB15541915?pdp_filters=category:MLB278167#searchVariation=MLB15541915&position=2&search_layout=grid&type=product&tracking_id=fd2918d9-8ccd-4ffd-881c-e407e1b52d0d"><img src="https://http2.mlstatic.com/D_NQ_NP_868365-MLA45255589079_032021-O.webp" width="100px;" alt="" /><br /><sub><b>1-Google Home Mini</b></sub></a><br />
         </td>
         <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-750803825-dht11-modulo-sensor-temp-umidade-arduino-esp8266-_JM?matt_tool=40343894&matt_word=&matt_source=google&matt_campaign_id=14303413655&matt_ad_group_id=125984293117&matt_match_type=&matt_network=g&matt_device=c&matt_creative=539354956680&matt_keyword=&matt_ad_position=&matt_ad_type=pla&matt_merchant_id=325976021&matt_product_id=MLB750803825&matt_product_partition_id=1404886571418&matt_target_id=aud-1457490208988:pla-1404886571418&gclid=CjwKCAiArOqOBhBmEiwAsgeLmamL3b46VP1gsx7S2CZZ2odSHwNrvpDnzL7aIVHiAol9rn9POd-mxBoCIXEQAvD_BwE"><img src="https://http2.mlstatic.com/D_NQ_NP_972488-MLB44509250054_012021-O.webp" width="100px;" alt="" /><br /><sub><b>1-Dht11 Modulo Sensor Temp Umidade</b></sub></a><br />
-        </td>
-    </tr>
-    <tr>
-        <td align="center"><a href="https://www.vespoliprofumi.com/it/linea-bambini-walt-disney/4524-minions-bagnoschiuma-3d-per-bambini-500-ml-con-dispenser-663350066289.html"><img src="https://www.vespoliprofumi.com/5978-thickbox_default/minions-bagnoschiuma-3d-per-bambini-500-ml-con-dispenser.jpg" width="100px;" alt="" /><br /><sub><b>1-Recipiente de sabão líquido dos minions</b></sub></a><br />
+        </td>  
+        <td align="center"><a href="https://www.vespoliprofumi.com/it/linea-bambini-walt-disney/4524-minions-bagnoschiuma-3d-per-bambini-500-ml-con-dispenser-663350066289.html"><img src="https://m.media-amazon.com/images/I/61dhQkcKGhL._AC_SY550_.jpg" width="100px;" alt="" /><br /><sub><b>1-Recipiente de sabão líquido dos minions</b></sub></a><br />
         </td>
         <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-2001780570-mini-chapeu-de-palha-boneca-dog-para-decoraco-12cm-loja-_JM?matt_tool=58936140&matt_word=&matt_source=google&matt_campaign_id=14300471974&matt_ad_group_id=127611133362&matt_match_type=&matt_network=g&matt_device=c&matt_creative=539425454119&matt_keyword=&matt_ad_position=&matt_ad_type=pla&matt_merchant_id=485086757&matt_product_id=MLB2001780570&matt_product_partition_id=1397999322603&matt_target_id=pla-1397999322603&gclid=CjwKCAiArOqOBhBmEiwAsgeLmQKhPbiOyBsXihZ57dU2UC5CT7eD2qIJbhmy8v5kflBRG1RbKav-_xoCs9sQAvD_BwE"><img src="https://http2.mlstatic.com/D_NQ_NP_895777-MLB47273532723_082021-O.webp" width="100px;" alt="" /><br /><sub><b>1-Chapéu de palha</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-2130299507-brinquedo-lanca-gira-helice-pirocoptero-com-luz-crianca-_JM#position=3&search_layout=grid&type=item&tracking_id=505acd45-b47c-4456-83e0-84137f18b30d"><img src="http://2.bp.blogspot.com/-FWv-8m8g-1Y/U4QETxVzcGI/AAAAAAAAjpU/lV-SBM7B-8U/s1600/propaganda+do+pirulito+pirocoptero.jpg" width="100px;" alt="" /><br /><sub><b>1-Hélice de pirulito pirocoptero</b></sub></a><br />
+    </tr>
+    <tr>        
+        <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-2130299507-brinquedo-lanca-gira-helice-pirocoptero-com-luz-crianca-_JM#position=3&search_layout=grid&type=item&tracking_id=505acd45-b47c-4456-83e0-84137f18b30d"><img src="https://http2.mlstatic.com/D_NQ_NP_867104-MLB49155003648_022022-O.webp" width="100px;" alt="" /><br /><sub><b>1-Hélice de pirulito pirocoptero</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://produto.mercadolivre.com.br/MLB-1264850017-lm386-modulo-amplificador-de-audio-arduino-_JM#position=2&search_layout=grid&type=item&tracking_id=9009ce70-9c90-40c2-aa83-acce30ec4ce1"><img src="https://http2.mlstatic.com/D_NQ_NP_815109-MLB31311164657_072019-O.webp" width="100px;" alt="" /><br /><sub><b>1-Lm386 Modulo Amplificador De Áudio - Arduino</b></sub></a><br />
+        <td align="center"><a href="https://www.filipeflop.com/produto/modulo-cartao-micro-sd/"><img src="https://www.filipeflop.com/wp-content/uploads/2017/07/SKU122168a.jpg" width="100px;" alt="" /><br /><sub><b>1-Módulo Cartão Micro SD</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://www.usinainfo.com.br/mini-alto-falante/mini-alto-falante-2w-4-ohms-50mm-para-projetos-yd50-5683.html"><img src="https://www.usinainfo.com.br/1018139-thickbox_default/mini-alto-falante-2w-4-ohms-50mm-para-projetos-yd50.jpg" width="100px;" alt="" /><br /><sub><b>1-Mini Alto-falante 2W 4 Ohms 50mm </b></sub></a><br />
-        </td>
+        <td align="center"><a href="https://shopee.com.br/sou%E2%98%AC-CJMCU-1334-DAC-Module-UDA1334A-Stereo-Decoder-Board-I2S-Output-Interface-Sound-Frequency-Decoding-Module-for-3.3V-to-5V-i.290382738.11917876698"><img src="https://www.baudaeletronica.com.br/media/catalog/product/cache/1/image/578x/9df78eab33525d08d6e5fb8d27136e95/u/d/uda1334a.jpg" width="100px;" alt="" /><br /><sub><b>1-UDA1334A</b></sub></a><br />
+        </td>                
     </tr>
 </table>
-
-## Certificado
-
-- [text2speech.crt](docs/Builtin_Object_Token_GTS_Root_R1.crt)
 
 ## Bugs 🐛
 
 - Em caso de encontrar algum bug, abra um pull request
 
-## Lembrem-se: enquanto esperamos pela vacina, 💉 devemos lavar bem as mãos 💦👏🙌 e usar máscara 😷, a pandemia vai passar!
+![Sick](https://cdn180.picsart.com/231018569019212.png?to=crop&type=webp&r=264x480&q=85)
+![Doctor](../others/imgs/minion-doctor.png)
+
+## Lembrem-se:
+
+**Devemos:**
+* Lavar bem as mãos 💦👏🙌
+* Evitar aglomerações
+    ![Aglomeracao](../others/imgs/aglomeracao.gif)
+* Usar máscara 😷
+
+A pandemia vai passar!
+
+**💉 VACINA SIM 💉**
+

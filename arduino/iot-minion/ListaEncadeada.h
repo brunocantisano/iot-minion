@@ -157,7 +157,7 @@ ListNode<T>* ListaEncadeada<T>::getNode(int index){
 		return current;
 	}
 
-	return false;
+	return NULL;
 }
 
 template<typename T>

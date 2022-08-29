@@ -1,1 +1,0 @@
-Wemos and LiPo battery case by MecaHumAnimal on Thingiverse: https://www.thingiverse.com/thing:4668578

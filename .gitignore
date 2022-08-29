@@ -1,0 +1,8 @@
+pwa/node_modules
+pwa/build
+build-wrapper-linux-x86
+pwa/.env
+.vscode/
+.firebase
+*.pem
+*.crt

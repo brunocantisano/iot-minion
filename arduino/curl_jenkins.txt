@@ -1,7 +1,0 @@
-curl --location --request POST 'minion.local/list' \
---header 'Content-Type: application/json' \
--d '{
-    "name": "garagem-auth",
-    "language": "java",
-    "description": "quebrou"
-}'

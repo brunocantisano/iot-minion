@@ -1,43 +1,49 @@
 #include "Credentials.h"
+#include "ListaEncadeada.h"
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 #include <ESPmDNS.h>
-#include <Update.h>
-#include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
-#include <WiFiClientSecure.h>
 #include <WiFi.h>
+#include <WiFiClient.h>
 #include <PubSubClient.h>
-#include "SPIFFS.h"
-#include "ListaEncadeada.h"
 #include <Preferences.h>
-#include <Firebase_ESP_Client.h>
-//Provide the token generation process info.
-#include <addons/TokenHelper.h>
+#include <SPI.h>
+#include <SD.h>
+#include <Audio.h>
 
-extern "C" {
-#include "crypto/base64.h"
-}
-
-#include "soc/timer_group_struct.h"
-#include "soc/timer_group_reg.h"
+#define FILESYSTEM "LittleFS"
+#define CONFIG_LITTLEFS_FOR_IDF_3_2
+#define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
+#include <LITTLEFS.h> 
 
 #define DEBUG
 #define SERIAL_PORT                115200
-#define TEMPERATURE_DELAY          60000
 //Rest API
 #define HTTP_REST_PORT             80
-
+//Volume
+#define DEFAULT_VOLUME             70
 #define RelayHat                   13
 #define RelayEyes                  14
 #define RelayBlink                 15
-#define RelayAudio                 25
-#define RelayShake                 26
-#define TemperatureHumidity        27
+#define RelayShake                 22
+#define TemperatureHumidity        33
 
-#define MAX_STRING_LENGTH          10000
+//Pinos de conexão do ESP32 e o módulo de cartão SD
+#define SD_CS                      5
+#define SCK                        18
+#define MISO                       19
+#define MOSI                       23
+//
+//Pinos de conexão do ESP32-I2S e o módulo I2S/DAC CJMCU 1334
+#define I2S_DOUT                   25
+#define I2S_LRC                    26
+#define I2S_BCLK                   27
+
+#define MAX_STRING_LENGTH          2000
+#define MAX_PATH                   256
 
 /* 200 OK */
 #define HTTP_OK                    200
@@ -51,11 +57,8 @@ extern "C" {
 #define HTTP_CONFLICT              409
 
 Preferences preferences;
-
-//Define Firebase Data object
-FirebaseData fbdo;
-FirebaseAuth auth;
-FirebaseConfig config;
+//Cria o objeto que representará o áudio
+Audio audio;
 //---------------------------------//
 
 /************* lista de aplicacoes jenkins *************/
@@ -64,6 +67,14 @@ class Application {
     String name;
     String language;
     String description;
+};
+/******************************************************/
+/************** lista de mídias no sdcard *************/
+class Media {
+  public:
+    String name;
+    int size;
+    String lastModified;
 };
 /******************************************************/
 /******************* lista de sensores ****************/
@@ -76,14 +87,23 @@ class ArduinoSensorPort {
 };
 /******************************************************/
 
+typedef enum {
+  celsius,
+  fahrenheit,
+  humidity
+} temperature_dht;
+
 /* versão do firmware */
-const char version[] = API_VERSION;
+const char version[] PROGMEM = API_VERSION;
 
 // Lista de sensores
 ListaEncadeada<ArduinoSensorPort*> sensorListaEncadeada = ListaEncadeada<ArduinoSensorPort*>();
 
 // Lista de aplicacoes do jenkins
 ListaEncadeada<Application*> applicationListaEncadeada = ListaEncadeada<Application*>();
+
+// Lista de media no sdcard
+ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -93,92 +113,14 @@ DHT dht(TemperatureHumidity, DHT11);
 
 AsyncWebServer *server;               // initialise webserver
 
-bool fileWriteDecodingBase64(String name, String content){
-  //abre o arquivo para escrita.
-  //Modos:
-  //"r" Abre um arquivo para leitura. O arquivo deve existir.
-  //"w" Cria um arquivo vazio para escrita. Se já existir um arquivo com o mesmo nome, seu conteúdo é apagado e o arquivo é considerado um novo arquivo vazio.
-  //"a" Anexa a um arquivo. Operações de escrita, anexar dados no final do arquivo. O arquivo é criado se não existir.
-  //"r+" Abre um arquivo para atualizar tanto a leitura quanto a escrita. O arquivo deve existir.
-  //"w+" Cria um arquivo vazio para leitura e escrita.
-  //"a+" Abre um arquivo para leitura e anexação.:
-
-  //escolhendo w porque ambos escreveremos no arquivo e depois leremos no final desta função.
-  File file = SPIFFS.open(name.c_str(), "w");
-
-  //verifica o arquivo aberto:
-  if (!file) {
-    //se o arquivo não abrir, exibiremos uma mensagem de erro;
-    String errorMessage = "Can't open '" + name + "' !\r\n";
-    Serial.println(errorMessage);
-    return false;
-  } else{
-    //Para todos vocês, programadores C++ da velha escola, isso provavelmente faz todo o sentido, mas para o resto de nós, meros mortais, aqui está o que está acontecendo:
-    //O método file.write() tem dois argumentos, buffer e comprimento. Como este exemplo está escrevendo uma string de texto, precisamos converter o
-    //string de texto (chamada "content") em um ponteiro uint8_t. Se os ponteiros o confundem, você não está sozinho!
-    //Não quero entrar em detalhes sobre ponteiros aqui, vou fazer outro exemplo com cast e ponteiros, por enquanto esta é a sintaxe
-    //para escrever uma String em um arquivo de texto.
-
-    size_t outputLength;
- 
-    unsigned char * decoded = base64_decode((const unsigned char *)content.c_str(), content.length(), &outputLength);
-    file.write((uint8_t *)decoded, outputLength);
-    file.close();
-    
-    free(decoded);
-    
-    return true;
-  }
-}
-
-String fileRead(String name){
-  // lê o arquivo do SPIFFS e armazena-o como uma variável String
-  String contents;
-  File file = SPIFFS.open(name.c_str(), "r");
-  if (!file) {
-    String errorMessage = "Não é possível abrir '" + name + "' !\r\n";
-    Serial.println(errorMessage);
-    return "FILE ERROR";
-  }
-  else {
-    
-    // isso vai obter o número de bytes no arquivo e nos dar o valor em um inteiro
-    int fileSize = file.size();
-    int chunkSize=1024;
-    //Este é um array de caracteres para armazenar um pedaço do arquivo.
-    // Armazenaremos 1024 caracteres por vez
-    char buf[chunkSize];
-    int numberOfChunks=(fileSize/chunkSize)+1;
-    
-    int count=0;
-    int remainingChunks=fileSize;
-    for (int i=1; i <= numberOfChunks; i++){
-      if (remainingChunks-chunkSize < 0){
-        chunkSize=remainingChunks;
-      }
-      file.read((uint8_t *)buf, chunkSize-1);
-      remainingChunks=remainingChunks-chunkSize;
-      contents+=String(buf);
-    }
-    file.close();
-    return contents;
-  }
-}
-
-boolean fileRemove(String name){
-  // lê o arquivo do SPIFFS e armazena-o como uma variável String
-  SPIFFS.remove(name.c_str());
-  return true;
-}
-
 String getContent(const char* filename) {
   String payload="";
-  File file = SPIFFS.open(filename);
+  File file = LITTLEFS.open(filename, "r"); 
   if(!file){    
     #ifdef DEBUG
-      Serial.println("Falhou para abrir para leitura");
+      Serial.println(F("Falhou para abrir para leitura"));
     #endif
-    return "<p>Falhou ao abrir para leitura</p>";
+    return F("<p>Falhou ao abrir para leitura</p>");
   }
   while (file.available()) {
     payload += file.readString();
@@ -188,129 +130,28 @@ String getContent(const char* filename) {
 }
 
 bool writeContent(String filename, String content){
-  File file = SPIFFS.open(filename, FILE_WRITE);
+   File file = LITTLEFS.open(filename, FILE_WRITE);
+   return writeContent(&file, content);
+}
+
+bool writeContent(File * file, String content){
   if (!file) {    
     #ifdef DEBUG
-      Serial.println("Falhou para abrir para escrita");
+      Serial.println(F("Falhou para abrir para escrita"));
     #endif
     return false;
   }
-  if (file.print(content)) {    
+  if (file->print(content)) {    
     #ifdef DEBUG
-      Serial.println("Arquivo foi escrito");
+      Serial.println(F("Arquivo foi escrito"));
     #endif
   } else {    
     #ifdef DEBUG
-      Serial.println("Falha ao escrever arquivo");
+      Serial.println(F("Falha ao escrever arquivo"));
     #endif
   }
-  file.close();
+  file->close();
   return true; 
-}
-
-String postUtil(String url, String httpRequestData, String certificate, String key="") { 
-  String payload;
-  WiFiClientSecure *client = new WiFiClientSecure;
-  if(client) {
-    char certificadoArray[certificate.length()];
-    certificate.toCharArray(certificadoArray, certificate.length());
-    client -> setCACert(certificadoArray);
-    {
-      // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
-      HTTPClient https;      
-      #ifdef DEBUG
-        Serial.print("[HTTPS] begin...\n");
-      #endif
-      if (https.begin(*client, url)) {  // HTTPS
-        if(key.length()!=0){
-          https.addHeader("Authorization", "Bearer "+key);
-        }
-        https.addHeader("Content-Type", "application/json");
-        #ifdef DEBUG
-          Serial.print("[HTTPS] POST...\n");
-        #endif
-        // start connection and send HTTP header
-        int httpCode = https.POST(httpRequestData);
-        // httpCode will be negative on error
-        if (httpCode == HTTP_OK) {
-          // HTTP header has been send and Server response header has been handled          
-          #ifdef DEBUG
-            Serial.printf("[HTTPS] POST... code: %d\n", httpCode);
-          #endif
-          payload = https.getString();
-        } else {          
-          #ifdef DEBUG
-            Serial.printf("[HTTPS] POST... failed, error: %s\n", https.errorToString(httpCode).c_str());
-          #endif
-          payload = "{\"message\": \"Método não implementado\"}";
-        }
-        https.end();
-      } else {        
-        #ifdef DEBUG
-          Serial.printf("[HTTPS] Unable to connect\n");
-        #endif
-      }
-      // End extra scoping block
-    }
-    delete client;
-  }
-  return payload;
-}
-
-String getUtil(String url, String certificate, String filename="") {
-  String payload;
-  WiFiClientSecure *client = new WiFiClientSecure;
-  if(client) {
-    char certificadoArray[certificate.length()];
-    certificate.toCharArray(certificadoArray, certificate.length());
-    client -> setCACert(certificadoArray);
-    {
-      // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
-      HTTPClient https;      
-      #ifdef DEBUG
-        Serial.print("[HTTPS] begin...\n");
-      #endif      
-      if (https.begin(*client, url)) {  // HTTPS        
-        #ifdef DEBUG
-          Serial.print("[HTTPS] GET...\n");
-        #endif
-        // start connection and send HTTP header
-        int httpCode = https.GET();
-  
-        // httpCode will be negative on error
-        if (httpCode > 0) {
-          // HTTP header has been send and Server response header has been handled          
-          #ifdef DEBUG
-            Serial.printf("[HTTPS] GET... code: %d\n", httpCode);
-          #endif
-          // file found at server
-          if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-            payload = https.getString();
-            if(filename!=""){
-              writeContent(filename, payload);
-            }
-            #ifdef DEBUG
-              Serial.println(payload);
-            #endif
-          }
-        } else {          
-          #ifdef DEBUG
-            Serial.printf("[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
-          #endif          
-        }
-        https.end();
-      } else {        
-        #ifdef DEBUG
-          Serial.printf("[HTTPS] Unable to connect\n");
-        #endif
-      }
-      // End extra scoping block
-    }
-    delete client;
-  } else {
-    Serial.println("Unable to create client");
-  }
-  return payload;
 }
 
 char* substr(char* arr, int begin, int len)
@@ -368,29 +209,11 @@ int matchStar(int c, char* regexp, char* text) {
   return 0;
 }
 
-bool isCertificate(char* filename) {  
-  if (match(".*.crt", filename) != 0)
-  {
-    // matching offsets in ms.capture
-    return true;
-  }
-  return false;
-}
-
-bool isAudio(char* filename) {  
-  if (match(".audio.wav", filename) != 0)
-  {
-    // matching offsets in ms.capture
-    return true;
-  }
-  return false;
-}
-
 // list all of the files, if ishtml=true, return html rather than simple text
 String listFiles(bool ishtml) {
   String returnText = "";
-  Serial.println("Listando arquivos armazenados no SPIFFS");
-  File root = SPIFFS.open("/");
+  Serial.println(F("Listando arquivos armazenados no storage"));
+  File root = LITTLEFS.open("/");
   File foundfile = root.openNextFile();
   if (ishtml) {
     returnText += "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th></tr>";
@@ -400,16 +223,7 @@ String listFiles(bool ishtml) {
       int tam = strlen(foundfile.name());
       char temp[tam];
       strncpy(temp,foundfile.name(),tam);
-      if(isCertificate(temp)) {
-        // coloco a linha em negrito que tenha a extensão .crt
-        returnText += "<tr align='left'><td><b>" + String(foundfile.name()) + "</b></td><td><b>" + humanReadableSize(foundfile.size()) + "</b></td></tr>"; 
-      } else {
-        if(isAudio(temp)) { 
-          returnText += "<tr align='left'><td><a href='audio'>" + String(foundfile.name()) + "</a></td><td>" + humanReadableSize(foundfile.size()) + "</td></tr>";
-        } else {
-          returnText += "<tr align='left'><td>" + String(foundfile.name()) + "</td><td>" + humanReadableSize(foundfile.size()) + "</td></tr>";
-        }        
-      }      
+      returnText += "<tr align='left'><td>" + String(foundfile.name()) + "</td><td>" + humanReadableSize(foundfile.size()) + "</td></tr>";
     } else {
       returnText += "Arquivo: " + String(foundfile.name()) + "\n";
     }
@@ -432,16 +246,16 @@ String humanReadableSize(const size_t bytes) {
   else return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
 }
 
-// handles uploads
-void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();  
+// handles uploads to storage
+void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;  
   #ifdef DEBUG
     Serial.println(logmessage);
   #endif
   if (!index) {
-    logmessage = "Upload Start: " + String(filename);
+    logmessage = "Upload Iniciado: " + String(filename);
     // open the file on first call and store the file handle in the request object
-    request->_tempFile = SPIFFS.open("/" + filename, "w");
+    request->_tempFile = LITTLEFS.open("/" + filename, "w");
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
@@ -450,14 +264,14 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
   if (len) {
     // stream the incoming chunk to the opened file
     request->_tempFile.write(data, len);
-    logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+    logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
   }
 
   if (final) {
-    logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
+    logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
     // close the file handle as the upload is now done
     request->_tempFile.close();
     #ifdef DEBUG
@@ -482,12 +296,12 @@ String getDataHora() {
     return String(buffer);
 }
 
-int searchList(DynamicJsonDocument doc) {
+int searchList(String name, String language) {
   Application *app;
   for(int i = 0; i < applicationListaEncadeada.size(); i++){
     // Obtem a aplicação da lista
     app = applicationListaEncadeada.get(i);
-    if (doc["name"] == app->name && doc["language"]==app->language) {
+    if (name == app->name && language==app->language) {
       return i;
     }
   }
@@ -507,10 +321,10 @@ unsigned char* getStreamData(const char* filename) {
   unsigned char* payload;
   unsigned char ch;
   int i = 0;
-  File file = SPIFFS.open(filename);
+  File file = LITTLEFS.open(filename);
   if(!file){
     #ifdef DEBUG
-      Serial.println("Falhou para abrir para leitura");
+      Serial.println(F("Falhou para abrir para leitura"));
     #endif
     return NULL;
   }
@@ -537,10 +351,6 @@ bool check_authorization_header(AsyncWebServerRequest * request){
   return false;
 }
 
-String getJsonText2Speech() {
-  return "{\"languageCode\": \"pt-BR\",\"voiceName\": \"pt-PT-Wavenet-A\",\"ssmlGender\": \"FEMALE\",\"audioEncoding\": \"LINEAR16\",\"text2SpeechHost\": \"texttospeech.googleapis.com\",\"text2SpeechHttpsPort\": 443,\"fingerprint\": \"7F 4A A6 9D A6 A8 B5 A6 48 AE C5 5A 03 4C B8 B0 25 32 B8 7F\"}";
-}
-
 bool addSensor(byte id, byte gpio, byte status, char* name) {
   ArduinoSensorPort *arduinoSensorPort = new ArduinoSensorPort(); 
   arduinoSensorPort->id = id;
@@ -563,16 +373,13 @@ bool loadSensorList()
   if(!ret) return false;
   ret=addSensor(3, RelayBlink, LOW, "blink");
   if(!ret) return false;
-  ret=addSensor(4, RelayAudio, LOW, "audio");
+  ret=addSensor(4, RelayShake, LOW, "shake");
   if(!ret) return false;
-  ret=addSensor(5, RelayShake, LOW, "shake");
-  if(!ret) return false;
-  ret=addSensor(6, TemperatureHumidity, LOW, "temperature");
+  ret=addSensor(5, TemperatureHumidity, LOW, "temperature");
   if(!ret) return false;
 }
 
-bool readBodySensorData(DynamicJsonDocument doc, byte gpio) {
-  byte status = doc["status"];  
+bool readBodySensorData(byte status, byte gpio) {
   #ifdef DEBUG
     Serial.println(status);
   #endif
@@ -606,6 +413,10 @@ String readSensor(byte gpio){
   return data;
 }
 
+String readSensorStatus(byte gpio){
+  return String(digitalRead(gpio));
+}
+
 void addApplication(String name, String language, String description) {
   Application *app = new Application();
   app->name = name;
@@ -614,6 +425,16 @@ void addApplication(String name, String language, String description) {
 
   // Adiciona a aplicação na lista
   applicationListaEncadeada.add(app);
+}
+
+void addMedia(String name, int size, String lastModified) {
+  Media *media = new Media();
+  media->name = name;
+  media->size = size;
+  media->lastModified = lastModified;
+
+  // Adiciona a aplicação na lista
+  mediaListaEncadeada.add(media);
 }
 
 void saveApplicationList() {
@@ -625,19 +446,18 @@ void saveApplicationList() {
     JSONmessage += "{\"name\": \""+String(app->name)+"\",\"language\": \""+String(app->language)+"\",\"description\": \""+String(app->description)+"\"}"+',';
   }
   JSONmessage = '['+JSONmessage.substring(0, JSONmessage.length()-1)+']';
-  // Grava no spiffs
-  writeContent("/lista.json", JSONmessage);
-  
+  // Grava no storage
+  writeContent("/lista.json",JSONmessage); 
   // Grava no adafruit
-  client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str()); 
+  client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
 }
 
 int loadApplicationList() {
-  // Carrega do SPIFFS
+  // Carrega do storage
   String JSONmessage = getContent("/lista.json");
   if(JSONmessage == "") {    
     #ifdef DEBUG
-      Serial.println("Lista local de aplicações vazia");
+      Serial.println(F("Lista local de aplicações vazia"));
     #endif
     return -1;
   } else {
@@ -653,42 +473,45 @@ int loadApplicationList() {
   return 0;
 }
 
-bool loadListFromAdafruit() {
-  DynamicJsonDocument doc(MAX_STRING_LENGTH);
-  // ler do feed list no adafruit
-  String JSONmessage = (String)client.subscribe((String(MQTT_USERNAME)+String("/feeds/list")).c_str());
-  if(JSONmessage == "") {    
-    #ifdef DEBUG
-      Serial.println("Lista de aplicações vazia");
-    #endif    
-    return false;
-  } else {
-    DeserializationError error = deserializeJson(doc, JSONmessage);
-    if (error) {
-      return false;
-    }
-    for(int i = 0; i < doc.size(); i++){
-      addApplication(doc[i]["name"], doc[i]["language"], doc[i]["description"]);
-    }
-    return true;
-  }
+void loadI2S() {
+  pinMode(SD_CS, OUTPUT);
+  digitalWrite(SD_CS, HIGH);
+  SPI.begin(SCK, MISO, MOSI);
+  SPI.setFrequency(1000000);
+  SD.begin(SD_CS);
+
+  //Ajusta os pinos de conexão I2S
+  audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+
+  //Ajusta o volume de saída.
+  audio.setVolume(DEFAULT_VOLUME); // 0...21
 }
 
-void taskTemperature( void * parameter)
+void playSpeech(const char * mensagem)
 {
-  for( ;; ){    
-    #ifdef DEBUG
-      Serial.println("Task temperature");
-    #endif
-    setCelsius();
-    setFahrenheit();
-    setHumidity();
-    delay(60000);    
-  }
+  //Para executar uma síntese de voz
+  // audio.connecttospeech(mensagem, "pt");
+  // voice speed: 74%
+  // pitch: 52%
+  audio.connecttomarytts(mensagem, "it", "istc-lucia-hsmm");
+}
+
+void playMidia(const char * midia)
+{
+  char filenameMidia[strlen(midia)+1];
+  filenameMidia[0]='/';
+  filenameMidia[1]='\0';
+  strcat(filenameMidia, midia);
   #ifdef DEBUG
-    Serial.println("Ending task temperature");
+    Serial.printf("Arquivo a tocar: %s\n",filenameMidia);
   #endif  
-  vTaskDelete( NULL );
+  // exemplo: "/1.mp3"
+  audio.connecttoSD(filenameMidia);
+}
+
+void playRemoteMidia(const char * url)
+{ 
+  audio.connecttohost(url); //  128k mp3
 }
 
 void setup(void)
@@ -699,18 +522,18 @@ void setup(void)
     setupStorage();
     incrementBootCounter();
     //
-
+    
     #ifdef DEBUG
-      Serial.println("modo debug");
+      Serial.println(F("modo debug"));
     #else
-      Serial.println("modo produção");
+      Serial.println(F("modo produção"));
     #endif
 
     // carrega sensores
     bool load = loadSensorList();
     if(!load) {
       #ifdef DEBUG
-        Serial.println("Nao foi possivel carregar a lista de sensores!");
+        Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
       #endif
     }
           
@@ -724,162 +547,176 @@ void setup(void)
     pinMode(TemperatureHumidity, OUTPUT);
 
     #ifdef DEBUG
-      Serial.println("Versão do firmware: "+String(version));
+      Serial.println("Versão: "+String(version));
     #endif
 
     // conteudo da pasta data
-    if(!SPIFFS.begin(true)){      
+    if(!LITTLEFS.begin(true)){      
       #ifdef DEBUG
-        Serial.println("Erro aconteceu enquanto montava SPIFFS");
+        Serial.println(F("Erro aconteceu enquanto montava LittleFS"));
       #endif
     }
-  
     /* Conecta-se a rede wi-fi */
     WiFi.begin(WIFI_SSID, WIFI_PASSWD);
     while (WiFi.status() != WL_CONNECTED) 
     {
         delay(500);        
         #ifdef DEBUG
-          Serial.print(".");
+          Serial.print(F("."));
         #endif
-    }
+    }    
     
     #ifdef DEBUG
-      Serial.println("\n\nNetwork Configuration:");
-      Serial.println("----------------------");
-      Serial.print("         SSID: "); Serial.println(WiFi.SSID());
-      Serial.print("  Wifi Status: "); Serial.println(WiFi.status());
-      Serial.print("Wifi Strength: "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
-      Serial.print("          MAC: "); Serial.println(WiFi.macAddress());
-      Serial.print("           IP: "); Serial.println(WiFi.localIP());
-      Serial.print("       Subnet: "); Serial.println(WiFi.subnetMask());
-      Serial.print("      Gateway: "); Serial.println(WiFi.gatewayIP());
-      Serial.print("        DNS 1: "); Serial.println(WiFi.dnsIP(0));
-      Serial.print("        DNS 2: "); Serial.println(WiFi.dnsIP(1));
-      Serial.print("        DNS 3: "); Serial.println(WiFi.dnsIP(2));   
-      Serial.printf("Firebase Client v%s\n\n", FIREBASE_CLIENT_VERSION);
+      Serial.println(F("\n\nNetwork Configuration:"));
+      Serial.println(F("----------------------"));
+      Serial.print(F("         SSID: ")); Serial.println(WiFi.SSID());
+      Serial.print(F("  Wifi Status: ")); Serial.println(WiFi.status());
+      Serial.print(F("Wifi Strength: ")); Serial.print(WiFi.RSSI()); Serial.println(F(" dBm"));
+      Serial.print(F("          MAC: ")); Serial.println(WiFi.macAddress());
+      Serial.print(F("           IP: ")); Serial.println(WiFi.localIP());
+      Serial.print(F("       Subnet: ")); Serial.println(WiFi.subnetMask());
+      Serial.print(F("      Gateway: ")); Serial.println(WiFi.gatewayIP());
+      Serial.print(F("        DNS 1: ")); Serial.println(WiFi.dnsIP(0));
+      Serial.print(F("        DNS 2: ")); Serial.println(WiFi.dnsIP(1));
+      Serial.print(F("        DNS 3: ")); Serial.println(WiFi.dnsIP(2));   
     #endif
 
     startWebServer();
-
+        
     // exibindo rota /update para atualização de firmware e filesystem
     AsyncElegantOTA.begin(server, USER_FIRMWARE, PASS_FIRMWARE);
 
     setClock();
 
     /* Usa MDNS para resolver o DNS */
-    //Serial.println("mDNS configurado e inicializado;");    
+    //Serial.println(F("mDNS configurado e inicializado;"));    
     if (!MDNS.begin(HOST)) 
     { 
-        //http://minion.local        
+        //http://HOST.local        
         #ifdef DEBUG
-          Serial.println("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s...");
+          Serial.println(F("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s..."));
         #endif
         delay(1000);
         ESP.restart();        
     }
-    
+    // carrega lista de arquivos de media no SDCARD
+    if(loadSdCardMedias()) loadI2S(); //Configura e inicia o SPI para conexão com o cartão SD
+        
     //connecting to a mqtt broker
     client.setServer(MQTT_BROKER, MQTT_PORT);
     client.setCallback(callback);
-    if (!client.connected()) {
-      String client_id = "minion.local-"+String(WiFi.macAddress());
-      #ifdef DEBUG
-        Serial.printf("O cliente %s conecta ao mqtt broker publico\n", client_id.c_str());
-      #endif      
-      if (client.connect(client_id.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) {        
-        #ifdef DEBUG
-          Serial.println("Adafruit mqtt broker conectado");
-        #endif
-        // carrega lista a partir do SPIFFS
-        loadApplicationList();
-        // já carregou local, salvo local e no adafruit
-        saveApplicationList();
-      } else {
-        #ifdef DEBUG
-          Serial.printf("Falhou com o estado %d\n", client.state());
-          Serial.println("Nao foi possivel conectar com o broker mqtt. Por favor, verifique as credenciais e instale uma nova versão de firmware.");
-        #endif
-      }
-    }
-
-    /* asigning the firebase api key (required) */
-    config.api_key = FIREBASE_API_KEY;
-
-    /* assigning the user sign in credentials */
-    auth.user.email = FIREBASE_USER_EMAIL;
-    auth.user.password = FIREBASE_USER_PASSWORD;
-
-    /* assigning the callback function for the long running token generation task */
-    config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
-
-#if defined(ESP8266)
-    //required for large file data, increase Rx size as needed.
-    fbdo.setBSSLBufferSize(1024 /* Rx buffer size in bytes from 512 - 16384 */, 1024 /* Tx buffer size in bytes from 512 - 16384 */);
-#endif
-
-    Firebase.begin(&config, &auth);    
-    Firebase.reconnectWiFi(true);
-
-    // thread para ler sensor de temperatura e umidade a cada minuto
-    xTaskCreate(taskTemperature, "TaskTemperature", 1000, NULL, 1, NULL);
-    Serial.println("Minion funcionando!");
+    Serial.println(F("Minion funcionando!"));
 }
 
 void callback(char *topic, byte *payload, unsigned int length) {
   byte gpio;
-  bool lista = false;
   String message;
   
   #ifdef DEBUG
-    Serial.print("Message arrived in topic: ");
+    Serial.print(F("Mensagem que chegou no tópico: "));
     Serial.println(topic);
-    Serial.print("Message:");
+    Serial.print(F("Mensagem:"));
   #endif
           
   for (int i = 0; i < length; i++) {
      message+=(char) payload[i];
   }
-  if(strcmp(topic,(String(MQTT_USERNAME)+String("/feeds/eye")).c_str())==0) {
-    gpio = RelayEyes;
-  }
-  if(strcmp(topic,(String(MQTT_USERNAME)+String("/feeds/hat")).c_str())==0) {
-    gpio = RelayHat;
-  }
-  if(strcmp(topic,(String(MQTT_USERNAME)+String("/feeds/blink")).c_str())==0) {
-    gpio=RelayBlink;
-  }
-  if(strcmp(topic,(String(MQTT_USERNAME)+String("/feeds/shake")).c_str())==0) {
-    gpio=RelayShake;
-  }    
-  if(strcmp(topic,(String(MQTT_USERNAME)+String("/feeds/list")).c_str())==0) {
-    lista = true;
-  }
-  if(!lista) {
-    byte status = message=="ON"?1:0;
-    digitalWrite(gpio, status);    
-  } else {
-    #ifdef DEBUG
-      Serial.println(message);
-    #endif
-  }  
-  
   #ifdef DEBUG
-    Serial.println("-----------------------");
+    Serial.println(message);
+  #endif
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/eye")).c_str()) {
+    digitalWrite(RelayEyes, message=="ON"?1:0);
+  }
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/hat")).c_str()) {
+    digitalWrite(RelayHat, message=="ON"?1:0);
+  }
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/blink")).c_str()) {
+    digitalWrite(RelayBlink, message=="ON"?1:0);
+  }
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/shake")).c_str()) {
+    digitalWrite(RelayShake, message=="ON"?1:0);
+  }    
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/list")).c_str()) {
+    DynamicJsonDocument doc(MAX_STRING_LENGTH);
+    // ler do feed list no adafruit
+    if(message == "") {    
+      #ifdef DEBUG
+        Serial.println(F("Lista de aplicações vazia"));
+      #endif
+      // carrega lista a partir do storage      
+      if(loadApplicationList()>=0) saveApplicationList();
+    } else {
+      DeserializationError error = deserializeJson(doc, message);
+      if (error) {
+        #ifdef DEBUG
+          Serial.println(F("Erro ao fazer o parser da lista vindo do Adafruit"));
+        #endif
+      }
+      for(int i = 0; i < doc.size(); i++){
+        addApplication(doc[i]["name"], doc[i]["language"], doc[i]["description"]);
+      }
+    }
+  }
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/play")).c_str()) {
+    playMidia(message.c_str());
+    
+  }
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/talk")).c_str()) {
+    playSpeech(message.c_str());
+  }
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/volume")).c_str()) {
+    setVolumeAudio(atoi(message.c_str()));
+  }
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/temperature")).c_str()) {
+    getTemperatureHumidity(celsius);
+  }  
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/humidity")).c_str()) {
+    getTemperatureHumidity(humidity);
+  }  
+  #ifdef DEBUG
+    Serial.println(F("-----------------------"));
   #endif
 }
 
+void reconnect() {
+  // Loop até que esteja reconectado
+  while (!client.connected()) {
+    Serial.println("Tentando conexão com o servidor MQTT...");
+    String client_id = String(HOST)+".local-"+String(WiFi.macAddress());
+    #ifdef DEBUG
+      Serial.printf("O cliente %s conecta ao mqtt broker publico\n", client_id.c_str());
+    #endif      
+    if (client.connect(client_id.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) {
+      Serial.println(F("Adafruit mqtt broker conectado"));
+      // Subscribe
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/eye")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/hat")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/blink")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/shake")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/list")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/play")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/talk")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/volume")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/temperature")).c_str());
+      client.subscribe((String(MQTT_USERNAME)+String("/feeds/humidity")).c_str());
+      //
+    } else {
+      #ifdef DEBUG
+        Serial.printf("Falhou com o estado %d\nNao foi possivel conectar com o broker mqtt.\nPor favor, verifique as credenciais e instale uma nova versão de firmware.\nTentando novamente em 5 segundos.", client.state());
+      #endif
+      delay(5000);
+    }
+  }
+}
+
 void loop()
-{
-   if(client.connected()) {
-     client.loop();
-   }
-   // evitando o problema de:
-   // "Task watchdog got triggered. The following tasks did not feed the watchdog in time"
-   // para o downloads de midias do firebase
-   TIMERG0.wdt_wprotect=TIMG_WDT_WKEY_VALUE;
-   TIMERG0.wdt_feed=1;
-   TIMERG0.wdt_wprotect=0;
+{ 
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+  //Executa o loop interno da biblioteca audio
+  audio.loop();
 }
 
 #ifdef __cplusplus
