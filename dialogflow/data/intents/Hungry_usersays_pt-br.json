@@ -1,0 +1,73 @@
+[
+  {
+    "id": "3691ddbc-190f-4c0b-a7b0-bb24188d5d44",
+    "data": [
+      {
+        "text": "Café da manhã",
+        "meta": "@sys.location",
+        "alias": "location",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "ba19b397-98eb-4ab0-9917-7b3d4de6d4c6",
+    "data": [
+      {
+        "text": "Lanche",
+        "meta": "@sys.location",
+        "alias": "location",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "bda8077c-e14a-4388-b8db-000394e0d767",
+    "data": [
+      {
+        "text": "Janta",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "a87f1ea5-c0d1-48d2-bce9-509ec954f248",
+    "data": [
+      {
+        "text": "Almoço",
+        "meta": "@sys.location",
+        "alias": "location",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  },
+  {
+    "id": "f0a8862f-cab6-4d07-bd7f-9f2ac649d13b",
+    "data": [
+      {
+        "text": "Fome",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "pt-br",
+    "updated": 0
+  }
+]

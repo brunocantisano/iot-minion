@@ -1,0 +1,36 @@
+{
+  "id": "d751a865-57ba-4b4d-aecf-2e3bec7065c8",
+  "name": "Exit Conversation",
+  "auto": true,
+  "contexts": [],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "",
+      "affectedContexts": [],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "pt-br",
+          "speech": [
+            "Siga as cinco dicas para ajudar a combater o coronavírus:\n1º-Lave as mãos frequentemente,\n2º- Use o cotovelo para cobrir a tosse,\n3º-Não toque no rosto,\n4º-Mantenha distância segura,\n5º-Evite sair de casa, se possível.\nVamos superar esta doença!,\nTchau Tchau!"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": [],
+  "endInteraction": true
+}
