@@ -32,10 +32,12 @@
 #define D6                         12
 #define D7                         13
 #define D8                         15
+#define D9                         16
 
 #define RelayEyes                  D5
 #define RelayHat                   D7
 #define RelayBlink                 D8
+#define RelayShake                 D9
 #define TemperatureHumidity        D6
 #define MAX_STRING_LENGTH          200
 #define MAX_PATH                   256
@@ -118,6 +120,7 @@ Adafruit_MQTT_Client mqtt(&client, MQTT_BROKER, MQTT_PORT, MQTT_USERNAME, MQTT_P
 // Setup feeds called 'eye', 'hat', 'blink' and 'temperature' for subscribing to changes.
 Adafruit_MQTT_Subscribe eyeReadFeed = Adafruit_MQTT_Subscribe(&mqtt, MQTT_USERNAME"/feeds/eye"); // set adafruit FeedName
 Adafruit_MQTT_Subscribe hatReadFeed = Adafruit_MQTT_Subscribe(&mqtt, MQTT_USERNAME"/feeds/hat"); // set adafruit FeedName
+Adafruit_MQTT_Subscribe shakeReadFeed = Adafruit_MQTT_Subscribe(&mqtt, MQTT_USERNAME"/feeds/shake"); // set adafruit FeedName
 Adafruit_MQTT_Subscribe blinkReadFeed = Adafruit_MQTT_Subscribe(&mqtt, MQTT_USERNAME"/feeds/blink"); // set adafruit FeedName
 Adafruit_MQTT_Subscribe temperatureReadFeed = Adafruit_MQTT_Subscribe(&mqtt, MQTT_USERNAME"/feeds/temperature"); // set adafruit FeedName
 Adafruit_MQTT_Subscribe listReadFeed = Adafruit_MQTT_Subscribe(&mqtt, MQTT_USERNAME"/feeds/list"); // set adafruit FeedName
@@ -128,6 +131,7 @@ Adafruit_MQTT_Subscribe playReadFeed = Adafruit_MQTT_Subscribe(&mqtt, MQTT_USERN
 Adafruit_MQTT_Publish eyeWriteFeed = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/feeds/eye");
 Adafruit_MQTT_Publish hatWriteFeed = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/feeds/hat");
 Adafruit_MQTT_Publish blinkWriteFeed = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/feeds/blink");
+Adafruit_MQTT_Publish shakeWriteFeed = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/feeds/shake");
 Adafruit_MQTT_Publish temperatureWriteFeed = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/feeds/temperature");
 Adafruit_MQTT_Publish listWriteFeed = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/feeds/list");
 Adafruit_MQTT_Publish talkWriteFeed = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/feeds/talk");
@@ -152,8 +156,9 @@ void loadSensorList()
   addSensor(2, D7, LOW, "hat");
   addSensor(3, D6, LOW, "temperature");
   addSensor(4, D8, LOW, "blink");
-  addSensor(5, D2, LOW, "Bluetooth RX");
-  addSensor(6, D3, LOW, "Bluetooth TX");
+  addSensor(5, D9, LOW, "shake");
+  addSensor(6, D2, LOW, "Bluetooth RX");
+  addSensor(7, D3, LOW, "Bluetooth TX");
 }
 
 void addSensor(byte id, byte gpio, byte status, const char * name) {
@@ -258,6 +263,7 @@ void handle_UpdateSensors(){
   //"/sensor?type=eye"
   //"/sensor?type=hat"
   //"/sensor?type=blink"
+  //"/sensor?type=shake"
   server->on("/sensor", HTTP_PUT, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
@@ -271,6 +277,8 @@ void handle_UpdateSensors(){
           sensor = RelayHat;
         } else if (strcmp("blink", p->value().c_str())==0){
           sensor = RelayBlink;
+        } else if (strcmp("shake", p->value().c_str())==0){
+          sensor = RelayShake;
         }
       }
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
@@ -742,6 +750,20 @@ void readFeedFromAdafruitBlink() {
   }
 }
 
+void readFeedFromAdafruitShake() {
+  Serial.print(F("Lido: "));
+  Serial.println((char *)shakeReadFeed.lastread);
+  
+  if (EEPROM.read(2) == HIGH){
+    digitalWrite(RelayShake, LOW);
+    EEPROM.write(2, LOW);
+  }
+  else {
+    digitalWrite(RelayShake, HIGH);
+    EEPROM.write(2, HIGH);
+  }
+}
+
 char * readFeedFromAdafruitList() {
   Serial.print(F("Lido: "));
   Serial.println((char *)listReadFeed.lastread);
@@ -791,6 +813,13 @@ void lastState() {
   else {
     EEPROM.write(2, LOW);
   }  
+  // shake
+  if (EEPROM.read(3) == LOW){
+    EEPROM.write(3, HIGH);
+  }
+  else {
+    EEPROM.write(3, LOW);
+  }    
 }
 
 void incomingSubscriptionPackets(){
@@ -805,6 +834,9 @@ void incomingSubscriptionPackets(){
     if (subscription == &blinkReadFeed) {
       readFeedFromAdafruitBlink();
     }
+    if (subscription == &shakeReadFeed) {
+      readFeedFromAdafruitShake();
+    }    
     if (subscription == &temperatureReadFeed) {
        getTemperatureHumidity(celsius);
     }
@@ -882,6 +914,8 @@ void setup(void) {
   
   pinMode(RelayEyes, OUTPUT);
   pinMode(RelayHat, OUTPUT);
+  pinMode(RelayBlink, OUTPUT);
+  pinMode(RelayShake, OUTPUT);
   pinMode(TemperatureHumidity, OUTPUT);
   EEPROM.begin(512);
   lastState(); //recover last state of relays
@@ -909,6 +943,7 @@ void setup(void) {
   mqtt.subscribe(&eyeReadFeed);
   mqtt.subscribe(&hatReadFeed);
   mqtt.subscribe(&blinkReadFeed);
+  mqtt.subscribe(&shakeReadFeed);
   mqtt.subscribe(&temperatureReadFeed);
   mqtt.subscribe(&listReadFeed);
   mqtt.subscribe(&talkReadFeed);
