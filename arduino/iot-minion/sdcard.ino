@@ -62,6 +62,34 @@ bool loadSdCardMedias() {
 }
 
 // list all of the files, if ishtml=true, return html rather than simple text
+const char * listFiles(bool ishtml) {
+  String returnText = "";
+  Serial.println(F("Listando arquivos armazenados no storage"));
+  File root = LITTLEFS.open("/");
+  File foundfile = root.openNextFile();
+  if (ishtml) {
+    returnText += "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th></tr>";
+  }
+  while (foundfile) {
+    if (ishtml) {
+      int tam = strlen(foundfile.name());
+      char temp[tam];
+      strncpy(temp,foundfile.name(),tam);
+      returnText += "<tr align='left'><td>" + String(foundfile.name()) + "</td><td>" + humanReadableSize(foundfile.size()) + "</td></tr>";
+    } else {
+      returnText += "Arquivo: " + String(foundfile.name()) + "\n";
+    }
+    foundfile = root.openNextFile();
+  }
+  if (ishtml) {
+    returnText += "</table>";
+  }
+  root.close();
+  foundfile.close();
+  return returnText.c_str();
+}
+
+// list all of the files, if ishtml=true, return html rather than simple text
 String listFilesSD(File dir, int numTabs) {
   String returnText = "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th><th align='left'>Modificação</th></tr>";
   char lastModified[MAX_PATH] = {'\0'} ; 
@@ -70,18 +98,19 @@ String listFilesSD(File dir, int numTabs) {
     if (!entry) {
       // no more files
       break;
-    }   
-    // Serial.print(entry.name());
-    if (entry.isDirectory()) {
-      listFilesSD(entry, numTabs + 1);
     } else {
-      // files have sizes, directories do not
-      time_t lw = entry.getLastWrite();
-      struct tm * tmstruct = localtime(&lw);
-      sprintf(lastModified, "%d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);      
-      addMedia(String(entry.name()), entry.size(), lastModified);
-      returnText += "<tr align='left'><td>" + String(entry.name()) + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + String(lastModified) + "</td></tr>";
-    }
+      // Serial.print(entry.name());
+      if (entry.isDirectory()) {
+        listFilesSD(entry, numTabs + 1);
+      } else {
+        // files have sizes, directories do not
+        time_t lw = entry.getLastWrite();
+        struct tm * tmstruct = localtime(&lw);
+        sprintf(lastModified, "%d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);      
+        addMedia(entry.name(), entry.size(), lastModified);
+        returnText += "<tr align='left'><td>" + String(entry.name()) + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + String(lastModified) + "</td></tr>";
+      }
+    }    
     entry.close();
   }
   returnText += "</table>";

@@ -69,6 +69,9 @@ void startWebServer() {
   // se não se enquadrar em nenhuma das rotas
   handle_OnError();
 
+  // tratando requisições como HTTPS
+  handle_SSL();
+
   // permitindo todas as origens. O ideal é trocar o '*' pela url do frontend poder utilizar a api com maior segurança
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Credentials", "true");
@@ -81,6 +84,41 @@ void startWebServer() {
   #ifdef DEBUG
     Serial.println(WEB_SERVER_STARTED);
   #endif
+}
+
+// handles uploads to storage
+void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;  
+  #ifdef DEBUG
+    Serial.println(logmessage);
+  #endif
+  if (!index) {
+    logmessage = "Upload Iniciado: " + String(filename);
+    // open the file on first call and store the file handle in the request object
+    request->_tempFile = LITTLEFS.open("/" + filename, "w");
+    #ifdef DEBUG
+      Serial.println(logmessage);
+    #endif
+  }
+
+  if (len) {
+    // stream the incoming chunk to the opened file
+    request->_tempFile.write(data, len);
+    logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+    #ifdef DEBUG
+      Serial.println(logmessage);
+    #endif
+  }
+
+  if (final) {
+    logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
+    // close the file handle as the upload is now done
+    request->_tempFile.close();
+    #ifdef DEBUG
+      Serial.println(logmessage);
+    #endif
+    request->redirect("/");
+  }
 }
 
 void handle_MinionLogo(){
@@ -114,7 +152,7 @@ void handle_Home(){
     bool exists = false;
     exists = LITTLEFS.exists("/home.html");
     if(exists){
-      html = getContent("/home.html");
+      html = String(getContent("/home.html"));
       // versao do firmware: https://semver.org/
       html.replace("0.0.0",String(version));
       html.replace("AIO_USERNAME",String(MQTT_USERNAME));
@@ -126,7 +164,7 @@ void handle_Home(){
 
 void handle_CICD(){
   server->on("/cicd", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = getContent("/cicd.html");
+    String html = String(getContent("/cicd.html"));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     html.replace("AIO_SERVER",String(MQTT_BROKER));
     html.replace("AIO_USERNAME",String(MQTT_USERNAME));
@@ -137,7 +175,7 @@ void handle_CICD(){
 
 void handle_Swagger(){
   server->on("/swagger.json", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = getContent("/swagger.json");
+    String html = String(getContent("/swagger.json"));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     html.replace("0.0.0",version);
     html.replace("HOST_MINION",String(HOST)+".local");
@@ -147,7 +185,7 @@ void handle_Swagger(){
 
 void handle_SwaggerUI(){
   server->on("/swaggerUI", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = getContent("/swaggerUI.html");
+    String html = String(getContent("/swaggerUI.html"));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     html.replace("HOST_MINION",String(HOST)+".local");
     request->send(HTTP_OK, FILE_TYPE_HTML, html);
@@ -157,7 +195,7 @@ void handle_SwaggerUI(){
 void handle_Health(){
   server->on("/health", HTTP_GET, [](AsyncWebServerRequest *request) {
     String mqttConnected = client.connected()?"true":"false";
-    String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"date\": \""+getDataHora()+"\",\"url\": \"/health\",\"mqtt\": \""+mqttConnected+"\",\"version\": \""+version+"\",\"ip\": \""+IpAddress2String(WiFi.localIP())+"\"}";
+    String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"date\": \""+String(getDataHora())+"\",\"url\": \"/health\",\"mqtt\": \""+mqttConnected+"\",\"version\": \""+version+"\",\"ip\": \""+String(IpAddress2String(WiFi.localIP()))+"\"}";
     request->send(HTTP_OK, FILE_TYPE_JSON, JSONmessage);
   });
 }
@@ -224,7 +262,7 @@ void handle_Sensors() {
           relayPin = RelayShake;
         }        
       }
-      request->send(HTTP_OK, FILE_TYPE_JSON, readSensor(relayPin));
+      request->send(HTTP_OK, FILE_TYPE_JSON, String(readSensor(relayPin)));
     } else {
       request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
     }
@@ -234,7 +272,6 @@ void handle_Sensors() {
 void handle_Lists(){
   server->on("/lists", HTTP_GET, [](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
-      getContent("/lista.json");
       String JSONmessage;
       Application *app;
       for(int i = 0; i < applicationListaEncadeada.size(); i++){
@@ -286,7 +323,7 @@ void handle_InsertTalk(){
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {      
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
-      String JSONmessageBody = getData(data, len);
+      String JSONmessageBody = String(getData(data, len));
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
@@ -314,7 +351,7 @@ void handle_InsertPlay(){
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
-      String JSONmessageBody = getData(data, len);
+      String JSONmessageBody = String(getData(data, len));
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
@@ -546,10 +583,10 @@ void handle_UploadStorage() {
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
-    String html = getContent("/uploadStorage.html");
+    String html = String(getContent("/uploadStorage.html"));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
-      html.replace("FILELIST",listFiles(true));
+      html.replace("FILELIST",String(listFiles(true)));
       html.replace("FREESTORAGE",humanReadableSize((LITTLEFS.totalBytes() - LITTLEFS.usedBytes())));
       html.replace("USEDSTORAGE",humanReadableSize(LITTLEFS.usedBytes()));
       html.replace("TOTALSTORAGE",humanReadableSize(LITTLEFS.totalBytes()));
@@ -570,7 +607,7 @@ void handle_ListSdcard() {
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
-    String html = getContent("/listSdcard.html");
+    String html = String(getContent("/listSdcard.html"));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
       File entry =  SD.open("/");
@@ -591,4 +628,21 @@ void handle_OnError(){
     }
     request->send(HTTP_NOT_FOUND, FILE_TYPE_TEXT, NOT_FOUND_ROUTE);
   });
+}
+
+void handle_SSL(){
+  // Até o momento não existe biblioteca que funcione HTTPS com o ESP32
+}
+
+bool check_authorization_header(AsyncWebServerRequest * request){
+  int headers = request->headers();
+  int i;
+  for(i=0;i<headers;i++){
+    AsyncWebHeader* h = request->getHeader(i);
+    //Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+    if(h->name()=="Authorization" && h->value()=="Basic "+String(API_MINION_TOKEN)){
+      return true;
+    }
+  }
+  return false;
 }

@@ -1,4 +1,5 @@
 #include "Credentials.h"
+#include "Tipos.h"
 #include "ListaEncadeada.h"
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -19,7 +20,7 @@
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
 #include <LITTLEFS.h> 
 
-#define DEBUG
+//#define DEBUG
 #define SERIAL_PORT                115200
 //Rest API
 #define HTTP_REST_PORT             80
@@ -61,38 +62,6 @@ Preferences preferences;
 Audio audio;
 //---------------------------------//
 
-/************* lista de aplicacoes jenkins *************/
-class Application {
-  public:
-    String name;
-    String language;
-    String description;
-};
-/******************************************************/
-/************** lista de mídias no sdcard *************/
-class Media {
-  public:
-    String name;
-    int size;
-    String lastModified;
-};
-/******************************************************/
-/******************* lista de sensores ****************/
-class ArduinoSensorPort {
-  public:
-    char* name;
-    byte id;
-    byte gpio;
-    byte status; // 1-TRUE / 0-FALSE
-};
-/******************************************************/
-
-typedef enum {
-  celsius,
-  fahrenheit,
-  humidity
-} temperature_dht;
-
 /* versão do firmware */
 const char version[] PROGMEM = API_VERSION;
 
@@ -113,20 +82,25 @@ DHT dht(TemperatureHumidity, DHT11);
 
 AsyncWebServer *server;               // initialise webserver
 
-String getContent(const char* filename) {
+String strCelsius = "0.0";
+String strFahrenheit = "0.0";
+String strHumidity = "0.0";
+
+const char * getContent(const char* filename) {
   String payload="";
   File file = LITTLEFS.open(filename, "r"); 
+  const char mensagem[] = "Falhou para abrir para leitura";
   if(!file){    
     #ifdef DEBUG
-      Serial.println(F("Falhou para abrir para leitura"));
+      Serial.println(mensagem);
     #endif
-    return F("<p>Falhou ao abrir para leitura</p>");
+    return mensagem;
   }
   while (file.available()) {
     payload += file.readString();
   }
   file.close();
-  return payload;
+  return payload.c_str();
 }
 
 bool writeContent(String filename, String content){
@@ -163,12 +137,12 @@ char* substr(char* arr, int begin, int len)
     return res;
 }
 
-String IpAddress2String(const IPAddress& ipAddress)
+const char* IpAddress2String(const IPAddress& ipAddress)
 {
-    return String(ipAddress[0]) + String(".") +
+    return (String(ipAddress[0]) + String(".") +
            String(ipAddress[1]) + String(".") +
            String(ipAddress[2]) + String(".") +
-           String(ipAddress[3]);
+           String(ipAddress[3])).c_str();
 }
 
 void setClock() {
@@ -209,34 +183,6 @@ int matchStar(int c, char* regexp, char* text) {
   return 0;
 }
 
-// list all of the files, if ishtml=true, return html rather than simple text
-String listFiles(bool ishtml) {
-  String returnText = "";
-  Serial.println(F("Listando arquivos armazenados no storage"));
-  File root = LITTLEFS.open("/");
-  File foundfile = root.openNextFile();
-  if (ishtml) {
-    returnText += "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th></tr>";
-  }
-  while (foundfile) {
-    if (ishtml) {
-      int tam = strlen(foundfile.name());
-      char temp[tam];
-      strncpy(temp,foundfile.name(),tam);
-      returnText += "<tr align='left'><td>" + String(foundfile.name()) + "</td><td>" + humanReadableSize(foundfile.size()) + "</td></tr>";
-    } else {
-      returnText += "Arquivo: " + String(foundfile.name()) + "\n";
-    }
-    foundfile = root.openNextFile();
-  }
-  if (ishtml) {
-    returnText += "</table>";
-  }
-  root.close();
-  foundfile.close();
-  return returnText;
-}
-
 // Make size of files human readable
 // source: https://github.com/CelliesProjects/minimalUploadAuthESP32
 String humanReadableSize(const size_t bytes) {
@@ -246,42 +192,7 @@ String humanReadableSize(const size_t bytes) {
   else return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
 }
 
-// handles uploads to storage
-void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;  
-  #ifdef DEBUG
-    Serial.println(logmessage);
-  #endif
-  if (!index) {
-    logmessage = "Upload Iniciado: " + String(filename);
-    // open the file on first call and store the file handle in the request object
-    request->_tempFile = LITTLEFS.open("/" + filename, "w");
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-  }
-
-  if (len) {
-    // stream the incoming chunk to the opened file
-    request->_tempFile.write(data, len);
-    logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-  }
-
-  if (final) {
-    logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
-    // close the file handle as the upload is now done
-    request->_tempFile.close();
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-    request->redirect("/");
-  }
-}
-
-String getDataHora() {
+const char * getDataHora() {
     // Busca tempo no NTP. Padrao de data: ISO-8601
     time_t nowSecs = time(nullptr);
     struct tm timeinfo;
@@ -293,7 +204,7 @@ String getDataHora() {
     gmtime_r(&nowSecs, &timeinfo);
     // ISO 8601: 2021-10-04T14:12:26+00:00
     strftime (buffer,80,"%FT%T%z",&timeinfo);
-    return String(buffer);
+    return buffer;
 }
 
 int searchList(String name, String language) {
@@ -308,13 +219,13 @@ int searchList(String name, String language) {
   return -1;
 }
 
-String getData(uint8_t *data, size_t len) {
+const char * getData(uint8_t *data, size_t len) {
   char raw[len];
   for (size_t i = 0; i < len; i++) {
     //Serial.write(data[i]);
     raw[i] = data[i];
   }
-  return String(raw);
+  return raw;
 }
 
 unsigned char* getStreamData(const char* filename) {
@@ -336,19 +247,6 @@ unsigned char* getStreamData(const char* filename) {
   }
   file.close();
   return payload;
-}
-
-bool check_authorization_header(AsyncWebServerRequest * request){
-  int headers = request->headers();
-  int i;
-  for(i=0;i<headers;i++){
-    AsyncWebHeader* h = request->getHeader(i);
-    //Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
-    if(h->name()=="Authorization" && h->value()=="Basic "+String(API_MINION_TOKEN)){
-      return true;
-    }
-  }
-  return false;
 }
 
 bool addSensor(byte id, byte gpio, byte status, char* name) {
@@ -403,18 +301,18 @@ ArduinoSensorPort * searchListSensor(byte gpio) {
   return NULL;
 }
 
-String readSensor(byte gpio){
+const char * readSensor(byte gpio){
   String data="";
   ArduinoSensorPort *arduinoSensorPort = searchListSensor(gpio);  
   if(arduinoSensorPort != NULL) {
     arduinoSensorPort->status=digitalRead(gpio);
     data="{\"id\":\""+String(arduinoSensorPort->id)+"\",\"name\":\""+String(arduinoSensorPort->name)+"\",\"gpio\":\""+String(arduinoSensorPort->gpio)+"\",\"status\":\""+String(arduinoSensorPort->status)+"\"}";
   }
-  return data;
+  return data.c_str();
 }
 
-String readSensorStatus(byte gpio){
-  return String(digitalRead(gpio));
+const char * readSensorStatus(byte gpio){
+  return String(digitalRead(gpio)).c_str();
 }
 
 void addApplication(String name, String language, String description) {
@@ -427,11 +325,11 @@ void addApplication(String name, String language, String description) {
   applicationListaEncadeada.add(app);
 }
 
-void addMedia(String name, int size, String lastModified) {
+void addMedia(const char* name, int size, char* lastModified) {
   Media *media = new Media();
-  media->name = name;
+  media->name = strdup(name);
   media->size = size;
-  media->lastModified = lastModified;
+  strcpy(media->lastModified, lastModified);
 
   // Adiciona a aplicação na lista
   mediaListaEncadeada.add(media);
@@ -454,7 +352,7 @@ void saveApplicationList() {
 
 int loadApplicationList() {
   // Carrega do storage
-  String JSONmessage = getContent("/lista.json");
+  String JSONmessage = String(getContent("/lista.json"));
   if(JSONmessage == "") {    
     #ifdef DEBUG
       Serial.println(F("Lista local de aplicações vazia"));
@@ -512,6 +410,14 @@ void playMidia(const char * midia)
 void playRemoteMidia(const char * url)
 { 
   audio.connecttohost(url); //  128k mp3
+}
+
+void taskSensorTemperatureHumidity( void * parameter )
+{
+  strCelsius = getTemperatureHumidity(celsius);
+  strFahrenheit = getTemperatureHumidity(fahrenheit);
+  strHumidity = getTemperatureHumidity(humidity);
+  vTaskDelete( NULL ); 
 }
 
 void setup(void)
@@ -606,6 +512,14 @@ void setup(void)
     client.setServer(MQTT_BROKER, MQTT_PORT);
     client.setCallback(callback);
     Serial.println(F("Minion funcionando!"));
+
+    // thread para buscar temperatura e umidade
+    xTaskCreate(taskSensorTemperatureHumidity,    /* Task function. */
+                "TaskSentorTemperatureHumidity",  /* String with name of task. */
+                10000,                            /* Stack size in bytes. */
+                NULL,                             /* Parameter passed as input of the task */
+                1,                                /* Priority of the task. */
+                NULL);                            /* Task handle. */
 }
 
 void callback(char *topic, byte *payload, unsigned int length) {
@@ -658,8 +572,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
     }
   }
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/play")).c_str()) {
-    playMidia(message.c_str());
-    
+    playMidia(message.c_str()); 
   }
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/talk")).c_str()) {
     playSpeech(message.c_str());
@@ -667,12 +580,16 @@ void callback(char *topic, byte *payload, unsigned int length) {
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/volume")).c_str()) {
     setVolumeAudio(atoi(message.c_str()));
   }
-  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/temperature")).c_str()) {
-    getTemperatureHumidity(celsius);
-  }  
-  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/humidity")).c_str()) {
-    getTemperatureHumidity(humidity);
-  }  
+  if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/temperature")).c_str() ||
+    String(topic) == (String(MQTT_USERNAME)+String("/feeds/humidity")).c_str()) {
+    // thread para buscar temperatura e umidade
+    xTaskCreate(taskSensorTemperatureHumidity,    /* Task function. */
+                "TaskSentorTemperatureHumidity",  /* String with name of task. */
+                10000,                            /* Stack size in bytes. */
+                NULL,                             /* Parameter passed as input of the task */
+                1,                                /* Priority of the task. */
+                NULL);                            /* Task handle. */
+  }
   #ifdef DEBUG
     Serial.println(F("-----------------------"));
   #endif
