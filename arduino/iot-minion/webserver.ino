@@ -9,21 +9,25 @@ const char NOT_FOUND_ROUTE[] PROGMEM = "Rota nao encontrada";
 const char PARSER_ERROR[] PROGMEM = "{\"message\": \"Erro ao fazer parser do json\"}";
 const char WEB_SERVER_CONFIG[] PROGMEM = "\nConfiguring Webserver ...";
 const char WEB_SERVER_STARTED[] PROGMEM = "Webserver started";
-const char MIME_TYPE_JPG[] PROGMEM = "image/jpg";
-const char MIME_TYPE_PNG[] PROGMEM = "image/png";
-const char MIME_TYPE_ICO[] PROGMEM = "image/ico";
-const char FILE_TYPE_CSS[] PROGMEM = "text/css";
-const char FILE_TYPE_HTML[] PROGMEM = "text/html";
-const char FILE_TYPE_JSON[] PROGMEM = "application/json";
-const char FILE_TYPE_TEXT[] PROGMEM = "text/plain";
 const char HTML_MISSING_DATA_UPLOAD[] PROGMEM = "<!DOCTYPE html><html lang=\"en\"><head><title>Minion ESP32-Garagem Digital</title>" 
                 "<meta charset=\"utf-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">" 
                 "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"></head>"
-                "<body><center><img src=\"https://cdn.icon-icons.com/icons2/458/PNG/128/evil-minion-icon_43747.png\" width=\"128\"/> </center>"
+                "<body><center><img src=\"http://www.imagenspng.com.br/wp-content/uploads/2015/07/minions-52-roxo.png\" width=\"128\"/> </center>"
                 "<div class=\"container\">Lembre-se que para rodar a aplicação será necessário, previamente, instalar o plugin: "
-                "<b><a src=\"https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/\">ESP32 Filesystem Uploader in Arduino IDE\"</a></b>"
+                "<b><a src=\"https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/\">Install ESP32 Filesystem Uploader in Arduino IDE\"</a></b>"
                 " e utilizar o menu no Arduino IDE: <b>Ferramentas->ESP32 Sketch Data Upload</b>"
                 " para gravar o conteúdo do web server (pasta: <b>/data</b>) no <b>Storage</b>.</div></body></html>";
+
+String getContentType(String filename) { // convert the file extension to the MIME type
+  if (filename.endsWith(".html")) return "text/html";
+  else if (filename.endsWith(".css")) return "text/css";
+  else if (filename.endsWith(".js")) return "application/javascript";
+  else if (filename.endsWith(".ico")) return "image/x-icon";
+  else if (filename.endsWith(".png")) return "image/png";
+  else if (filename.endsWith(".jpg")) return "image/jpg";
+  else if (filename.endsWith(".json")) return "application/json";
+  return "text/plain";
+}
 
 void startWebServer() {
   /* Webserver para se comunicar via browser com ESP32  */
@@ -123,26 +127,30 @@ void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t
 
 void handle_MinionLogo(){
   server->on("/minion-logo", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    request->send(LITTLEFS, "/minion-logo.png", MIME_TYPE_PNG);
+    char filename[] = "/minion-logo.png";
+    request->send(LITTLEFS, filename, getContentType(filename));
   });
 }
 
 void handle_MinionList(){
   server->on("/minion-list", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    request->send(LITTLEFS, "/minion-list.png", MIME_TYPE_PNG);
+    char filename[] = "/minion-list.png";
+    request->send(LITTLEFS, filename, getContentType(filename));
   });
 }
   
   
 void handle_MinionIco(){
   server->on("/minion-ico", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LITTLEFS, "/minion-ico.ico", MIME_TYPE_ICO);
+    char filename[] = "/minion-ico.ico";
+    request->send(LITTLEFS, filename, getContentType(filename));
   });
 }
 
 void handle_Style(){
   server->on("/style", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    request->send(LITTLEFS, "/style.css", FILE_TYPE_CSS);
+    char filename[] = "/style.css";
+    request->send(LITTLEFS, filename, getContentType(filename));
   });
 }
 
@@ -150,45 +158,49 @@ void handle_Home(){
   server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = HTML_MISSING_DATA_UPLOAD;
     bool exists = false;
-    exists = LITTLEFS.exists("/home.html");
+    char filename[] = "/home.html"; 
+    exists = LITTLEFS.exists(filename);
     if(exists){
-      html = String(getContent("/home.html"));
+      html = String(getContent(filename));
       // versao do firmware: https://semver.org/
       html.replace("0.0.0",String(version));
       html.replace("AIO_USERNAME",String(MQTT_USERNAME));
       html.replace("HOST_MINION",String(HOST));      
     }        
-    request->send(HTTP_OK, FILE_TYPE_HTML, html);
+    request->send(HTTP_OK, getContentType(filename), html);
   });
 }
 
 void handle_CICD(){
   server->on("/cicd", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = String(getContent("/cicd.html"));
+    char filename[] = "/cicd.html"; 
+    String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     html.replace("AIO_SERVER",String(MQTT_BROKER));
     html.replace("AIO_USERNAME",String(MQTT_USERNAME));
     html.replace("AIO_KEY",String(MQTT_PASSWORD));
-    request->send(HTTP_OK, FILE_TYPE_HTML, html);
+    request->send(HTTP_OK, getContentType(filename), html);
   });
 }
 
 void handle_Swagger(){
   server->on("/swagger.json", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = String(getContent("/swagger.json"));
-    if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
-    html.replace("0.0.0",version);
-    html.replace("HOST_MINION",String(HOST)+".local");
-    request->send(HTTP_OK, FILE_TYPE_JSON, html);
+    char filename[] = "/swagger.json";
+    String json = String(getContent(filename));
+    if(json.length() == 0) json=HTML_MISSING_DATA_UPLOAD;
+    json.replace("0.0.0",version);
+    json.replace("HOST_MINION",String(HOST)+".local");
+    request->send(HTTP_OK, getContentType(filename), json);
   });
 }
 
 void handle_SwaggerUI(){
   server->on("/swaggerUI", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = String(getContent("/swaggerUI.html"));
+    char filename[] = "/swaggerUI.html";
+    String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     html.replace("HOST_MINION",String(HOST)+".local");
-    request->send(HTTP_OK, FILE_TYPE_HTML, html);
+    request->send(HTTP_OK, getContentType(filename), html);
   });  
 }
 
@@ -196,13 +208,13 @@ void handle_Health(){
   server->on("/health", HTTP_GET, [](AsyncWebServerRequest *request) {
     String mqttConnected = client.connected()?"true":"false";
     String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"date\": \""+String(getDataHora())+"\",\"url\": \"/health\",\"mqtt\": \""+mqttConnected+"\",\"version\": \""+version+"\",\"ip\": \""+String(IpAddress2String(WiFi.localIP()))+"\"}";
-    request->send(HTTP_OK, FILE_TYPE_JSON, JSONmessage);
+    request->send(HTTP_OK, getContentType(".json"), JSONmessage);
   });
 }
 
 void handle_Metrics(){
   server->on("/metrics", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(HTTP_OK, FILE_TYPE_TEXT, getMetrics());
+    request->send(HTTP_OK, getContentType(".txt"), getMetrics());
   });
 }
 
@@ -217,9 +229,9 @@ void handle_Ports(){
         arduinoSensorPort->status = digitalRead(arduinoSensorPort->gpio);
         JSONmessage += "{\"id\": \""+String(arduinoSensorPort->id)+"\",\"gpio\": \""+String(arduinoSensorPort->gpio)+"\",\"status\": \""+String(arduinoSensorPort->status)+"\",\"name\": \""+String(arduinoSensorPort->name)+"\"},";
       }
-      request->send(HTTP_OK, FILE_TYPE_JSON, '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
+      request->send(HTTP_OK, getContentType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });  
 }
@@ -234,9 +246,9 @@ void handle_Audios(){
         media = mediaListaEncadeada.get(i);
         JSONmessage += "{\"name\": \""+String(media->name)+"\",\"size\": \""+String(media->size)+"\",\"lastModified\": \""+String(media->lastModified)+"\"},";
       }
-      request->send(HTTP_OK, FILE_TYPE_JSON, '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
+      request->send(HTTP_OK, getContentType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });  
 }
@@ -262,9 +274,9 @@ void handle_Sensors() {
           relayPin = RelayShake;
         }        
       }
-      request->send(HTTP_OK, FILE_TYPE_JSON, String(readSensor(relayPin)));
+      request->send(HTTP_OK, getContentType(".json"), String(readSensor(relayPin)));
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -279,9 +291,9 @@ void handle_Lists(){
         app = applicationListaEncadeada.get(i);
         JSONmessage += "{\"id\": "+String(i+1)+",\"name\": \""+app->name+"\",\"language\": \""+app->language+"\",\"description\": \""+app->description+"\"}"+',';
       }
-      request->send(HTTP_OK, FILE_TYPE_JSON, '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
+      request->send(HTTP_OK, getContentType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -294,17 +306,17 @@ void handle_TemperatureAndHumidity(){
       for(int i=0;i<paramsNr;i++){
         AsyncWebParameter* p = request->getParam(i);
         if(strcmp("celsius", p->value().c_str())==0){
-          request->send(HTTP_OK, FILE_TYPE_JSON, treatTemperatureAndHumidity("celsius", getTemperatureHumidity(celsius)));
+          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("celsius", getTemperatureHumidity(celsius)));
         } else if (strcmp("fahrenheit", p->value().c_str())==0){
-          request->send(HTTP_OK, FILE_TYPE_JSON, treatTemperatureAndHumidity("fahrenheit", getTemperatureHumidity(fahrenheit)));
+          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("fahrenheit", getTemperatureHumidity(fahrenheit)));
         }
         else if (strcmp("humidity", p->value().c_str())==0){
-          request->send(HTTP_OK, FILE_TYPE_JSON, treatTemperatureAndHumidity("humidity", getTemperatureHumidity(humidity)));
+          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("humidity", getTemperatureHumidity(humidity)));
         }
       }
-      request->send(HTTP_BAD_REQUEST, FILE_TYPE_TEXT, WRONG_CLIMATE);
+      request->send(HTTP_BAD_REQUEST, getContentType(".txt"), WRONG_CLIMATE);
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -326,7 +338,7 @@ void handle_InsertTalk(){
       String JSONmessageBody = String(getData(data, len));
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
           const char * mensagem = doc["mensagem"];
           #ifdef DEBUG
@@ -338,10 +350,10 @@ void handle_InsertTalk(){
           // toca o audio
           playSpeech(mensagem);
           doc.clear();
-          request->send(HTTP_OK, FILE_TYPE_TEXT, PLAYED);
+          request->send(HTTP_OK, getContentType(".txt"), PLAYED);
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -354,7 +366,7 @@ void handle_InsertPlay(){
       String JSONmessageBody = String(getData(data, len));
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
         const char * midia = doc["midia"];
         #ifdef DEBUG
@@ -366,10 +378,10 @@ void handle_InsertPlay(){
         // toca o audio
         playMidia(midia);
         doc.clear();
-        request->send(HTTP_OK, FILE_TYPE_TEXT, PLAYED);
+        request->send(HTTP_OK, getContentType(".txt"), PLAYED);
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -382,7 +394,7 @@ void handle_InsertPlayRemote(){
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
         const char * url = doc["url"];        
         #ifdef DEBUG
@@ -394,10 +406,10 @@ void handle_InsertPlayRemote(){
         // 2- http://stream.friskyradio.com:9000/frisky_mp3_h
         playRemoteMidia(url);
         doc.clear();
-        request->send(HTTP_OK, FILE_TYPE_TEXT, PLAYED);
+        request->send(HTTP_OK, getContentType(".txt"), PLAYED);
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -411,7 +423,7 @@ void handle_Volume(){
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
         String feedName="volume";
         setVolumeAudio(doc["intensidade"]);
@@ -422,10 +434,10 @@ void handle_Volume(){
         client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
         snprintf ( buffer, MAX_PATH, "Intensidade do volume foi alterada para: %d", getVolumeAudio());  
         doc.clear();      
-        request->send(HTTP_OK, FILE_TYPE_TEXT, buffer);
+        request->send(HTTP_OK, getContentType(".txt"), buffer);
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -457,7 +469,7 @@ void handle_UpdateSensors(){
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
         String JSONmessage;
         if(readBodySensorData(doc["status"], sensor)) {
@@ -469,13 +481,13 @@ void handle_UpdateSensors(){
           // publish
           client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), arduinoSensorPort->status==0?"OFF":"ON");
           doc.clear();
-          request->send(HTTP_OK, FILE_TYPE_JSON, JSONmessage);
+          request->send(HTTP_OK, getContentType(".json"), JSONmessage);
         } else {
-          request->send(HTTP_BAD_REQUEST, FILE_TYPE_TEXT, WRONG_STATUS);
+          request->send(HTTP_BAD_REQUEST, getContentType(".txt"), WRONG_STATUS);
         }
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -488,7 +500,7 @@ void handle_InsertItemList(){
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
         //busco para checar se aplicacao já existe
         int index = searchList(doc["name"],doc["language"]);
@@ -518,13 +530,13 @@ void handle_InsertItemList(){
           // publish
           client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
           doc.clear();
-          request->send(HTTP_OK, FILE_TYPE_JSON, JSONmessage);
+          request->send(HTTP_OK, getContentType(".json"), JSONmessage);
         } else {
-          request->send(HTTP_CONFLICT, FILE_TYPE_TEXT, EXISTING_ITEM);
+          request->send(HTTP_CONFLICT, getContentType(".txt"), EXISTING_ITEM);
         }
       }
    } else {
-    request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+    request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
    }
   });
 }
@@ -537,7 +549,7 @@ void handle_DeleteItemList(){
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, FILE_TYPE_JSON, PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
       //busco pela aplicacao a ser removida
       int index = searchList(doc["name"],doc["language"]);
@@ -566,13 +578,13 @@ void handle_DeleteItemList(){
         // publish
         client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
         doc.clear();
-        request->send(HTTP_OK, FILE_TYPE_TEXT, REMOVED_ITEM);
+        request->send(HTTP_OK, getContentType(".txt"), REMOVED_ITEM);
       } else {
-        request->send(HTTP_NOT_FOUND, FILE_TYPE_TEXT, NOT_FOUND_ITEM);
+        request->send(HTTP_NOT_FOUND, getContentType(".txt"), NOT_FOUND_ITEM);
       }
     }
    } else {
-    request->send(HTTP_UNAUTHORIZED, FILE_TYPE_TEXT, WRONG_AUTHORIZATION);
+    request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
    }
   });
 }
@@ -583,7 +595,8 @@ void handle_UploadStorage() {
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
-    String html = String(getContent("/uploadStorage.html"));
+    char filename[] = "/uploadStorage.html";
+    String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
       html.replace("FILELIST",String(listFiles(true)));
@@ -591,7 +604,7 @@ void handle_UploadStorage() {
       html.replace("USEDSTORAGE",humanReadableSize(LITTLEFS.usedBytes()));
       html.replace("TOTALSTORAGE",humanReadableSize(LITTLEFS.totalBytes()));
     }
-    request->send(HTTP_OK, FILE_TYPE_HTML, html);
+    request->send(HTTP_OK, getContentType(filename), html);
   });
 
   // run handleUpload function when any file is uploaded
@@ -607,7 +620,8 @@ void handle_ListSdcard() {
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
-    String html = String(getContent("/listSdcard.html"));
+    char filename[] = "/listSdcard.html";
+    String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
       File entry =  SD.open("/");
@@ -617,7 +631,7 @@ void handle_ListSdcard() {
       html.replace("TOTALSDCARD",humanReadableSize(SD.totalBytes()));
       entry.close();
     }
-    request->send(HTTP_OK, FILE_TYPE_HTML, html);
+    request->send(HTTP_OK, getContentType(filename), html);
   });
 }
 
@@ -626,7 +640,8 @@ void handle_OnError(){
     if(request->method() == HTTP_OPTIONS) {
       request->send(HTTP_NO_CONTENT);
     }
-    request->send(HTTP_NOT_FOUND, FILE_TYPE_TEXT, NOT_FOUND_ROUTE);
+    char filename[] = "/error.html";
+    request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
   });
 }
 

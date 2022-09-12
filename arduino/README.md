@@ -25,6 +25,7 @@ A aplicação consiste em três desenvolvimentos:
 - [Informações de uso do plugin](https://techtutorialsx.com/2018/08/24/esp32-arduino-spiffs-file-upload-ide-plugin/)
 - [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
 - [Preparando o ambiente com arduino IDE para ESP32](https://blog.eletrogate.com/conhecendo-o-esp32-usando-arduino-ide-2/)
+- [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32littlefs-plugin)
 
 * Instalando pre-requisito do arduino IDE: 
 

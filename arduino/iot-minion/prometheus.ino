@@ -16,8 +16,6 @@ String getMetrics() {
  
   setMetric(&p, "esp32_uptime", String(millis()));
   setMetric(&p, "esp32_wifi_rssi", String(WiFi.RSSI()));
-  setMetric(&p, "esp32_heap_size", String(ESP.getHeapSize()));
-  setMetric(&p, "esp32_free_heap", String(ESP.getFreeHeap()));
   setMetric(&p, "esp32_sketch_size", String(sketch_size));
   setMetric(&p, "esp32_flash_size", String(flash_size));
   setMetric(&p, "esp32_available_size", String(available_size));
