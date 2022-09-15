@@ -335,7 +335,7 @@ void handle_InsertTalk(){
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {      
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
-      String JSONmessageBody = String(getData(data, len));
+      String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
@@ -363,7 +363,7 @@ void handle_InsertPlay(){
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
-      String JSONmessageBody = String(getData(data, len));
+      String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);

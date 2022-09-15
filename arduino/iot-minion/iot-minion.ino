@@ -219,13 +219,13 @@ int searchList(String name, String language) {
   return -1;
 }
 
-const char * getData(uint8_t *data, size_t len) {
+String getData(uint8_t *data, size_t len) {
   char raw[len];
   for (size_t i = 0; i < len; i++) {
     //Serial.write(data[i]);
     raw[i] = data[i];
   }
-  return raw;
+  return String(raw);
 }
 
 unsigned char* getStreamData(const char* filename) {
@@ -388,10 +388,10 @@ void loadI2S() {
 void playSpeech(const char * mensagem)
 {
   //Para executar uma síntese de voz
-  // audio.connecttospeech(mensagem, "pt");
+  audio.connecttospeech(mensagem, "pt");
   // voice speed: 74%
   // pitch: 52%
-  audio.connecttomarytts(mensagem, "it", "istc-lucia-hsmm");
+  // audio.connecttomarytts(mensagem, "it", "istc-lucia-hsmm");
 }
 
 void playMidia(const char * midia)
@@ -630,10 +630,11 @@ void loop()
 { 
   if (!client.connected()) {
     reconnect();
+  } else {
+    client.loop();
+    //Executa o loop interno da biblioteca audio
+    audio.loop();  
   }
-  client.loop();
-  //Executa o loop interno da biblioteca audio
-  audio.loop();
 }
 
 #ifdef __cplusplus
