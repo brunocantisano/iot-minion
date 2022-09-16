@@ -10,9 +10,9 @@ class Application {
 /************** lista de mídias no sdcard *************/
 class Media {
   public:
-    char* name;
-    int size;
-    char* lastModified;
+    String name;
+    int size;    
+    String lastModified;
 };
 /******************************************************/
 /******************* lista de sensores ****************/

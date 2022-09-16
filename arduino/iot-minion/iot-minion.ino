@@ -86,7 +86,7 @@ String strCelsius = "0.0";
 String strFahrenheit = "0.0";
 String strHumidity = "0.0";
 
-const char * getContent(const char* filename) {
+String getContent(const char* filename) {
   String payload="";
   File file = LITTLEFS.open(filename, "r"); 
   const char mensagem[] = "Falhou para abrir para leitura";
@@ -100,7 +100,7 @@ const char * getContent(const char* filename) {
     payload += file.readString();
   }
   file.close();
-  return payload.c_str();
+  return payload;
 }
 
 bool writeContent(String filename, String content){
@@ -136,13 +136,12 @@ char* substr(char* arr, int begin, int len)
     res[len] = 0;
     return res;
 }
-
-const char* IpAddress2String(const IPAddress& ipAddress)
+String IpAddress2String(const IPAddress& ipAddress)
 {
     return (String(ipAddress[0]) + String(".") +
            String(ipAddress[1]) + String(".") +
            String(ipAddress[2]) + String(".") +
-           String(ipAddress[3])).c_str();
+           String(ipAddress[3]));
 }
 
 void setClock() {
@@ -192,7 +191,7 @@ String humanReadableSize(const size_t bytes) {
   else return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
 }
 
-const char * getDataHora() {
+String getDataHora() {
     // Busca tempo no NTP. Padrao de data: ISO-8601
     time_t nowSecs = time(nullptr);
     struct tm timeinfo;
@@ -204,7 +203,7 @@ const char * getDataHora() {
     gmtime_r(&nowSecs, &timeinfo);
     // ISO 8601: 2021-10-04T14:12:26+00:00
     strftime (buffer,80,"%FT%T%z",&timeinfo);
-    return buffer;
+    return String(buffer);
 }
 
 int searchList(String name, String language) {
@@ -226,27 +225,6 @@ String getData(uint8_t *data, size_t len) {
     raw[i] = data[i];
   }
   return String(raw);
-}
-
-unsigned char* getStreamData(const char* filename) {
-  unsigned char* payload;
-  unsigned char ch;
-  int i = 0;
-  File file = LITTLEFS.open(filename);
-  if(!file){
-    #ifdef DEBUG
-      Serial.println(F("Falhou para abrir para leitura"));
-    #endif
-    return NULL;
-  }
-  while (file.available()) {
-    ch = file.read();
-    payload = (unsigned char*)malloc(sizeof(payload)*sizeof(unsigned char));
-    payload[i] = ch;
-    i++;
-  }
-  file.close();
-  return payload;
 }
 
 bool addSensor(byte id, byte gpio, byte status, char* name) {
@@ -301,18 +279,18 @@ ArduinoSensorPort * searchListSensor(byte gpio) {
   return NULL;
 }
 
-const char * readSensor(byte gpio){
+String readSensor(byte gpio){
   String data="";
   ArduinoSensorPort *arduinoSensorPort = searchListSensor(gpio);  
   if(arduinoSensorPort != NULL) {
     arduinoSensorPort->status=digitalRead(gpio);
     data="{\"id\":\""+String(arduinoSensorPort->id)+"\",\"name\":\""+String(arduinoSensorPort->name)+"\",\"gpio\":\""+String(arduinoSensorPort->gpio)+"\",\"status\":\""+String(arduinoSensorPort->status)+"\"}";
   }
-  return data.c_str();
+  return data;
 }
 
-const char * readSensorStatus(byte gpio){
-  return String(digitalRead(gpio)).c_str();
+String readSensorStatus(byte gpio){
+  return String(digitalRead(gpio));
 }
 
 void addApplication(String name, String language, String description) {
@@ -325,11 +303,11 @@ void addApplication(String name, String language, String description) {
   applicationListaEncadeada.add(app);
 }
 
-void addMedia(const char* name, int size, char* lastModified) {
+void addMedia(String name, int size, String lastModified) {
   Media *media = new Media();
-  media->name = strdup(name);
+  media->name = name;
   media->size = size;
-  strcpy(media->lastModified, lastModified);
+  media->lastModified=lastModified;
 
   // Adiciona a aplicação na lista
   mediaListaEncadeada.add(media);
@@ -352,7 +330,7 @@ void saveApplicationList() {
 
 int loadApplicationList() {
   // Carrega do storage
-  String JSONmessage = String(getContent("/lista.json"));
+  String JSONmessage = getContent("/lista.json");
   if(JSONmessage == "") {    
     #ifdef DEBUG
       Serial.println(F("Lista local de aplicações vazia"));
@@ -630,11 +608,10 @@ void loop()
 { 
   if (!client.connected()) {
     reconnect();
-  } else {
-    client.loop();
-    //Executa o loop interno da biblioteca audio
-    audio.loop();  
   }
+  client.loop();
+  //Executa o loop interno da biblioteca audio
+  audio.loop(); 
 }
 
 #ifdef __cplusplus

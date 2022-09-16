@@ -28,10 +28,10 @@ String getMetrics() {
   setMetric(&p, "esp32_celsius", strCelsius);
   setMetric(&p, "esp32_fahrenheit", strFahrenheit);
   setMetric(&p, "esp32_humidity", strHumidity);
-  setMetric(&p, "esp32_eyes", String(readSensorStatus(RelayEyes)));
-  setMetric(&p, "esp32_hat", String(readSensorStatus(RelayHat)));
-  setMetric(&p, "esp32_blink", String(readSensorStatus(RelayBlink)));
-  setMetric(&p, "esp32_shake", String(readSensorStatus(RelayShake)));
+  setMetric(&p, "esp32_eyes", readSensorStatus(RelayEyes));
+  setMetric(&p, "esp32_hat", readSensorStatus(RelayHat));
+  setMetric(&p, "esp32_blink", readSensorStatus(RelayBlink));
+  setMetric(&p, "esp32_shake", readSensorStatus(RelayShake));
   setMetric(&p, "esp32_volume", String(getVolumeAudio()));
   setMetric(&p, "esp32_sdcard_total", String(uint64ToText(sdcard_total)));
   setMetric(&p, "esp32_sdcard_used", String(uint64ToText(sdcard_used)));

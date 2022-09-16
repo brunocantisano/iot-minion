@@ -73,9 +73,6 @@ void startWebServer() {
   // se não se enquadrar em nenhuma das rotas
   handle_OnError();
 
-  // tratando requisições como HTTPS
-  handle_SSL();
-
   // permitindo todas as origens. O ideal é trocar o '*' pela url do frontend poder utilizar a api com maior segurança
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Credentials", "true");
@@ -274,7 +271,7 @@ void handle_Sensors() {
           relayPin = RelayShake;
         }        
       }
-      request->send(HTTP_OK, getContentType(".json"), String(readSensor(relayPin)));
+      request->send(HTTP_OK, getContentType(".json"), readSensor(relayPin));
     } else {
       request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
@@ -599,7 +596,7 @@ void handle_UploadStorage() {
     String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
-      html.replace("FILELIST",String(listFiles(true)));
+      html.replace("FILELIST",listFiles(true));
       html.replace("FREESTORAGE",humanReadableSize((LITTLEFS.totalBytes() - LITTLEFS.usedBytes())));
       html.replace("USEDSTORAGE",humanReadableSize(LITTLEFS.usedBytes()));
       html.replace("TOTALSTORAGE",humanReadableSize(LITTLEFS.totalBytes()));
@@ -640,14 +637,11 @@ void handle_OnError(){
     if(request->method() == HTTP_OPTIONS) {
       request->send(HTTP_NO_CONTENT);
     }
-    char filename[] = "/error.html";
-    request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
+      char filename[] = "/error.html";
+      request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
   });
 }
 
-void handle_SSL(){
-  // Até o momento não existe biblioteca que funcione HTTPS com o ESP32
-}
 
 bool check_authorization_header(AsyncWebServerRequest * request){
   int headers = request->headers();

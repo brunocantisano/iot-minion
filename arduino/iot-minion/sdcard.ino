@@ -62,7 +62,7 @@ bool loadSdCardMedias() {
 }
 
 // list all of the files, if ishtml=true, return html rather than simple text
-const char * listFiles(bool ishtml) {
+String listFiles(bool ishtml) {
   String returnText = "";
   Serial.println(F("Listando arquivos armazenados no storage"));
   File root = LITTLEFS.open("/");
@@ -86,13 +86,13 @@ const char * listFiles(bool ishtml) {
   }
   root.close();
   foundfile.close();
-  return returnText.c_str();
+  return returnText;
 }
 
 // list all of the files, if ishtml=true, return html rather than simple text
 String listFilesSD(File dir, int numTabs) {
   String returnText = "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th><th align='left'>Modificação</th></tr>";
-  char lastModified[MAX_PATH] = {'\0'} ; 
+  String lastModified;
   while (true) {
     File entry =  dir.openNextFile();
     if (!entry) {
@@ -106,9 +106,9 @@ String listFilesSD(File dir, int numTabs) {
         // files have sizes, directories do not
         time_t lw = entry.getLastWrite();
         struct tm * tmstruct = localtime(&lw);
-        sprintf(lastModified, "%d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);      
-        addMedia(entry.name(), entry.size(), lastModified);
-        returnText += "<tr align='left'><td>" + String(entry.name()) + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + String(lastModified) + "</td></tr>";
+        lastModified = String((tmstruct->tm_year) + 1900,2)+"-"+String((tmstruct->tm_mon) + 1,2)+"-"+String(tmstruct->tm_mday,2)+" "+String(tmstruct->tm_hour,2)+":"+String(tmstruct->tm_min,2)+":"+String(tmstruct->tm_sec,2);
+        addMedia(String(entry.name()), entry.size(), lastModified);
+        returnText += "<tr align='left'><td>" + String(entry.name()) + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td></tr>";
       }
     }    
     entry.close();
