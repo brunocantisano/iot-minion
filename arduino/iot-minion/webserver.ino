@@ -18,17 +18,6 @@ const char HTML_MISSING_DATA_UPLOAD[] PROGMEM = "<!DOCTYPE html><html lang=\"en\
                 " e utilizar o menu no Arduino IDE: <b>Ferramentas->ESP8266 Sketch Data Upload</b>"
                 " para gravar o conteúdo do web server (pasta: <b>/data</b>) no <b>Storage</b>.</div></body></html>";
 
-String getContentType(String filename) { // convert the file extension to the MIME type
-  if (filename.endsWith(".html")) return "text/html";
-  else if (filename.endsWith(".css")) return "text/css";
-  else if (filename.endsWith(".js")) return "application/javascript";
-  else if (filename.endsWith(".ico")) return "image/x-icon";
-  else if (filename.endsWith(".png")) return "image/png";
-  else if (filename.endsWith(".jpg")) return "image/jpg";
-  else if (filename.endsWith(".json")) return "application/json";
-  return "text/plain";
-}
-
 void handle_OnError(){
   server->onNotFound([](AsyncWebServerRequest *request) {
     char filename[] = "/error.html";
@@ -38,46 +27,41 @@ void handle_OnError(){
 
 void handle_MinionLogo(){
   server->on("/minion-logo", HTTP_GET, [](AsyncWebServerRequest *request) {
-    char filename[] = "/minion-logo.png";
-    request->send(LittleFS, filename, getContentType(filename));
+   request->send(LittleFS, "/minion-logo.png", getContentType("/minion-logo.png"));  
   });
 }
 
 void handle_MinionList(){
   server->on("/minion-list", HTTP_GET, [](AsyncWebServerRequest *request) {
-    char filename[] = "/minion-list.png";
-    request->send(LittleFS, filename, getContentType(filename));
+    request->send(LittleFS, "/minion-list.png", getContentType("/minion-list.png"));
   });
 }
   
   
 void handle_MinionIco(){
   server->on("/minion-ico", HTTP_GET, [](AsyncWebServerRequest *request) {
-    char filename[] = "/minion-ico.ico";
-    request->send(LittleFS, filename, getContentType(filename));
+    request->send(LittleFS, "/minion-ico.ico", getContentType("/minion-ico.ico"));   
   });
 }
 
 void handle_Style(){
-  server->on("/style", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    char filename[] = "/style.css";
-    request->send(LittleFS, filename, getContentType(filename));
+  server->on("/style", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/style.css", getContentType("/style.css"));
   });
 }
 
 void handle_Home(){
   server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = HTML_MISSING_DATA_UPLOAD;
-    bool exists = false;
-    char filename[] = "/home.html";        
-    exists = LittleFS.exists(filename);
-    if(exists){
-      html = getContent(filename);
+    char filename[] = "/home.html";
+    String html = getContent(filename);
+    if(html.length() > 0) {
       // versao do firmware: https://semver.org/
       html.replace("0.0.0",String(version));
       html.replace("AIO_USERNAME",String(MQTT_USERNAME));
-      html.replace("HOST_MINION",String(HOST));      
-    }        
+      html.replace("HOST_MINION",String(HOST));
+    } else {
+      html = HTML_MISSING_DATA_UPLOAD;  
+    }
     request->send(HTTP_OK, getContentType(filename), html);
   });
 }
@@ -86,10 +70,13 @@ void handle_CICD(){
   server->on("/cicd", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/cicd.html";    
     String html = getContent(filename);
-    if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
-    html.replace("AIO_SERVER",String(MQTT_BROKER));
-    html.replace("AIO_USERNAME",String(MQTT_USERNAME));
-    html.replace("AIO_KEY",String(MQTT_PASSWORD));
+    if(html.length() > 0) {
+      html.replace("AIO_SERVER",String(MQTT_BROKER));
+      html.replace("AIO_USERNAME",String(MQTT_USERNAME));
+      html.replace("AIO_KEY",String(MQTT_PASSWORD));
+    } else {
+      html = HTML_MISSING_DATA_UPLOAD;  
+    }
     request->send(HTTP_OK, getContentType(filename), html);
   });
 }
@@ -98,9 +85,12 @@ void handle_Swagger(){
   server->on("/swagger.json", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/swagger.json";
     String json = getContent(filename);
-    if(json.length() == 0) json=HTML_MISSING_DATA_UPLOAD;
-    json.replace("0.0.0",version);
-    json.replace("HOST_MINION",String(HOST)+".local");
+    if(json.length() > 0) {
+      json.replace("0.0.0",version);
+      json.replace("HOST_MINION",String(HOST)+".local");
+    } else {
+      json = HTML_MISSING_DATA_UPLOAD;  
+    }
     request->send(HTTP_OK, getContentType(filename), json);
   });
 }
@@ -108,9 +98,12 @@ void handle_Swagger(){
 void handle_SwaggerUI(){
   server->on("/swaggerUI", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/swaggerUI.html";
-    String html = getContent(filename);
-    if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
-    html.replace("HOST_MINION",String(HOST)+".local");
+    String html = getContent(filename);    
+    if(html.length() > 0) {
+      html.replace("HOST_MINION",String(HOST)+".local");
+    } else {
+      html = HTML_MISSING_DATA_UPLOAD;
+    }
     request->send(HTTP_OK, getContentType(filename), html);
   });  
 }
@@ -277,7 +270,7 @@ void handle_UpdateSensors(){
 
 // handles uploads to storage
 void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;  
+  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
   #ifdef DEBUG
     Serial.println(logmessage);
   #endif
@@ -409,6 +402,7 @@ void handle_DeleteItemList(){
 
 void handle_UploadStorage() {
   server->on("/storage", HTTP_GET, [](AsyncWebServerRequest * request) {
+    FSInfo64 fs_info;
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     #ifdef DEBUG
       Serial.println(logmessage);
@@ -418,13 +412,20 @@ void handle_UploadStorage() {
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
       html.replace("FILELIST",listFiles(true));
-      //html.replace("FREESTORAGE",humanReadableSize((LittleFS.totalBytes() - LittleFS.usedBytes())));
-      //html.replace("USEDSTORAGE",humanReadableSize(LittleFS.usedBytes()));
-      //html.replace("TOTALSTORAGE",humanReadableSize(LittleFS.totalBytes()));
+      if (!LittleFS.info64(fs_info)) {
+        #ifdef DEBUG
+          Serial.println("Erro ao listar storage do LittleFS");  
+        #endif
+      }
+      else {
+        html.replace("FREESTORAGE",humanReadableSize((fs_info.totalBytes - fs_info.usedBytes)));
+        html.replace("USEDSTORAGE",humanReadableSize(fs_info.usedBytes));
+        html.replace("TOTALSTORAGE",humanReadableSize(fs_info.totalBytes));
+      }
     }
-    request->send(HTTP_OK, getContentType(filename), html);
+    request->send(HTTP_OK, getContentType(filename), html);    
   });
-
+  
   // run handleUpload function when any file is uploaded
   server->on("/uploadStorage", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(HTTP_OK);

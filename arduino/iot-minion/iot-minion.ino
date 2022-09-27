@@ -12,6 +12,8 @@
 #include <Preferences.h>
 #include <LittleFS.h>
 
+const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
+
 #define DEBUG
 #define SERIAL_PORT                115200
 //Rest API
@@ -77,25 +79,41 @@ String strFahrenheit = "0.0";
 String strHumidity = "0.0";
 
 String getContent(const char* filename) {
-  String payload="";
-  File file = LittleFS.open(filename, "r"); 
-  const char mensagem[] = "Falhou para abrir para leitura";
-  if(!file){    
-    #ifdef DEBUG
-      Serial.println(mensagem);
-    #endif
-    return mensagem;
-  }
-  while (file.available()) {
-    payload += file.readString();
-  }
-  file.close();
+  String payload="";  
+  bool exists = LittleFS.exists(filename);
+  if(exists){
+    File file = LittleFS.open(filename, "r"); 
+    const char mensagem[] = "Falhou para abrir para leitura";
+    if(!file){    
+      #ifdef DEBUG
+        Serial.println(mensagem);
+      #endif
+      return mensagem;
+    }
+    while (file.available()) {
+      payload += file.readString();
+    }
+    file.close();
+  } else {
+    Serial.println(LITTLEFS_ERROR);
+  }  
   return payload;
 }
 
+String getContentType(String filename) { // convert the file extension to the MIME type
+  if (filename.endsWith(".html")) return "text/html";
+  else if (filename.endsWith(".css")) return "text/css";
+  else if (filename.endsWith(".js")) return "application/javascript";
+  else if (filename.endsWith(".ico")) return "image/x-icon";
+  else if (filename.endsWith(".png")) return "image/png";
+  else if (filename.endsWith(".jpg")) return "image/jpg";
+  else if (filename.endsWith(".json")) return "application/json";
+  return "text/plain";
+}
+
 bool writeContent(String filename, String content){
-   File file = LittleFS.open(filename, "w");
-   return writeContent(&file, content);
+  File file = LittleFS.open(filename, "w");
+  return writeContent(&file, content);
 }
 
 bool writeContent(File * file, String content){
@@ -264,11 +282,10 @@ void setup() {
     } else {
       Serial.println("Error setting up MDNS responder!");
     }
-  
+
     if(!LittleFS.begin()){
-      Serial.println("An Error has occurred while mounting LittleFS");
+      Serial.println(LITTLEFS_ERROR);
     }
-    
     startWebServer();
     
     Serial.println("HTTP server started");

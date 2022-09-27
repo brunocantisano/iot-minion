@@ -7,8 +7,8 @@ String getMetrics() {
   int sketch_size = ESP.getSketchSize();
   int flash_size =  ESP.getFreeSketchSpace();
   int available_size = flash_size - sketch_size;
-  //int heap_size = ESP.getHeapSize();
-  //int free_heap = ESP.getFreeHeap();
+  int heap_size = ESP.getFreeContStack();
+  int free_heap = ESP.getFreeHeap();
   //int psram_size = ESP.getPsramSize();
   //int free_psram_size = ESP.getFreePsram();
   
@@ -19,13 +19,11 @@ String getMetrics() {
   setMetric(&p, "esp8266_sketch_size", String(sketch_size));
   setMetric(&p, "esp8266_flash_size", String(flash_size));
   setMetric(&p, "esp8266_available_size", String(available_size));
-/*  
   setMetric(&p, "esp8266_heap_size", String(heap_size));
   setMetric(&p, "esp8266_free_heap", String(free_heap));
-  setMetric(&p, "esp8266_psram_size", String(psram_size));
-  setMetric(&p, "esp8266_free_psram_size", String(free_psram_size));
-  setMetric(&p, "esp8266_temperature", String(temperature));
-  */
+  //setMetric(&p, "esp8266_psram_size", String(psram_size));
+  //setMetric(&p, "esp8266_free_psram_size", String(free_psram_size));
+  //setMetric(&p, "esp8266_temperature", String(temperature));
   setMetric(&p, "esp8266_boot_counter", String(getBootCounter()));  
   setMetric(&p, "esp8266_celsius", strCelsius);
   setMetric(&p, "esp8266_fahrenheit", strFahrenheit);
