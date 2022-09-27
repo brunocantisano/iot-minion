@@ -18,108 +18,14 @@ const char HTML_MISSING_DATA_UPLOAD[] PROGMEM = "<!DOCTYPE html><html lang=\"en\
                 " e utilizar o menu no Arduino IDE: <b>Ferramentas->ESP32 Sketch Data Upload</b>"
                 " para gravar o conteúdo do web server (pasta: <b>/data</b>) no <b>Storage</b>.</div></body></html>";
 
-String getContentType(String filename) { // convert the file extension to the MIME type
-  if (filename.endsWith(".html")) return "text/html";
-  else if (filename.endsWith(".css")) return "text/css";
-  else if (filename.endsWith(".js")) return "application/javascript";
-  else if (filename.endsWith(".ico")) return "image/x-icon";
-  else if (filename.endsWith(".png")) return "image/png";
-  else if (filename.endsWith(".jpg")) return "image/jpg";
-  else if (filename.endsWith(".json")) return "application/json";
-  return "text/plain";
-}
-
-void startWebServer() {
-  /* Webserver para se comunicar via browser com ESP32  */
-  Serial.println(WEB_SERVER_CONFIG);
-  server = new AsyncWebServer(HTTP_REST_PORT);
-
-  /* 
-   *  Rotas sem bloqueios de token na API
-   *  Configura as páginas de login e upload 
-   *  de firmware OTA 
-   */
-  // Rotas das imagens a serem usadas na página home e o Health (não estão com basic auth)
-  handle_MinionLogo();
-  handle_MinionList();
-  handle_MinionIco();
-  handle_Style();
-  handle_Health();
-  handle_Metrics();
-
-  handle_Home();
-  handle_CICD();
-  handle_Swagger();
-  handle_SwaggerUI();
-  
-  /*
-   * Rotas bloqueadas pelo token authorization
-   */
-  handle_Ports();
-  handle_Volume();
-  handle_Audios();
-  handle_Sensors();
-  handle_Lists();
-  handle_TemperatureAndHumidity();
-  handle_InsertTalk();
-  handle_InsertPlay();
-  handle_InsertPlayRemote();
-  handle_UpdateSensors();
-  handle_InsertItemList();
-  handle_DeleteItemList();
-  handle_UploadStorage();
-  handle_ListSdcard();
-  // ------------------------------------ //
-  // se não se enquadrar em nenhuma das rotas
-  handle_OnError();
-
-  // permitindo todas as origens. O ideal é trocar o '*' pela url do frontend poder utilizar a api com maior segurança
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Credentials", "true");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-
-  // startup web server
-  server->begin();
-  
-  #ifdef DEBUG
-    Serial.println(WEB_SERVER_STARTED);
-  #endif
-}
-
-// handles uploads to storage
-void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;  
-  #ifdef DEBUG
-    Serial.println(logmessage);
-  #endif
-  if (!index) {
-    logmessage = "Upload Iniciado: " + String(filename);
-    // open the file on first call and store the file handle in the request object
-    request->_tempFile = LITTLEFS.open("/" + filename, "w");
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-  }
-
-  if (len) {
-    // stream the incoming chunk to the opened file
-    request->_tempFile.write(data, len);
-    logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-  }
-
-  if (final) {
-    logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
-    // close the file handle as the upload is now done
-    request->_tempFile.close();
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-    request->redirect("/");
-  }
+void handle_OnError(){
+  server->onNotFound([](AsyncWebServerRequest *request) {
+    if(request->method() == HTTP_OPTIONS) {
+      request->send(HTTP_NO_CONTENT);
+    }
+      char filename[] = "/error.html";
+      request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
+  });
 }
 
 void handle_MinionLogo(){
@@ -153,29 +59,31 @@ void handle_Style(){
 
 void handle_Home(){
   server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = HTML_MISSING_DATA_UPLOAD;
-    bool exists = false;
-    char filename[] = "/home.html"; 
-    exists = LITTLEFS.exists(filename);
-    if(exists){
-      html = String(getContent(filename));
+    char filename[] = "/home.html";
+    String html = getContent(filename);
+    if(html.length() > 0) {
       // versao do firmware: https://semver.org/
       html.replace("0.0.0",String(version));
       html.replace("AIO_USERNAME",String(MQTT_USERNAME));
-      html.replace("HOST_MINION",String(HOST));      
-    }        
+      html.replace("HOST_MINION",String(HOST));
+    } else {
+      html = HTML_MISSING_DATA_UPLOAD;  
+    }
     request->send(HTTP_OK, getContentType(filename), html);
-  });
+  });  
 }
 
 void handle_CICD(){
   server->on("/cicd", HTTP_GET, [](AsyncWebServerRequest *request) {
-    char filename[] = "/cicd.html"; 
-    String html = String(getContent(filename));
-    if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
-    html.replace("AIO_SERVER",String(MQTT_BROKER));
-    html.replace("AIO_USERNAME",String(MQTT_USERNAME));
-    html.replace("AIO_KEY",String(MQTT_PASSWORD));
+    char filename[] = "/cicd.html";    
+    String html = getContent(filename);
+    if(html.length() > 0) {
+      html.replace("AIO_SERVER",String(MQTT_BROKER));
+      html.replace("AIO_USERNAME",String(MQTT_USERNAME));
+      html.replace("AIO_KEY",String(MQTT_PASSWORD));
+    } else {
+      html = HTML_MISSING_DATA_UPLOAD;  
+    }
     request->send(HTTP_OK, getContentType(filename), html);
   });
 }
@@ -183,10 +91,13 @@ void handle_CICD(){
 void handle_Swagger(){
   server->on("/swagger.json", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/swagger.json";
-    String json = String(getContent(filename));
-    if(json.length() == 0) json=HTML_MISSING_DATA_UPLOAD;
-    json.replace("0.0.0",version);
-    json.replace("HOST_MINION",String(HOST)+".local");
+    String json = getContent(filename);
+    if(json.length() > 0) {
+      json.replace("0.0.0",version);
+      json.replace("HOST_MINION",String(HOST)+".local");
+    } else {
+      json = HTML_MISSING_DATA_UPLOAD;  
+    }
     request->send(HTTP_OK, getContentType(filename), json);
   });
 }
@@ -194,11 +105,14 @@ void handle_Swagger(){
 void handle_SwaggerUI(){
   server->on("/swaggerUI", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/swaggerUI.html";
-    String html = String(getContent(filename));
-    if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
-    html.replace("HOST_MINION",String(HOST)+".local");
+    String html = getContent(filename);    
+    if(html.length() > 0) {
+      html.replace("HOST_MINION",String(HOST)+".local");
+    } else {
+      html = HTML_MISSING_DATA_UPLOAD;
+    }
     request->send(HTTP_OK, getContentType(filename), html);
-  });  
+  });
 }
 
 void handle_Health(){
@@ -632,16 +546,98 @@ void handle_ListSdcard() {
   });
 }
 
-void handle_OnError(){
-  server->onNotFound([](AsyncWebServerRequest *request) {
-    if(request->method() == HTTP_OPTIONS) {
-      request->send(HTTP_NO_CONTENT);
-    }
-      char filename[] = "/error.html";
-      request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
-  });
+// handles uploads to storage
+void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;  
+  #ifdef DEBUG
+    Serial.println(logmessage);
+  #endif
+  if (!index) {
+    logmessage = "Upload Iniciado: " + String(filename);
+    // open the file on first call and store the file handle in the request object
+    request->_tempFile = LITTLEFS.open("/" + filename, "w");
+    #ifdef DEBUG
+      Serial.println(logmessage);
+    #endif
+  }
+
+  if (len) {
+    // stream the incoming chunk to the opened file
+    request->_tempFile.write(data, len);
+    logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+    #ifdef DEBUG
+      Serial.println(logmessage);
+    #endif
+  }
+
+  if (final) {
+    logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
+    // close the file handle as the upload is now done
+    request->_tempFile.close();
+    #ifdef DEBUG
+      Serial.println(logmessage);
+    #endif
+    request->redirect("/");
+  }
 }
 
+void startWebServer() {
+  /* Webserver para se comunicar via browser com ESP32  */
+  Serial.println(WEB_SERVER_CONFIG);
+  server = new AsyncWebServer(HTTP_REST_PORT);
+
+  /* 
+   *  Rotas sem bloqueios de token na API
+   *  Configura as páginas de login e upload 
+   *  de firmware OTA 
+   */
+  // Rotas das imagens a serem usadas na página home e o Health (não estão com basic auth)
+  handle_MinionLogo();
+  handle_MinionList();
+  handle_MinionIco();
+  handle_Style();
+  handle_Health();
+  handle_Metrics();
+
+  handle_Home();
+  handle_CICD();
+  handle_Swagger();
+  handle_SwaggerUI();
+  
+  /*
+   * Rotas bloqueadas pelo token authorization
+   */
+  handle_Ports();
+  handle_Volume();
+  handle_Audios();
+  handle_Sensors();
+  handle_Lists();
+  handle_TemperatureAndHumidity();
+  handle_InsertTalk();
+  handle_InsertPlay();
+  handle_InsertPlayRemote();
+  handle_UpdateSensors();
+  handle_InsertItemList();
+  handle_DeleteItemList();
+  handle_UploadStorage();
+  handle_ListSdcard();
+  // ------------------------------------ //
+  // se não se enquadrar em nenhuma das rotas
+  handle_OnError();
+
+  // permitindo todas as origens. O ideal é trocar o '*' pela url do frontend poder utilizar a api com maior segurança
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Credentials", "true");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+
+  // startup web server
+  server->begin();
+  
+  #ifdef DEBUG
+    Serial.println(WEB_SERVER_STARTED);
+  #endif
+}
 
 bool check_authorization_header(AsyncWebServerRequest * request){
   int headers = request->headers();

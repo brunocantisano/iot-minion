@@ -20,6 +20,8 @@
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
 #include <LITTLEFS.h> 
 
+const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
+
 //#define DEBUG
 #define SERIAL_PORT                115200
 //Rest API
@@ -87,25 +89,41 @@ String strFahrenheit = "0.0";
 String strHumidity = "0.0";
 
 String getContent(const char* filename) {
-  String payload="";
-  File file = LITTLEFS.open(filename, "r"); 
-  const char mensagem[] = "Falhou para abrir para leitura";
-  if(!file){    
-    #ifdef DEBUG
-      Serial.println(mensagem);
-    #endif
-    return mensagem;
-  }
-  while (file.available()) {
-    payload += file.readString();
-  }
-  file.close();
+  String payload="";  
+  bool exists = LITTLEFS.exists(filename);
+  if(exists){
+    File file = LITTLEFS.open(filename, "r"); 
+    const char mensagem[] = "Falhou para abrir para leitura";
+    if(!file){    
+      #ifdef DEBUG
+        Serial.println(mensagem);
+      #endif
+      return mensagem;
+    }
+    while (file.available()) {
+      payload += file.readString();
+    }
+    file.close();
+  } else {
+    Serial.println(LITTLEFS_ERROR);
+  }  
   return payload;
 }
 
+String getContentType(String filename) { // convert the file extension to the MIME type
+  if (filename.endsWith(".html")) return "text/html";
+  else if (filename.endsWith(".css")) return "text/css";
+  else if (filename.endsWith(".js")) return "application/javascript";
+  else if (filename.endsWith(".ico")) return "image/x-icon";
+  else if (filename.endsWith(".png")) return "image/png";
+  else if (filename.endsWith(".jpg")) return "image/jpg";
+  else if (filename.endsWith(".json")) return "application/json";
+  return "text/plain";
+}
+
 bool writeContent(String filename, String content){
-   File file = LITTLEFS.open(filename, FILE_WRITE);
-   return writeContent(&file, content);
+  File file = LITTLEFS.open(filename, "w");
+  return writeContent(&file, content);
 }
 
 bool writeContent(File * file, String content){
@@ -434,12 +452,6 @@ void setup(void)
       Serial.println("Versão: "+String(version));
     #endif
 
-    // conteudo da pasta data
-    if(!LITTLEFS.begin(true)){      
-      #ifdef DEBUG
-        Serial.println(F("Erro aconteceu enquanto montava LittleFS"));
-      #endif
-    }
     /* Conecta-se a rede wi-fi */
     WiFi.begin(WIFI_SSID, WIFI_PASSWD);
     while (WiFi.status() != WL_CONNECTED) 
@@ -465,6 +477,13 @@ void setup(void)
       Serial.print(F("        DNS 3: ")); Serial.println(WiFi.dnsIP(2));   
     #endif
 
+    // conteudo da pasta data
+    if(!LITTLEFS.begin(true)){      
+      #ifdef DEBUG
+        Serial.println(LITTLEFS_ERROR);
+      #endif
+    }    
+    
     startWebServer();
         
     // exibindo rota /update para atualização de firmware e filesystem
