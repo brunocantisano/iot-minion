@@ -9,11 +9,7 @@ String getMetrics() {
   int available_size = flash_size - sketch_size;
   int heap_size = ESP.getFreeContStack();
   int free_heap = ESP.getFreeHeap();
-  //int psram_size = ESP.getPsramSize();
-  //int free_psram_size = ESP.getFreePsram();
   
-  //float temperature = ((temprature_sens_read() - 32) / 1.8);
- 
   setMetric(&p, "esp8266_uptime", String(millis()));
   setMetric(&p, "esp8266_wifi_rssi", String(WiFi.RSSI()));
   setMetric(&p, "esp8266_sketch_size", String(sketch_size));
@@ -21,9 +17,6 @@ String getMetrics() {
   setMetric(&p, "esp8266_available_size", String(available_size));
   setMetric(&p, "esp8266_heap_size", String(heap_size));
   setMetric(&p, "esp8266_free_heap", String(free_heap));
-  //setMetric(&p, "esp8266_psram_size", String(psram_size));
-  //setMetric(&p, "esp8266_free_psram_size", String(free_psram_size));
-  //setMetric(&p, "esp8266_temperature", String(temperature));
   setMetric(&p, "esp8266_boot_counter", String(getBootCounter()));  
   setMetric(&p, "esp8266_celsius", strCelsius);
   setMetric(&p, "esp8266_fahrenheit", strFahrenheit);

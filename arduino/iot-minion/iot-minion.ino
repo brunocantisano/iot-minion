@@ -4,6 +4,7 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
 #include <WiFiClient.h>
 #include <ESP8266mDNS.h>
 #include <ArduinoJson.h>
@@ -286,7 +287,11 @@ void setup() {
     if(!LittleFS.begin()){
       Serial.println(LITTLEFS_ERROR);
     }
+    
     startWebServer();
+
+    // exibindo rota /update para atualização de firmware e filesystem
+    AsyncElegantOTA.begin(server, USER_FIRMWARE, PASS_FIRMWARE);
     
     Serial.println("HTTP server started");
 }
@@ -294,13 +299,3 @@ void setup() {
 void loop(void) {
   
 }
-/*
-#ifdef __cplusplus
-extern "C" {
-#endif
-uint8_t temprature_sens_read();
-#ifdef __cplusplus
-}
-#endif
-uint8_t temprature_sens_read();
-*/
