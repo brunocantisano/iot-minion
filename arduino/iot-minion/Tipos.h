@@ -24,9 +24,3 @@ class ArduinoSensorPort {
     byte status; // 1-TRUE / 0-FALSE
 };
 /******************************************************/
-
-typedef enum {
-  celsius,
-  fahrenheit,
-  humidity
-} temperature_dht;

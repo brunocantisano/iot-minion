@@ -23,46 +23,52 @@
 const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
 //#define DEBUG
-#define SERIAL_PORT                115200
+#define SERIAL_PORT                  115200
 //Rest API
-#define HTTP_REST_PORT             80
+#define HTTP_REST_PORT               80
 //Volume
-#define DEFAULT_VOLUME             70
-#define RelayHat                   13
-#define RelayEyes                  14
-#define RelayBlink                 15
-#define RelayShake                 22
-#define TemperatureHumidity        33
+#define DEFAULT_VOLUME               70
+#define RelayHat                     13
+#define RelayEyes                    14
+#define RelayBlink                   15
+#define RelayShake                   22
+#define TemperatureHumidity          33
 
 //Pinos de conexão do ESP32 e o módulo de cartão SD
-#define SD_CS                      5
-#define SCK                        18
-#define MISO                       19
-#define MOSI                       23
+#define SD_CS                        5
+#define SCK                          18
+#define MISO                         19
+#define MOSI                         23
 //
 //Pinos de conexão do ESP32-I2S e o módulo I2S/DAC CJMCU 1334
-#define I2S_DOUT                   25
-#define I2S_LRC                    26
-#define I2S_BCLK                   27
+#define I2S_DOUT                     25
+#define I2S_LRC                      26
+#define I2S_BCLK                     27
 
-#define MAX_STRING_LENGTH          2000
-#define MAX_PATH                   256
+#define MAX_STRING_LENGTH            2000
+#define MAX_PATH                     256
 
 /* 200 OK */
-#define HTTP_OK                    200
+#define HTTP_OK                      200
 /* 204 No Content */
-#define HTTP_NO_CONTENT            204
+#define HTTP_NO_CONTENT              204
 /* 400 Bad Request */
-#define HTTP_BAD_REQUEST           400
-#define HTTP_UNAUTHORIZED          401
-#define HTTP_INTERNAL_SERVER_ERROR 500
-#define HTTP_NOT_FOUND             404
-#define HTTP_CONFLICT              409
+#define HTTP_BAD_REQUEST             400
+#define HTTP_UNAUTHORIZED            401
+#define HTTP_INTERNAL_SERVER_ERROR   500
+#define HTTP_NOT_FOUND               404
+#define HTTP_CONFLICT                409
 
 Preferences preferences;
 //Cria o objeto que representará o áudio
 Audio audio;
 //---------------------------------//
+int timeSinceLastRead = 0;
+String strCelsius;
+String strFahrenheit;
+String strHumidity;
+String strHeatIndexFahrenheit;
+String strHeatIndexCelsius;
 
 /* versão do firmware */
 const char version[] PROGMEM = API_VERSION;
@@ -83,10 +89,6 @@ PubSubClient client(espClient);
 DHT dht(TemperatureHumidity, DHT11);
 
 AsyncWebServer *server;               // initialise webserver
-
-String strCelsius = "0.0";
-String strFahrenheit = "0.0";
-String strHumidity = "0.0";
 
 String getContent(const char* filename) {
   String payload="";  
@@ -408,14 +410,6 @@ void playRemoteMidia(const char * url)
   audio.connecttohost(url); //  128k mp3
 }
 
-void taskSensorTemperatureHumidity( void * parameter )
-{
-  strCelsius = getTemperatureHumidity(celsius);
-  strFahrenheit = getTemperatureHumidity(fahrenheit);
-  strHumidity = getTemperatureHumidity(humidity);
-  vTaskDelete( NULL ); 
-}
-
 void setup(void)
 {
     Serial.begin(SERIAL_PORT);
@@ -509,14 +503,6 @@ void setup(void)
     client.setServer(MQTT_BROKER, MQTT_PORT);
     client.setCallback(callback);
     Serial.println(F("Minion funcionando!"));
-
-    // thread para buscar temperatura e umidade
-    xTaskCreate(taskSensorTemperatureHumidity,    /* Task function. */
-                "TaskSentorTemperatureHumidity",  /* String with name of task. */
-                10000,                            /* Stack size in bytes. */
-                NULL,                             /* Parameter passed as input of the task */
-                1,                                /* Priority of the task. */
-                NULL);                            /* Task handle. */
 }
 
 void callback(char *topic, byte *payload, unsigned int length) {
@@ -579,13 +565,10 @@ void callback(char *topic, byte *payload, unsigned int length) {
   }
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/temperature")).c_str() ||
     String(topic) == (String(MQTT_USERNAME)+String("/feeds/humidity")).c_str()) {
-    // thread para buscar temperatura e umidade
-    xTaskCreate(taskSensorTemperatureHumidity,    /* Task function. */
-                "TaskSentorTemperatureHumidity",  /* String with name of task. */
-                10000,                            /* Stack size in bytes. */
-                NULL,                             /* Parameter passed as input of the task */
-                1,                                /* Priority of the task. */
-                NULL);                            /* Task handle. */
+    #ifdef DEBUG
+      // busca temperatura e umidade
+    Serial.println("busca temperatura e umidade")
+    #endif
   }
   #ifdef DEBUG
     Serial.println(F("-----------------------"));
@@ -631,6 +614,16 @@ void loop()
   client.loop();
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
+
+  // Report every 1 minuto.
+  if(timeSinceLastRead > 60000) {
+    // Reading temperature or humidity takes about 250 milliseconds!
+    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    getTemperatureHumidity();
+    timeSinceLastRead = 0;
+  }
+  delay(100);
+  timeSinceLastRead += 100;  
 }
 
 #ifdef __cplusplus
