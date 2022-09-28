@@ -21,6 +21,8 @@ String getMetrics() {
   setMetric(&p, "esp8266_celsius", strCelsius);
   setMetric(&p, "esp8266_fahrenheit", strFahrenheit);
   setMetric(&p, "esp8266_humidity", strHumidity);
+  setMetric(&p, "esp32_heat_celsius", strHeatIndexCelsius);
+  setMetric(&p, "esp32_heat_fahrenheit", strHeatIndexFahrenheit);
   setMetric(&p, "esp8266_eyes", String(readSensorStatus(RelayEyes)));
   setMetric(&p, "esp8266_hat", String(readSensorStatus(RelayHat)));
   setMetric(&p, "esp8266_blink", String(readSensorStatus(RelayBlink)));
@@ -92,36 +94,50 @@ void closeStorage() {
   preferences.end();
 }
 
-String getTemperatureHumidity(temperature_dht tipo) {
-  float valor = 0.0;
+void getTemperatureHumidity() {
+
   String feedName = "temperature";
-  // Leituras do sensor podem demorar até 2 segundos (o sensor DHT11 é muito lento)
-  switch(tipo) {
-    case celsius:
-      // Le a temperatura como Celsius (padrao)
-      valor = dht.readTemperature();
-      delay(2000);
-      break;
-    case fahrenheit:
-      valor = dht.readTemperature(true);
-      delay(2000);
-      break;
-    case humidity:
-      valor = dht.readHumidity();
-      feedName = "humidity";
-      delay(2000);
-      break;            
-  }  
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+
+  // Le a temperatura como Celsius (padrao)
+  float c = dht.readTemperature();
+  float f = dht.readTemperature(true);
+  float h = dht.readHumidity();
+
   // Checa se qualquer leitura falha e saida mais cedo (para tentar de novo).
-  if (isnan(valor)) {    
+  if (isnan(h) || isnan(c) || isnan(f)) {    
     #ifdef DEBUG
-      Serial.println("Falha na leitura do tipo: "+String(tipo));
+      Serial.println("Falha na leitura");
     #endif
-    valor = 0.0;
+    timeSinceLastRead = 0;
   }
-  char buffer [MAX_PATH];
-  snprintf ( buffer, MAX_PATH, "%.1f", valor );   
-  // publish
-  client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
-  return String(buffer);
+
+  // Compute heat index in Celsius (isFahreheit = false)
+  float hic = dht.computeHeatIndex(c, h, false);
+  // Compute heat index in Fahrenheit (the default)
+  float hif = dht.computeHeatIndex(f, h);
+
+  char celsius [MAX_PATH];
+  snprintf (celsius, MAX_PATH, "%.1f", c);
+  char fahrenheit [MAX_PATH];
+  snprintf (fahrenheit, MAX_PATH, "%.1f", f);
+  char humidity [MAX_PATH];
+  snprintf (humidity, MAX_PATH, "%.1f", h);
+
+  char heatIndexCelsius [MAX_PATH];
+  snprintf (heatIndexCelsius, MAX_PATH, "%.1f", hic);
+
+  char heatIndexFahrenheit [MAX_PATH];
+  snprintf (heatIndexFahrenheit, MAX_PATH, "%.1f", hif);
+
+
+  strCelsius = String(celsius);
+  strFahrenheit = String(fahrenheit);
+  strHumidity = String(humidity);
+  strHeatIndexCelsius = String(heatIndexCelsius);
+  strHeatIndexFahrenheit = String(heatIndexFahrenheit);
+
+
+  timeSinceLastRead = 0;
 }

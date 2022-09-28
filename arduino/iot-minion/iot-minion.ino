@@ -55,6 +55,14 @@ const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
 Preferences preferences;
 //---------------------------------//
+int timeSinceLastRead = 0;
+
+String strCelsius = "0.0";
+String strFahrenheit = "0.0";
+String strHumidity = "0.0";
+String strHeatIndexFahrenheit = "0.0";
+String strHeatIndexCelsius = "0.0";
+
 
 /* versão do firmware */
 const char version[] PROGMEM = API_VERSION;
@@ -74,10 +82,6 @@ DHT dht(TemperatureHumidity, DHT11);
 
 // Create a webserver object that listens for HTTP request on port 80
 AsyncWebServer *server;
-
-String strCelsius = "0.0";
-String strFahrenheit = "0.0";
-String strHumidity = "0.0";
 
 String getContent(const char* filename) {
   String payload="";  
@@ -297,5 +301,13 @@ void setup() {
 }
 
 void loop(void) {
-  
+  // Report every 2 seconds.
+  if(timeSinceLastRead > 2000) {
+    // Reading temperature or humidity takes about 250 milliseconds!
+    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    getTemperatureHumidity();
+    timeSinceLastRead = 0;
+  }
+  delay(100);
+  timeSinceLastRead += 100;
 }

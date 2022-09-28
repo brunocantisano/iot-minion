@@ -194,12 +194,12 @@ void handle_TemperatureAndHumidity(){
       for(int i=0;i<paramsNr;i++){
         AsyncWebParameter* p = request->getParam(i);
         if(strcmp("celsius", p->value().c_str())==0){
-          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("celsius", getTemperatureHumidity(celsius)));
+          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("celsius", strCelsius));
         } else if (strcmp("fahrenheit", p->value().c_str())==0){
-          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("fahrenheit", getTemperatureHumidity(fahrenheit)));
+          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("fahrenheit", strFahrenheit));
         }
         else if (strcmp("humidity", p->value().c_str())==0){
-          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("humidity", getTemperatureHumidity(humidity)));
+          request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("humidity", strHumidity));
         }
       }
       request->send(HTTP_BAD_REQUEST, getContentType(".txt"), WRONG_CLIMATE);
