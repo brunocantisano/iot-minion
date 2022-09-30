@@ -266,8 +266,9 @@ void setup() {
     
     // DH11 inicia temperatura
     dht.begin();
-      
-     WiFi.begin(WIFI_SSID, WIFI_PASSWD);
+
+    WiFi.mode(WIFI_STA);   
+    WiFi.begin(WIFI_SSID, WIFI_PASSWD);
     Serial.println("Connecting ...");
     while (WiFi.status() != WL_CONNECTED) 
     {
@@ -280,9 +281,9 @@ void setup() {
     Serial.print("Connected to ");
     Serial.println(WiFi.SSID());              // Tell us what network we're connected to
     Serial.print("IP address:\t");
-    Serial.println(WiFi.localIP());           // Send the IP address of the ESP8266 to the computer
-  
-    if (MDNS.begin(HOST)) {              // Start the mDNS responder for minion.local
+    Serial.println(WiFi.localIP());           // Send the IP address of the ESP8266 to the computer  
+
+    if (MDNS.begin(HOST)) {              // Start the mDNS responder for minion.local      
       Serial.println("mDNS responder started");
     } else {
       Serial.println("Error setting up MDNS responder!");
@@ -292,7 +293,7 @@ void setup() {
       Serial.println(LITTLEFS_ERROR);
     }
     
-    startWebServer();
+    startWebServer();  
 
     // exibindo rota /update para atualização de firmware e filesystem
     AsyncElegantOTA.begin(server, USER_FIRMWARE, PASS_FIRMWARE);
@@ -301,6 +302,7 @@ void setup() {
 }
 
 void loop(void) {
+  MDNS.update();
   // Report every 2 seconds.
   if(timeSinceLastRead > 2000) {
     // Reading temperature or humidity takes about 250 milliseconds!

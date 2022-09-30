@@ -476,6 +476,8 @@ void startWebServer() {
 
   // startup web server
   server->begin();
+
+  MDNS.addService("http", "tcp", 80);
   
   #ifdef DEBUG
     Serial.println(WEB_SERVER_STARTED);
