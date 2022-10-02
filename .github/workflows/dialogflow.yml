@@ -1,0 +1,118 @@
+# This is a basic workflow that is manually triggered
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+name: Build Dialog Flow
+on:
+  workflow_dispatch:
+    branches: [ ESP8266 ]
+    inputs:
+      name:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Iniciar a geração de configurações Dialog Flow'
+        # Default value if no value is explicitly provided
+        default: 'Iniciar'
+        # Input has to be provided for the workflow to run
+        required: true
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+# Esses campos não podem ser alterados pelo cicd. Devem ser alterados manualmente
+# Porque, como o repositório é público, uma alteração nesses campos irá expor as 
+# dados sensíveis para acesso ao firebase e ao adafruit.
+#      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+#      AIO_USERNAME: ${{secrets.AIO_USERNAME}}
+#      AIO_KEY: ${{secrets.AIO_KEY}}
+      FIREBASE_STORAGE_BUCKET_ID: ${{secrets.FIREBASE_STORAGE_BUCKET_ID}}
+      Version: 1.0.${{ github.run_number }}
+      BUILD_WRAPPER_OUT_DIR: minion-dialogflow # Directory where output will be placed
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@master
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+#      - name: Change Firebase Token
+#        uses: jacobtomlinson/gha-find-replace@master
+#        with:
+#          find: <FIREBASE_TOKEN>
+#          replace: ${{ env.FIREBASE_TOKEN }}
+#          include: "index.js"
+
+#      - name: Change Adafruit Username
+#        uses: jacobtomlinson/gha-find-replace@master
+#        with:
+#          find: <AIO_USERNAME>
+#          replace: ${{ env.AIO_USERNAME }}
+#          include: "index.js"
+
+#      - name: Change Adafruit Key
+#        uses: jacobtomlinson/gha-find-replace@master
+#        with:
+#          find: <AIO_KEY>
+#          replace: ${{ env.AIO_KEY }}
+#          include: "index.js"
+
+      - name: Change Firebase Storage Bucket Id
+        uses: jacobtomlinson/gha-find-replace@master
+        with:
+          find: <FIREBASE_STORAGE_BUCKET_ID>
+          replace: ${{ env.FIREBASE_STORAGE_BUCKET_ID }}
+          include: "index.js"
+
+      - name: Change Agent - Firebase Storage Bucket Id
+        uses: microsoft/variable-substitution@v1 
+        with:
+          files: "dialogflow/data/agent.json"
+        env:
+          webhook.url: "https://us-central1-${{ env.FIREBASE_STORAGE_BUCKET_ID }}.cloudfunctions.net/dialogflowFirebaseFulfillment"
+
+      - name: Change Version
+        uses: microsoft/variable-substitution@v1 
+        with:
+          files: "dialogflow/package.json"
+        env:
+          version: ${{ env.Version }}
+
+      # Archive the package
+      - name: Create zip file archive
+        uses: coco-hkk/compress-action@v2.1
+        id: step1
+        with:
+          file-suffix: '**'
+          target-directory-path: dialogflow
+          compress-tool: 'zip'
+
+      - name: Get archive
+        run: |
+          if [ "0"x != "${{ steps.step1.outputs.state }}"x ]; then
+            echo "archive create failed, exit"
+          else
+            mv ${{ steps.step1.outputs.archive }} ${{ env.BUILD_WRAPPER_OUT_DIR }}-v${{env.Version}}.zip
+          fi
+
+      # Create the release:  https://github.com/actions/create-release
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: v${{ env.Version }}
+          release_name: ${{ env.BUILD_WRAPPER_OUT_DIR }}-v${{ env.Version }}
+          draft: false
+          prerelease: false
+
+      # Upload release asset:   https://github.com/actions/upload-release-asset
+      - name: Update release asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}  # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ${{ env.BUILD_WRAPPER_OUT_DIR }}-v${{env.Version}}.zip
+          asset_name: ${{ env.BUILD_WRAPPER_OUT_DIR }}-v${{env.Version}}.zip
+          asset_content_type: application/zip

@@ -63,7 +63,6 @@ String strHumidity = "0.0";
 String strHeatIndexFahrenheit = "0.0";
 String strHeatIndexCelsius = "0.0";
 
-
 /* versão do firmware */
 const char version[] PROGMEM = API_VERSION;
 
@@ -88,12 +87,12 @@ String getContent(const char* filename) {
   bool exists = LittleFS.exists(filename);
   if(exists){
     File file = LittleFS.open(filename, "r"); 
-    const char mensagem[] = "Falhou para abrir para leitura";
+    String mensagem = "Falhou para abrir para leitura";
     if(!file){    
       #ifdef DEBUG
         Serial.println(mensagem);
       #endif
-      return mensagem;
+      return String(mensagem);
     }
     while (file.available()) {
       payload += file.readString();
