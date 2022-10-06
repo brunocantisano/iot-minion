@@ -21,8 +21,8 @@ String getMetrics() {
   setMetric(&p, "esp8266_celsius", strCelsius);
   setMetric(&p, "esp8266_fahrenheit", strFahrenheit);
   setMetric(&p, "esp8266_humidity", strHumidity);
-  setMetric(&p, "esp32_heat_celsius", strHeatIndexCelsius);
-  setMetric(&p, "esp32_heat_fahrenheit", strHeatIndexFahrenheit);
+  setMetric(&p, "esp8266_heat_celsius", strHeatIndexCelsius);
+  setMetric(&p, "esp8266_heat_fahrenheit", strHeatIndexFahrenheit);
   setMetric(&p, "esp8266_eyes", String(readSensorStatus(RelayEyes)));
   setMetric(&p, "esp8266_hat", String(readSensorStatus(RelayHat)));
   setMetric(&p, "esp8266_blink", String(readSensorStatus(RelayBlink)));
