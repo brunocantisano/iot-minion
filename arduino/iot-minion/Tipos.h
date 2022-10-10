@@ -9,6 +9,14 @@ class Application {
     String description;    
 };
 /******************************************************/
+/************** lista de mídias no sdcard *************/
+class Media {
+  public:
+    String name;
+    int size;    
+    String lastModified;
+};
+/******************************************************/
 /******************* lista de sensores ****************/
 class ArduinoSensorPort {
   public:

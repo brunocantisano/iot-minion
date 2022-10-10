@@ -1,17 +1,38 @@
 #include "Credentials.h"
 #include "Tipos.h"
 #include "ListaEncadeada.h"
+#include <google-tts.h>
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
-#include <WiFiClient.h>
+#include <WiFiClientSecure.h>
 #include <ESP8266mDNS.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <LittleFS.h>
+
+#include <SPI.h>
+#include <SD.h>
+#include "AudioFileSourceSPIFFS.h"
+#include "AudioFileSourceID3.h"
+#include "AudioGeneratorMP3.h"
+#include "AudioOutputI2SNoDAC.h"
+#include "AudioFileSourceICYStream.h"
+#include "AudioFileSourceBuffer.h"
+#include "AudioOutputSPDIF.h"
+
+AudioGeneratorMP3 *mp3;
+AudioFileSourceSPIFFS *file;
+AudioOutputI2SNoDAC *out;
+AudioFileSourceID3 *id3;
+AudioFileSourceICYStream *fileRemote;
+AudioFileSourceBuffer *buff;
+
+// Output device is SPDIF
+AudioOutputSPDIF *outSPDIF;
 
 const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
@@ -33,11 +54,22 @@ const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 #define D8                         15
 #define D9                         16
 
-#define RelayEyes                  D5
-#define RelayHat                   D7
-#define RelayBlink                 D8
-#define RelayShake                 D9
-#define TemperatureHumidity        D6
+#define RelayEyes                  D0
+#define RelayHat                   D1
+#define RelayBlink                 D2
+#define RelayShake                 D3
+#define TemperatureHumidity        D4
+
+//Pinos de conexão do ESP8266 e o módulo de cartão SD
+#define SD_CS                      11
+#define SCK                        6
+#define MISO                       7
+#define MOSI                       8
+//
+//Pinos de conexão do ESP8266-I2S e o módulo I2S/DAC CJMCU 1334
+#define I2S_DOUT                   D5
+#define I2S_LRC                    D6
+#define I2S_BCLK                   D7
 
 #define MAX_STRING_LENGTH          2000
 #define MAX_PATH                   256
@@ -72,6 +104,9 @@ ListaEncadeada<ArduinoSensorPort*> sensorListaEncadeada = ListaEncadeada<Arduino
 // Lista de aplicacoes do jenkins
 ListaEncadeada<Application*> applicationListaEncadeada = ListaEncadeada<Application*>();
 
+// Lista de media no sdcard
+ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
+
 // Create an ESP8266 WiFiClient class to connect to the MQTT server.
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -81,6 +116,149 @@ DHT dht(TemperatureHumidity, DHT11);
 
 // Create a webserver object that listens for HTTP request on port 80
 AsyncWebServer *server;
+
+/*
+// Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
+void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
+{
+  (void)cbData;
+  Serial.printf("ID3 callback for: %s = '", type);
+
+  if (isUnicode) {
+    string += 2;
+  }
+  
+  while (*string) {
+    char a = *(string++);
+    if (isUnicode) {
+      string++;
+    }
+    Serial.printf("%c", a);
+  }
+  Serial.printf("'\n");
+  Serial.flush();
+}
+*/
+/*
+String postUtil(String url, String httpRequestData, String certificate, String key="") { 
+  String payload;
+  WiFiClientSecure *secureClient = new WiFiClientSecure;
+  if(secureClient) {
+    char certificadoArray[certificate.length()];
+    certificate.toCharArray(certificadoArray, certificate.length());
+    secureClient -> setCACert(certificadoArray);
+    {
+      // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
+      HTTPClient https;      
+      #ifdef DEBUG
+        Serial.print("[HTTPS] begin...\n");
+      #endif
+      if (https.begin(*client, url)) {  // HTTPS
+        if(key.length()!=0){
+          https.addHeader("Authorization", "Bearer "+key);
+        }
+        https.addHeader("Content-Type", "application/json");
+        #ifdef DEBUG
+          Serial.print("[HTTPS] POST...\n");
+        #endif
+        // start connection and send HTTP header
+        int httpCode = https.POST(httpRequestData);
+        // httpCode will be negative on error
+        if (httpCode == HTTP_OK) {
+          // HTTP header has been send and Server response header has been handled          
+          #ifdef DEBUG
+            Serial.printf("[HTTPS] POST... code: %d\n", httpCode);
+          #endif
+          payload = https.getString();
+        } else {          
+          #ifdef DEBUG
+            Serial.printf("[HTTPS] POST... failed, error: %s\n", https.errorToString(httpCode).c_str());
+          #endif
+          payload = "{\"message\": \"Método não implementado\"}";
+        }
+        https.end();
+      } else {        
+        #ifdef DEBUG
+          Serial.printf("[HTTPS] Unable to connect\n");
+        #endif
+      }
+      // End extra scoping block
+    }
+    delete secureClient;
+  }
+  return payload;
+}
+
+String getUtil(String url, String certificate, String filename="") {
+  String payload;
+  WiFiClientSecure *secureClient = new WiFiClientSecure;
+  if(secureClient) {
+    char certificadoArray[certificate.length()];
+    certificate.toCharArray(certificadoArray, certificate.length());
+    secureClient -> setCACert(certificadoArray);
+    {
+      // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
+      HTTPClient https;      
+      #ifdef DEBUG
+        Serial.print("[HTTPS] begin...\n");
+      #endif      
+      if (https.begin(*secureClient, url)) {  // HTTPS        
+        #ifdef DEBUG
+          Serial.print("[HTTPS] GET...\n");
+        #endif
+        // start connection and send HTTP header
+        int httpCode = https.GET();
+  
+        // httpCode will be negative on error
+        if (httpCode > 0) {
+          // HTTP header has been send and Server response header has been handled          
+          #ifdef DEBUG
+            Serial.printf("[HTTPS] GET... code: %d\n", httpCode);
+          #endif
+          // file found at server
+          if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+            payload = https.getString();
+            if(filename!=""){
+              writeContent(filename, payload);
+            }
+            #ifdef DEBUG
+              Serial.println(payload);
+            #endif
+          }
+        } else {          
+          #ifdef DEBUG
+            Serial.printf("[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
+          #endif          
+        }
+        https.end();
+      } else {        
+        #ifdef DEBUG
+          Serial.printf("[HTTPS] Unable to connect\n");
+        #endif
+      }
+      // End extra scoping block
+    }
+    delete secureClient;
+  } else {
+    Serial.println("Unable to create client");
+  }
+  return payload;
+}
+*/
+// Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
+void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
+{
+  const char *ptr = reinterpret_cast<const char *>(cbData);
+  (void) isUnicode; // Punt this ball for now
+  // Note that the type and string may be in PROGMEM, so copy them to RAM for printf
+  char s1[32], s2[64];
+  strncpy_P(s1, type, sizeof(s1));
+  s1[sizeof(s1)-1]=0;
+  strncpy_P(s2, string, sizeof(s2));
+  s2[sizeof(s2)-1]=0;
+  Serial.printf("METADATA(%s) '%s' = '%s'\n", ptr, s1, s2);
+  Serial.flush();
+}
 
 String getContent(const char* filename) {
   String payload="";  
@@ -233,6 +411,16 @@ void addApplication(String name, String language, String description) {
   applicationListaEncadeada.add(app);
 }
 
+void addMedia(String name, int size, String lastModified) {
+  Media *media = new Media();
+  media->name = name;
+  media->size = size;
+  media->lastModified=lastModified;
+
+  // Adiciona a aplicação na lista
+  mediaListaEncadeada.add(media);
+}
+
 void saveApplicationList() {
   Application *app;
   String JSONmessage;
@@ -248,6 +436,115 @@ void saveApplicationList() {
   client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
 }
 
+int loadApplicationList() {
+  // Carrega do storage
+  String JSONmessage = getContent("/lista.json");
+  if(JSONmessage == "") {    
+    #ifdef DEBUG
+      Serial.println(F("Lista local de aplicações vazia"));
+    #endif
+    return -1;
+  } else {
+    DynamicJsonDocument doc(MAX_STRING_LENGTH);
+    DeserializationError error = deserializeJson(doc, JSONmessage);
+    if (error) {
+      return 1;
+    }
+    for(int i = 0; i < doc.size(); i++){
+      addApplication(doc[i]["name"], doc[i]["language"], doc[i]["description"]);
+    }    
+  }
+  return 0;
+}
+
+// TODO
+void loadI2S() {
+  pinMode(SD_CS, OUTPUT);
+  digitalWrite(SD_CS, HIGH);
+  //SPI.begin(SCK, MISO, MOSI);
+  //SPI.setFrequency(1000000);
+  //SD.begin(SD_CS);
+
+  //Ajusta os pinos de conexão I2S
+  //audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+
+  //Ajusta o volume de saída.
+  //audio.setVolume(DEFAULT_VOLUME); // 0...21
+}
+
+// TODO
+bool playSpeech(const char * mensagem)
+{
+  //Para executar uma síntese de voz
+  TTS tts;
+  String url = tts.getSpeechUrl(mensagem, "pt");
+  /*
+  if(getUtil(url, getContent("/text2speech.crt"), "/audio.mp3").length() == 0) {
+    Serial.println("Não foi possível tocar o arquivo: /audio.mp3");
+    return false;
+  }
+  */
+  // toca o áudio
+  playMidia("/audio.mp3");
+  return true;
+}
+
+// TODO
+void playMidia(const char * midia)
+{
+  char filenameMidia[strlen(midia)+1];
+  filenameMidia[0]='/';
+  filenameMidia[1]='\0';
+  strcat(filenameMidia, midia);
+  #ifdef DEBUG
+    Serial.printf("Arquivo a tocar: %s\n",filenameMidia);
+  #endif
+  
+  // exemplo: "/1.mp3"
+  audioLogger = &Serial;
+  file = new AudioFileSourceSPIFFS(filenameMidia);
+  id3 = new AudioFileSourceID3(file);
+  id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
+  out = new AudioOutputI2SNoDAC();
+  mp3 = new AudioGeneratorMP3();
+  mp3->begin(id3, out);  
+}
+
+// TODO
+void playRemoteMidia(const char * url)
+{ 
+  audioLogger = &Serial;
+  fileRemote = new AudioFileSourceICYStream(url);
+
+  // Commented out for performance issues with high rate MP3 stream
+  //file->RegisterMetadataCB(MDCallback, (void*)"ICY");
+
+  buff = new AudioFileSourceBuffer(fileRemote, 4096);  // Doubled form default 2048
+
+  // Commented out for performance issues with high rate MP3 stream
+  //buff->RegisterStatusCB(StatusCallback, (void*)"buffer");
+
+  // Set SPDIF output
+  outSPDIF = new AudioOutputSPDIF();
+  mp3 = new AudioGeneratorMP3();
+
+  // Commented out for performance issues with high rate MP3 stream
+  //mp3->RegisterStatusCB(StatusCallback, (void*)"mp3");
+
+  mp3->begin(buff, outSPDIF);
+}
+
+// Called when there's a warning or error (like a buffer underflow or decode hiccup)
+void StatusCallback(void *cbData, int code, const char *string)
+{
+  const char *ptr = reinterpret_cast<const char *>(cbData);
+  // Note that the string may be in PROGMEM, so copy it to RAM for printf
+  char s1[64];
+  strncpy_P(s1, string, sizeof(s1));
+  s1[sizeof(s1)-1]=0;
+  Serial.printf("STATUS(%s) '%d' = '%s'\n", ptr, code, s1);
+  Serial.flush();
+}
 
 void setup() {
     Serial.begin(SERIAL_PORT);
@@ -302,6 +599,11 @@ void setup() {
 
 void loop(void) {
   MDNS.update();
+  /*
+  if (mp3->isRunning()) {
+    if (!mp3->loop()) mp3->stop();
+  }
+  */
   // Report every 2 seconds.
   if(timeSinceLastRead > 2000) {
     // Reading temperature or humidity takes about 250 milliseconds!
