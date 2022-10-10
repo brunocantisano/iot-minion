@@ -95,7 +95,7 @@ String getContent(const char* filename) {
   bool exists = LITTLEFS.exists(filename);
   if(exists){
     File file = LITTLEFS.open(filename, "r"); 
-    const char mensagem[] = "Falhou para abrir para leitura";
+    String mensagem = "Falhou para abrir para leitura";
     if(!file){    
       #ifdef DEBUG
         Serial.println(mensagem);
