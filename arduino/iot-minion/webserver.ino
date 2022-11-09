@@ -19,7 +19,7 @@ const char HTML_MISSING_DATA_UPLOAD[] PROGMEM = "<!DOCTYPE html><html lang=\"en\
                 " para gravar o conteúdo do web server (pasta: <b>/data</b>) no <b>Storage</b>.</div></body></html>";
 
 void handle_OnError(){
-  server->onNotFound([](AsyncWebServerRequest *request) {
+  server.onNotFound([](AsyncWebServerRequest *request) {
     if(request->method() == HTTP_OPTIONS) {
       request->send(HTTP_NO_CONTENT);
     }
@@ -29,14 +29,14 @@ void handle_OnError(){
 }
 
 void handle_MinionLogo(){
-  server->on("/minion-logo", HTTP_GET, [](AsyncWebServerRequest *request) {    
+  server.on("/minion-logo", HTTP_GET, [](AsyncWebServerRequest *request) {    
     char filename[] = "/minion-logo.png";
     request->send(LITTLEFS, filename, getContentType(filename));
   });
 }
 
 void handle_MinionList(){
-  server->on("/minion-list", HTTP_GET, [](AsyncWebServerRequest *request) {    
+  server.on("/minion-list", HTTP_GET, [](AsyncWebServerRequest *request) {    
     char filename[] = "/minion-list.png";
     request->send(LITTLEFS, filename, getContentType(filename));
   });
@@ -44,21 +44,21 @@ void handle_MinionList(){
   
   
 void handle_MinionIco(){
-  server->on("/minion-ico", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/minion-ico", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/minion-ico.ico";
     request->send(LITTLEFS, filename, getContentType(filename));
   });
 }
 
 void handle_Style(){
-  server->on("/style", HTTP_GET, [](AsyncWebServerRequest *request) {    
+  server.on("/style", HTTP_GET, [](AsyncWebServerRequest *request) {    
     char filename[] = "/style.css";
     request->send(LITTLEFS, filename, getContentType(filename));
   });
 }
 
 void handle_Home(){
-  server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/home.html";
     String html = getContent(filename);
     if(html.length() > 0) {
@@ -74,7 +74,7 @@ void handle_Home(){
 }
 
 void handle_CICD(){
-  server->on("/cicd", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/cicd", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/cicd.html";    
     String html = getContent(filename);
     if(html.length() > 0) {
@@ -89,7 +89,7 @@ void handle_CICD(){
 }
 
 void handle_Swagger(){
-  server->on("/swagger.json", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/swagger.json", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/swagger.json";
     String json = getContent(filename);
     if(json.length() > 0) {
@@ -103,7 +103,7 @@ void handle_Swagger(){
 }
 
 void handle_SwaggerUI(){
-  server->on("/swaggerUI", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/swaggerUI", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/swaggerUI.html";
     String html = getContent(filename);    
     if(html.length() > 0) {
@@ -116,7 +116,7 @@ void handle_SwaggerUI(){
 }
 
 void handle_Health(){
-  server->on("/health", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/health", HTTP_GET, [](AsyncWebServerRequest *request) {
     String mqttConnected = client.connected()?"true":"false";
     String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"date\": \""+String(getDataHora())+"\",\"url\": \"/health\",\"mqtt\": \""+mqttConnected+"\",\"version\": \""+version+"\",\"ip\": \""+String(IpAddress2String(WiFi.localIP()))+"\"}";
     request->send(HTTP_OK, getContentType(".json"), JSONmessage);
@@ -124,13 +124,13 @@ void handle_Health(){
 }
 
 void handle_Metrics(){
-  server->on("/metrics", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/metrics", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(HTTP_OK, getContentType(".txt"), getMetrics());
   });
 }
 
 void handle_Ports(){
-  server->on("/ports", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/ports", HTTP_GET, [](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       String JSONmessage;
       ArduinoSensorPort *arduinoSensorPort;    
@@ -148,7 +148,7 @@ void handle_Ports(){
 }
 
 void handle_Audios(){
-  server->on("/audios", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/audios", HTTP_GET, [](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       String JSONmessage;
       Media *media;    
@@ -165,7 +165,7 @@ void handle_Audios(){
 }
 
 void handle_Sensors() {
-  server->on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
     //"/sensors?type=eye"
     //"/sensors?type=hat"
     //"/sensors?type=blink"
@@ -193,7 +193,7 @@ void handle_Sensors() {
 }
 
 void handle_Lists(){
-  server->on("/lists", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/lists", HTTP_GET, [](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       String JSONmessage;
       Application *app;
@@ -211,7 +211,7 @@ void handle_Lists(){
 
 void handle_TemperatureAndHumidity(){
   //http://minion.local/climate?type=celsius
-  server->on("/climate", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/climate", HTTP_GET, [](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       int paramsNr = request->params();
       for(int i=0;i<paramsNr;i++){
@@ -242,7 +242,7 @@ String treatTemperatureAndHumidity(String field, String value)
 }
 
 void handle_InsertTalk(){
-  server->on("/talk", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
+  server.on("/talk", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {      
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
@@ -270,7 +270,7 @@ void handle_InsertTalk(){
 }
 
 void handle_InsertPlay(){
-  server->on("/play", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
+  server.on("/play", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
@@ -298,7 +298,7 @@ void handle_InsertPlay(){
 }
 
 void handle_InsertPlayRemote(){
-  server->on("/playRemote", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
+  server.on("/playRemote", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
             DynamicJsonDocument doc(MAX_STRING_LENGTH);
@@ -327,7 +327,7 @@ void handle_InsertPlayRemote(){
 
 void handle_Volume(){
   //"/volume"
-  server->on("/volume", HTTP_PUT, [](AsyncWebServerRequest * request){}, NULL,
+  server.on("/volume", HTTP_PUT, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {     
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
@@ -358,7 +358,7 @@ void handle_UpdateSensors(){
   //"/sensor?type=hat"
   //"/sensor?type=blink"
   //"/sensor?type=shake"
-  server->on("/sensor", HTTP_PUT, [](AsyncWebServerRequest * request){}, NULL,
+  server.on("/sensor", HTTP_PUT, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
       int sensor = RelayEyes;
@@ -404,7 +404,7 @@ void handle_UpdateSensors(){
 }
 
 void handle_InsertItemList(){
-  server->on("/list", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
+  server.on("/list", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
@@ -453,7 +453,7 @@ void handle_InsertItemList(){
 }
 
 void handle_DeleteItemList(){
-  server->on("/list/del", HTTP_DELETE, [](AsyncWebServerRequest * request){}, NULL,
+  server.on("/list/del", HTTP_DELETE, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
@@ -501,7 +501,7 @@ void handle_DeleteItemList(){
 }
 
 void handle_UploadStorage() {
-  server->on("/storage", HTTP_GET, [](AsyncWebServerRequest * request) {
+  server.on("/storage", HTTP_GET, [](AsyncWebServerRequest * request) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     #ifdef DEBUG
       Serial.println(logmessage);
@@ -519,14 +519,14 @@ void handle_UploadStorage() {
   });
 
   // run handleUpload function when any file is uploaded
-  server->on("/uploadStorage", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/uploadStorage", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(HTTP_OK);
       }, handleUploadStorage);
 }
 
 
 void handle_ListSdcard() {
-  server->on("/sdcard", HTTP_GET, [](AsyncWebServerRequest * request) {
+  server.on("/sdcard", HTTP_GET, [](AsyncWebServerRequest * request) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     #ifdef DEBUG
       Serial.println(logmessage);
@@ -584,8 +584,6 @@ void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t
 void startWebServer() {
   /* Webserver para se comunicar via browser com ESP32  */
   Serial.println(WEB_SERVER_CONFIG);
-  server = new AsyncWebServer(HTTP_REST_PORT);
-
   /* 
    *  Rotas sem bloqueios de token na API
    *  Configura as páginas de login e upload 
@@ -632,11 +630,71 @@ void startWebServer() {
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
   // startup web server
-  server->begin();
+  server.begin();
   
   #ifdef DEBUG
     Serial.println(WEB_SERVER_STARTED);
   #endif
+}
+
+void startWifiManagerServer() {
+  Serial.println("\nConfigurando o gerenciador de Wifi ...");
+  
+  handle_Style();
+  handle_WifiManager();
+  handle_WifiInfo();
+  server.serveStatic("/", LITTLEFS, "/");
+  
+  server.begin();
+}
+
+void handle_WifiManager(){
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(LITTLEFS, "/wifimanager.html", getContentType("/wifimanager.html"));
+  });
+}
+
+void handle_WifiInfo(){
+  server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
+    int params = request->params();
+    for(int i=0;i<params;i++){
+      AsyncWebParameter* p = request->getParam(i);
+      if(p->isPost()){
+        // HTTP POST ssid value
+        if (p->name() == "ssid") {
+          String ssid = p->value().c_str();
+          Serial.print("SSID set to: ");
+          Serial.println(ssid);
+          preferences.putString("ssid", ssid.c_str());
+        }
+        // HTTP POST pass value
+        if (p->name() == "pass") {
+          String pass = p->value().c_str();
+          Serial.print("Password set to: ");
+          Serial.println(pass);
+          preferences.putString("pass", pass.c_str());
+        }
+        // HTTP POST ip value
+        if (p->name() == "ip") {
+          String ip = p->value().c_str();
+          Serial.print("IP Address set to: ");
+          Serial.println(ip);
+          preferences.putString("ip", ip.c_str());
+        }
+        // HTTP POST gateway value
+        if (p->name() == "gateway") {
+          String gateway = p->value().c_str();
+          Serial.print("Gateway set to: ");
+          Serial.println(gateway);
+          preferences.putString("gateway", gateway.c_str());
+        }
+        //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+      }
+    }
+    request->send(200, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local");
+    delay(3000);
+    ESP.restart();
+  });
 }
 
 bool check_authorization_header(AsyncWebServerRequest * request){

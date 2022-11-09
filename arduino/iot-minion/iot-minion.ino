@@ -88,7 +88,19 @@ PubSubClient client(espClient);
 // Inicia sensor DHT
 DHT dht(TemperatureHumidity, DHT11);
 
-AsyncWebServer *server;               // initialise webserver
+AsyncWebServer server(HTTP_REST_PORT);               // initialise webserver
+
+IPAddress localIP;
+//IPAddress localIP(192, 168, 1, 200); // hardcoded
+
+// Set your Gateway IP address
+IPAddress localGateway;
+//IPAddress localGateway(192, 168, 1, 1); //hardcoded
+IPAddress subnet(255, 255, 0, 0);
+
+// Timer variables
+unsigned long previousMillis = 0;
+const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
 
 String getContent(const char* filename) {
   String payload="";  
@@ -410,88 +422,118 @@ void playRemoteMidia(const char * url)
   audio.connecttohost(url); //  128k mp3
 }
 
+// Initialize WiFi
+bool initWiFi() {
+  // Search for parameter in HTTP POST request
+  //Variables to save values from HTML form
+  String ssid = preferences.getString("ssid");
+  String pass = preferences.getString("pass");
+  String ip = preferences.getString("ip");
+  String gateway = preferences.getString("gateway");
+
+  Serial.println(ssid);
+  Serial.println(pass);
+  Serial.println(ip);
+  Serial.println(gateway);
+  
+  if(ssid=="" || ip==""){
+    Serial.println("SSID ou endereço IP indefinido.");
+    return false;
+  }
+
+  WiFi.mode(WIFI_STA);
+  localIP.fromString(ip.c_str());
+  localGateway.fromString(gateway.c_str());
+
+  if (!WiFi.config(localIP, localGateway, subnet)){
+    Serial.println("STA Falhou para configurar");
+    return false;
+  }
+  WiFi.begin(ssid.c_str(), pass.c_str());
+  Serial.println("Conectando ao WiFi...");
+
+  unsigned long currentMillis = millis();
+  previousMillis = currentMillis;
+
+  while(WiFi.status() != WL_CONNECTED) {
+    currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+      Serial.println("Falhou para conectar.");
+      return false;
+    }
+  }
+  Serial.println(WiFi.localIP());
+  return true;
+}
+
 void setup(void)
 {
-    Serial.begin(SERIAL_PORT);
+  Serial.begin(SERIAL_PORT);
 
-    // métricas para prometheus
-    setupStorage();
-    incrementBootCounter();
-    //
-    
+  // métricas para prometheus
+  setupStorage();
+  incrementBootCounter();
+  //
+  
+  #ifdef DEBUG
+    Serial.println(F("modo debug"));
+  #else
+    Serial.println(F("modo produção"));
+  #endif
+
+  // carrega sensores
+  bool load = loadSensorList();
+  if(!load) {
     #ifdef DEBUG
-      Serial.println(F("modo debug"));
-    #else
-      Serial.println(F("modo produção"));
+      Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
     #endif
-
-    // carrega sensores
-    bool load = loadSensorList();
-    if(!load) {
-      #ifdef DEBUG
-        Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
-      #endif
-    }
-          
-    // DH11 inicia temperatura
-    dht.begin();
-
-    pinMode(RelayEyes, OUTPUT);
-    pinMode(RelayHat, OUTPUT);
-    pinMode(RelayBlink, OUTPUT);
-    pinMode(RelayShake, OUTPUT);
-    pinMode(TemperatureHumidity, OUTPUT);
-
-    #ifdef DEBUG
-      Serial.println("Versão: "+String(version));
-    #endif
-
-    /* Conecta-se a rede wi-fi */
-    WiFi.begin(WIFI_SSID, WIFI_PASSWD);
-    while (WiFi.status() != WL_CONNECTED) 
-    {
-        delay(500);        
-        #ifdef DEBUG
-          Serial.print(F("."));
-        #endif
-    }    
-    
-    #ifdef DEBUG
-      Serial.println(F("\n\nNetwork Configuration:"));
-      Serial.println(F("----------------------"));
-      Serial.print(F("         SSID: ")); Serial.println(WiFi.SSID());
-      Serial.print(F("  Wifi Status: ")); Serial.println(WiFi.status());
-      Serial.print(F("Wifi Strength: ")); Serial.print(WiFi.RSSI()); Serial.println(F(" dBm"));
-      Serial.print(F("          MAC: ")); Serial.println(WiFi.macAddress());
-      Serial.print(F("           IP: ")); Serial.println(WiFi.localIP());
-      Serial.print(F("       Subnet: ")); Serial.println(WiFi.subnetMask());
-      Serial.print(F("      Gateway: ")); Serial.println(WiFi.gatewayIP());
-      Serial.print(F("        DNS 1: ")); Serial.println(WiFi.dnsIP(0));
-      Serial.print(F("        DNS 2: ")); Serial.println(WiFi.dnsIP(1));
-      Serial.print(F("        DNS 3: ")); Serial.println(WiFi.dnsIP(2));   
-    #endif
-
-    // conteudo da pasta data
-    if(!LITTLEFS.begin(true)){      
-      #ifdef DEBUG
-        Serial.println(LITTLEFS_ERROR);
-      #endif
-    }    
-    
-    startWebServer();
+  }
         
+  // DH11 inicia temperatura
+  dht.begin();
+
+  pinMode(RelayEyes, OUTPUT);
+  pinMode(RelayHat, OUTPUT);
+  pinMode(RelayBlink, OUTPUT);
+  pinMode(RelayShake, OUTPUT);
+  pinMode(TemperatureHumidity, OUTPUT);
+
+  #ifdef DEBUG
+    Serial.println("Versão: "+String(version));
+  #endif
+
+  if(!LITTLEFS.begin(true)){
+    #ifdef DEBUG
+      Serial.println(LITTLEFS_ERROR);
+    #endif      
+  }
+
+  if(initWiFi()) {
+    #ifdef DEBUG
+      Serial.println("\n\nNetwork Configuration:");
+      Serial.println("----------------------");
+      Serial.print("         SSID: "); Serial.println(WiFi.SSID());
+      Serial.print("  Wifi Status: "); Serial.println(WiFi.status());
+      Serial.print("Wifi Strength: "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
+      Serial.print("          MAC: "); Serial.println(WiFi.macAddress());
+      Serial.print("           IP: "); Serial.println(WiFi.localIP());
+      Serial.print("       Subnet: "); Serial.println(WiFi.subnetMask());
+      Serial.print("      Gateway: "); Serial.println(WiFi.gatewayIP());
+      Serial.print("        DNS 1: "); Serial.println(WiFi.dnsIP(0));
+      Serial.print("        DNS 2: "); Serial.println(WiFi.dnsIP(1));
+      Serial.print("        DNS 3: "); Serial.println(WiFi.dnsIP(2));   
+    #endif
+    startWebServer();
     // exibindo rota /update para atualização de firmware e filesystem
-    AsyncElegantOTA.begin(server, USER_FIRMWARE, PASS_FIRMWARE);
-
+    AsyncElegantOTA.begin(&server, USER_FIRMWARE, PASS_FIRMWARE);
     setClock();
-
     /* Usa MDNS para resolver o DNS */
-    //Serial.println(F("mDNS configurado e inicializado;"));    
+    Serial.println("mDNS configurado e inicializado;");    
     if (!MDNS.begin(HOST)) 
     { 
-        //http://HOST.local        
+        //http://temperatura.local        
         #ifdef DEBUG
-          Serial.println(F("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s..."));
+          Serial.println("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s...");
         #endif
         delay(1000);
         ESP.restart();        
@@ -503,6 +545,17 @@ void setup(void)
     client.setServer(MQTT_BROKER, MQTT_PORT);
     client.setCallback(callback);
     Serial.println(F("Minion funcionando!"));
+  }
+  else {
+    // Conecta a rede Wi-Fi com SSID e senha
+    Serial.println("Atribuindo Ponto de Acesso");
+    // NULL sets an open Access Point
+    WiFi.softAP("ESP-WIFI-MANAGER", NULL);
+    IPAddress IP = WiFi.softAPIP();
+    Serial.print("Endereço IP do ponto de acesso: ");
+    Serial.println(IP);     
+    startWifiManagerServer();    
+  }
 }
 
 void callback(char *topic, byte *payload, unsigned int length) {

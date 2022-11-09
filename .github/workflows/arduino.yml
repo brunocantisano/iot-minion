@@ -23,8 +23,6 @@ jobs:
     env:
       ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: true
       API_MINION_TOKEN: ${{secrets.API_MINION_TOKEN}}
-      WIFI_SSID: ${{secrets.WIFI_SSID}}
-      WIFI_PASSWORD: ${{secrets.WIFI_PASSWORD}}
       USER_FIRMWARE: ${{secrets.USER_FIRMWARE}}
       PASS_FIRMWARE: ${{secrets.PASS_FIRMWARE}}
       AIO_USERNAME: ${{secrets.AIO_USERNAME}}
@@ -85,20 +83,6 @@ jobs:
         arduino-cli lib install "Preferences"        
         arduino-cli config dump
 
-    - name: Change WiFi SSID
-      uses: jacobtomlinson/gha-find-replace@master
-      with:
-        find: <WIFI_SSID>
-        replace: ${{ env.WIFI_SSID }}
-        include: "${{ env.App_Packages_Archive }}/Credentials.h"
-
-    - name: Change WiFi Password
-      uses: jacobtomlinson/gha-find-replace@master
-      with:
-        find: <WIFI_PASSWORD>
-        replace: ${{ env.WIFI_PASSWORD }}
-        include: "${{ env.App_Packages_Archive }}/Credentials.h"
-
     - name: Change Firmware Username
       uses: jacobtomlinson/gha-find-replace@master
       with:
@@ -143,7 +127,7 @@ jobs:
     
     - name: Binários - ${{ matrix.iot-minion }} ${{ matrix.board }}
       run: |
-        docker run -v $(pwd):$(pwd) -t mgos/esp32-build:4.2-r2 mklittlefs -b 4096 -p 256 -s 0x100000 $(pwd)/${{ matrix.iot-minion }}/data -f $(pwd)/${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}-fs.bin
+        docker run -v $(pwd):$(pwd) -t arget888/mklittlefs:latest /mklittlefs/mklittlefs -b 4096 -p 256 -s 0x100000 -c $(pwd)/${{ matrix.iot-minion }}/data $(pwd)/${{ env.App_Packages_Directory }}/${{ env.App_Packages_Archive }}-v${{env.Version}}-fs.bin
         mv ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}.ino.bin ${{ env.BUILD_OUT_DIR }}/${{ env.App_Packages_Archive }}-v${{env.Version}}.bin
 
     # Archive the package

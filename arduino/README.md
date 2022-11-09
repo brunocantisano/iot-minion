@@ -41,8 +41,6 @@ sudo apt-get install python3-serial -y
 | <AIO_USERNAME>                 | Adafruit                       |
 | <AIO_KEY>                      | Adafruit                       |
 | <FIREBASE_API_KEY>             | Firebase API Key               |
-| <WIFI_SSID>                    | WiFi SSID                      |
-| <WIFI_PASSWORD>                | WiFi Senha                     |
 | <API_MINION_TOKEN>             | Base64 Basic Auth              |
 | <USER_FIRMWARE>                | Upload Firmware User           |
 | <PASS_FIRMWARE>                | Upload Firmware Senha          |
