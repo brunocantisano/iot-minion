@@ -14,10 +14,6 @@
 #define USER_FIRMWARE             "<USER_FIRMWARE>"
 #define PASS_FIRMWARE             "<PASS_FIRMWARE>"
 
-/* Constantes - conexão wi-fi, webserver */
-#define WIFI_SSID                 "<WIFI_SSID>"
-#define WIFI_PASSWD               "<WIFI_PASSWD>"
-
 #define HOST                      "minion"
 #define API_VERSION               "<API_VERSION>"
 #endif
