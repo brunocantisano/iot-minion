@@ -18,11 +18,11 @@ String getMetrics() {
   setMetric(&p, "esp8266_heap_size", String(heap_size));
   setMetric(&p, "esp8266_free_heap", String(free_heap));
   setMetric(&p, "esp8266_boot_counter", String(getBootCounter()));  
-  setMetric(&p, "esp8266_celsius", strCelsius);
-  setMetric(&p, "esp8266_fahrenheit", strFahrenheit);
-  setMetric(&p, "esp8266_humidity", strHumidity);
-  setMetric(&p, "esp8266_heat_celsius", strHeatIndexCelsius);
-  setMetric(&p, "esp8266_heat_fahrenheit", strHeatIndexFahrenheit);
+  setMetric(&p, "esp8266_celsius", String(iCelsius));
+  setMetric(&p, "esp8266_fahrenheit", String(iFahrenheit));
+  setMetric(&p, "esp8266_humidity", String(iHumidity));
+  setMetric(&p, "esp8266_heat_celsius", String(iHeatIndexCelsius));
+  setMetric(&p, "esp8266_heat_fahrenheit", String(iHeatIndexFahrenheit));
   setMetric(&p, "esp8266_eyes", String(readSensorStatus(RelayEyes)));
   setMetric(&p, "esp8266_hat", String(readSensorStatus(RelayHat)));
   setMetric(&p, "esp8266_blink", String(readSensorStatus(RelayBlink)));
@@ -110,7 +110,6 @@ void getTemperatureHumidity() {
     #ifdef DEBUG
       Serial.println("Falha na leitura");
     #endif
-    timeSinceLastRead = 0;
   }
 
   // Compute heat index in Celsius (isFahreheit = false)
@@ -132,12 +131,9 @@ void getTemperatureHumidity() {
   snprintf (heatIndexFahrenheit, MAX_PATH, "%.1f", hif);
 
 
-  strCelsius = String(celsius);
-  strFahrenheit = String(fahrenheit);
-  strHumidity = String(humidity);
-  strHeatIndexCelsius = String(heatIndexCelsius);
-  strHeatIndexFahrenheit = String(heatIndexFahrenheit);
-
-
-  timeSinceLastRead = 0;
+  iCelsius = atoi(celsius);
+  iFahrenheit = atoi(fahrenheit);
+  iHumidity = atoi(humidity);
+  iHeatIndexCelsius = atoi(heatIndexCelsius);
+  iHeatIndexFahrenheit = atoi(heatIndexFahrenheit);
 }

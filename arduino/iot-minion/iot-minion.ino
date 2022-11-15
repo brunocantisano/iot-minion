@@ -13,16 +13,13 @@
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <LittleFS.h>
-
-#include <SPI.h>
-#include <SD.h>
-#include "AudioFileSourceSPIFFS.h"
-#include "AudioFileSourceID3.h"
-#include "AudioGeneratorMP3.h"
-#include "AudioOutputI2SNoDAC.h"
-#include "AudioFileSourceICYStream.h"
-#include "AudioFileSourceBuffer.h"
-#include "AudioOutputSPDIF.h"
+#include <AudioFileSourceSPIFFS.h>
+#include <AudioFileSourceID3.h>
+#include <AudioGeneratorMP3.h>
+#include <AudioOutputI2SNoDAC.h>
+#include <AudioFileSourceICYStream.h>
+#include <AudioFileSourceBuffer.h>
+#include <AudioOutputSPDIF.h>
 
 AudioGeneratorMP3 *mp3;
 AudioFileSourceSPIFFS *file;
@@ -87,13 +84,12 @@ const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
 Preferences preferences;
 //---------------------------------//
-int timeSinceLastRead = 0;
 
-String strCelsius = "0.0";
-String strFahrenheit = "0.0";
-String strHumidity = "0.0";
-String strHeatIndexFahrenheit = "0.0";
-String strHeatIndexCelsius = "0.0";
+int iCelsius = 0;
+int iFahrenheit = 0;
+int iHumidity = 0;
+int iHeatIndexFahrenheit = 0;
+int iHeatIndexCelsius = 0;
 
 /* versão do firmware */
 const char version[] PROGMEM = API_VERSION;
@@ -109,13 +105,71 @@ ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
 
 // Create an ESP8266 WiFiClient class to connect to the MQTT server.
 WiFiClient espClient;
-PubSubClient client(espClient);
+PubSubClient mqttClient(espClient);
 
 // Inicia sensor DHT
 DHT dht(TemperatureHumidity, DHT11);
 
-// Create a webserver object that listens for HTTP request on port 80
-AsyncWebServer *server;
+AsyncWebServer server(HTTP_REST_PORT);               // initialise webserver
+
+// Search for parameter in HTTP POST request
+const char* PARAM_INPUT_1 = "ssid";
+const char* PARAM_INPUT_2 = "pass";
+const char* PARAM_INPUT_3 = "ip";
+const char* PARAM_INPUT_4 = "gateway";
+
+//Variables to save values from HTML form
+String ssid;
+String pass;
+String ip;
+String gateway;
+
+IPAddress localIP;
+//IPAddress localIP(192, 168, 1, 200); // hardcoded
+
+// Set your Gateway IP address
+IPAddress localGateway;
+//IPAddress localGateway(192, 168, 1, 1); //hardcoded
+IPAddress subnet(255, 255, 0, 0);
+
+// Timer variables
+unsigned long previousMillis = 0;
+const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
+
+const char fingerprint[] = "36 87 B1 58 58 7A F8 E2 ED 79 A2 4F 49 81 7F 69 7B A7 4C A3";
+std::unique_ptr<BearSSL::WiFiClientSecure> clientSecureBearSSL (new BearSSL::WiFiClientSecure);
+
+String getGoogleTranslateSpeech(String url) {
+  String payload;
+  // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
+  HTTPClient https;
+
+  Serial.print("[HTTPS] begin...\n");
+  if (https.begin(*clientSecureBearSSL, url)) {  // HTTPS
+    Serial.print("[HTTPS] GET...\n");
+    // start connection and send HTTP header
+    int httpCode = https.GET();
+
+    // httpCode will be negative on error
+    if (httpCode > 0) {
+      // HTTP header has been send and Server response header has been handled
+      Serial.printf("[HTTPS] GET... code: %d\n", httpCode);
+
+      // file found at server
+      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+        payload = https.getString();
+        Serial.println(payload);
+      }
+    } else {
+      Serial.printf("[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
+    }
+
+    https.end();
+  } else {
+    Serial.printf("[HTTPS] Unable to connect\n");
+  }
+  return payload;
+}
 
 /*
 // Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
@@ -139,112 +193,7 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
   Serial.flush();
 }
 */
-/*
-String postUtil(String url, String httpRequestData, String certificate, String key="") { 
-  String payload;
-  WiFiClientSecure *secureClient = new WiFiClientSecure;
-  if(secureClient) {
-    char certificadoArray[certificate.length()];
-    certificate.toCharArray(certificadoArray, certificate.length());
-    secureClient -> setCACert(certificadoArray);
-    {
-      // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
-      HTTPClient https;      
-      #ifdef DEBUG
-        Serial.print("[HTTPS] begin...\n");
-      #endif
-      if (https.begin(*client, url)) {  // HTTPS
-        if(key.length()!=0){
-          https.addHeader("Authorization", "Bearer "+key);
-        }
-        https.addHeader("Content-Type", "application/json");
-        #ifdef DEBUG
-          Serial.print("[HTTPS] POST...\n");
-        #endif
-        // start connection and send HTTP header
-        int httpCode = https.POST(httpRequestData);
-        // httpCode will be negative on error
-        if (httpCode == HTTP_OK) {
-          // HTTP header has been send and Server response header has been handled          
-          #ifdef DEBUG
-            Serial.printf("[HTTPS] POST... code: %d\n", httpCode);
-          #endif
-          payload = https.getString();
-        } else {          
-          #ifdef DEBUG
-            Serial.printf("[HTTPS] POST... failed, error: %s\n", https.errorToString(httpCode).c_str());
-          #endif
-          payload = "{\"message\": \"Método não implementado\"}";
-        }
-        https.end();
-      } else {        
-        #ifdef DEBUG
-          Serial.printf("[HTTPS] Unable to connect\n");
-        #endif
-      }
-      // End extra scoping block
-    }
-    delete secureClient;
-  }
-  return payload;
-}
 
-String getUtil(String url, String certificate, String filename="") {
-  String payload;
-  WiFiClientSecure *secureClient = new WiFiClientSecure;
-  if(secureClient) {
-    char certificadoArray[certificate.length()];
-    certificate.toCharArray(certificadoArray, certificate.length());
-    secureClient -> setCACert(certificadoArray);
-    {
-      // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
-      HTTPClient https;      
-      #ifdef DEBUG
-        Serial.print("[HTTPS] begin...\n");
-      #endif      
-      if (https.begin(*secureClient, url)) {  // HTTPS        
-        #ifdef DEBUG
-          Serial.print("[HTTPS] GET...\n");
-        #endif
-        // start connection and send HTTP header
-        int httpCode = https.GET();
-  
-        // httpCode will be negative on error
-        if (httpCode > 0) {
-          // HTTP header has been send and Server response header has been handled          
-          #ifdef DEBUG
-            Serial.printf("[HTTPS] GET... code: %d\n", httpCode);
-          #endif
-          // file found at server
-          if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-            payload = https.getString();
-            if(filename!=""){
-              writeContent(filename, payload);
-            }
-            #ifdef DEBUG
-              Serial.println(payload);
-            #endif
-          }
-        } else {          
-          #ifdef DEBUG
-            Serial.printf("[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
-          #endif          
-        }
-        https.end();
-      } else {        
-        #ifdef DEBUG
-          Serial.printf("[HTTPS] Unable to connect\n");
-        #endif
-      }
-      // End extra scoping block
-    }
-    delete secureClient;
-  } else {
-    Serial.println("Unable to create client");
-  }
-  return payload;
-}
-*/
 // Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
 void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
 {
@@ -433,7 +382,7 @@ void saveApplicationList() {
   // Grava no storage
   writeContent("/lista.json",JSONmessage); 
   // Grava no adafruit
-  client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+  mqttClient.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
 }
 
 int loadApplicationList() {
@@ -546,71 +495,123 @@ void StatusCallback(void *cbData, int code, const char *string)
   Serial.flush();
 }
 
+// Initialize WiFi
+bool initWiFi() {
+  if(ssid=="" || ip==""){
+    Serial.println("SSID ou endereço IP indefinido.");
+    return false;
+  }
+
+  WiFi.mode(WIFI_STA);
+  localIP.fromString(ip.c_str());
+  localGateway.fromString(gateway.c_str());
+
+  if (!WiFi.config(localIP, localGateway, subnet)){
+    Serial.println("STA Falhou para configurar");
+    return false;
+  }
+  WiFi.begin(ssid.c_str(), pass.c_str());
+  Serial.println("Conectando ao WiFi...");
+
+  unsigned long currentMillis = millis();
+  previousMillis = currentMillis;
+
+  while(WiFi.status() != WL_CONNECTED) {
+    currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+      Serial.println("Falhou para conectar.");
+      return false;
+    }
+  }
+  Serial.println(WiFi.localIP());
+  return true;
+}
+
 void setup() {
-    Serial.begin(SERIAL_PORT);
+  Serial.begin(SERIAL_PORT);
 
-    // métricas para prometheus
-    setupStorage();
-    incrementBootCounter();
-    //
-    
+  clientSecureBearSSL->setFingerprint(fingerprint);
+
+  // métricas para prometheus
+  setupStorage();
+  incrementBootCounter();
+  //
+  
+  #ifdef DEBUG
+    Serial.println(F("modo debug"));
+  #else
+    Serial.println(F("modo produção"));
+  #endif
+  
+  // DH11 inicia temperatura
+  dht.begin();
+
+  if(!LittleFS.begin()){
     #ifdef DEBUG
-      Serial.println(F("modo debug"));
-    #else
-      Serial.println(F("modo produção"));
-    #endif
-    
-    // DH11 inicia temperatura
-    dht.begin();
-
-    WiFi.mode(WIFI_STA);   
-    WiFi.begin(WIFI_SSID, WIFI_PASSWD);
-    Serial.println("Connecting ...");
-    while (WiFi.status() != WL_CONNECTED) 
-    {
-        delay(500);        
-        #ifdef DEBUG
-          Serial.print(F("."));
-        #endif
-    }  
-    Serial.println('\n');
-    Serial.print("Connected to ");
-    Serial.println(WiFi.SSID());              // Tell us what network we're connected to
-    Serial.print("IP address:\t");
-    Serial.println(WiFi.localIP());           // Send the IP address of the ESP8266 to the computer  
-
-    if (MDNS.begin(HOST)) {              // Start the mDNS responder for minion.local      
-      Serial.println("mDNS responder started");
-    } else {
-      Serial.println("Error setting up MDNS responder!");
-    }
-
-    if(!LittleFS.begin()){
       Serial.println(LITTLEFS_ERROR);
-    }
-    
-    startWebServer();  
+    #endif      
+  }
 
+  ssid = preferences.getString(PARAM_INPUT_1);
+  pass = preferences.getString(PARAM_INPUT_2);
+  ip = preferences.getString(PARAM_INPUT_3);
+  gateway = preferences.getString(PARAM_INPUT_4);
+  
+  Serial.println(ssid);
+  Serial.println(pass);
+  Serial.println(ip);
+  Serial.println(gateway);
+
+  if(initWiFi()) {
+    #ifdef DEBUG
+      Serial.println("\n\nNetwork Configuration:");
+      Serial.println("----------------------");
+      Serial.print("         SSID: "); Serial.println(WiFi.SSID());
+      Serial.print("  Wifi Status: "); Serial.println(WiFi.status());
+      Serial.print("Wifi Strength: "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
+      Serial.print("          MAC: "); Serial.println(WiFi.macAddress());
+      Serial.print("           IP: "); Serial.println(WiFi.localIP());
+      Serial.print("       Subnet: "); Serial.println(WiFi.subnetMask());
+      Serial.print("      Gateway: "); Serial.println(WiFi.gatewayIP());
+      Serial.print("        DNS 1: "); Serial.println(WiFi.dnsIP(0));
+      Serial.print("        DNS 2: "); Serial.println(WiFi.dnsIP(1));
+      Serial.print("        DNS 3: "); Serial.println(WiFi.dnsIP(2));   
+    #endif
+    startWebServer();
     // exibindo rota /update para atualização de firmware e filesystem
-    AsyncElegantOTA.begin(server, USER_FIRMWARE, PASS_FIRMWARE);
-    
-    Serial.println("HTTP server started");
+    AsyncElegantOTA.begin(&server, USER_FIRMWARE, PASS_FIRMWARE);
+    //setClock();
+    /* Usa MDNS para resolver o DNS */
+    Serial.println("mDNS configurado e inicializado;");    
+    if (!MDNS.begin(HOST)) 
+    { 
+        //http://temperatura.local        
+        #ifdef DEBUG
+          Serial.println("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s...");
+        #endif
+        delay(1000);
+        ESP.restart();        
+    }
+    // carrega dados
+    loadApplicationList();
+    Serial.println("Alarme de temperatura funcionando!");      
+  }
+  else {
+    // Conecta a rede Wi-Fi com SSID e senha
+    Serial.println("Atribuindo Ponto de Acesso");
+    // NULL sets an open Access Point
+    WiFi.softAP("ESP-WIFI-MANAGER", NULL);
+    IPAddress IP = WiFi.softAPIP();
+    Serial.print("Endereço IP do ponto de acesso: ");
+    Serial.println(IP);     
+    startWifiManagerServer();    
+  }
 }
 
 void loop(void) {
   MDNS.update();
-  /*
   if (mp3->isRunning()) {
     if (!mp3->loop()) mp3->stop();
   }
-  */
-  // Report every 2 seconds.
-  if(timeSinceLastRead > 2000) {
-    // Reading temperature or humidity takes about 250 milliseconds!
-    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-    getTemperatureHumidity();
-    timeSinceLastRead = 0;
-  }
-  delay(100);
-  timeSinceLastRead += 100;
+  getTemperatureHumidity();
 }
