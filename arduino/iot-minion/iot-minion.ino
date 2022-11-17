@@ -13,6 +13,8 @@
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <LittleFS.h>
+#include <SPI.h>
+#include <SD.h>
 #include <AudioFileSourceSPIFFS.h>
 #include <AudioFileSourceID3.h>
 #include <AudioGeneratorMP3.h>
@@ -70,6 +72,7 @@ const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
 #define MAX_STRING_LENGTH          2000
 #define MAX_PATH                   256
+#define MAX_FLOAT                  5
 
 /* 200 OK */
 #define HTTP_OK                    200
@@ -84,7 +87,7 @@ const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
 Preferences preferences;
 //---------------------------------//
-
+int timeSinceLastRead = 0;
 int iCelsius = 0;
 int iFahrenheit = 0;
 int iHumidity = 0;
@@ -412,7 +415,7 @@ void loadI2S() {
   digitalWrite(SD_CS, HIGH);
   //SPI.begin(SCK, MISO, MOSI);
   //SPI.setFrequency(1000000);
-  //SD.begin(SD_CS);
+  SD.begin(SD_CS);
 
   //Ajusta os pinos de conexão I2S
   //audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
@@ -455,7 +458,7 @@ void playMidia(const char * midia)
   id3 = new AudioFileSourceID3(file);
   id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
   out = new AudioOutputI2SNoDAC();
-  mp3 = new AudioGeneratorMP3();
+  
   mp3->begin(id3, out);  
 }
 
@@ -479,7 +482,10 @@ void playRemoteMidia(const char * url)
 
   // Commented out for performance issues with high rate MP3 stream
   //mp3->RegisterStatusCB(StatusCallback, (void*)"mp3");
-
+  mp3 = new AudioGeneratorMP3();
+  if (mp3->isRunning()) {
+    if (!mp3->loop()) mp3->stop();
+  }
   mp3->begin(buff, outSPDIF);
 }
 
@@ -585,7 +591,7 @@ void setup() {
     Serial.println("mDNS configurado e inicializado;");    
     if (!MDNS.begin(HOST)) 
     { 
-        //http://temperatura.local        
+        //http://minion.local (linux) e http://minion (windows)
         #ifdef DEBUG
           Serial.println("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s...");
         #endif
@@ -594,7 +600,7 @@ void setup() {
     }
     // carrega dados
     loadApplicationList();
-    Serial.println("Alarme de temperatura funcionando!");      
+    Serial.println("Minion esta funcionando!");      
   }
   else {
     // Conecta a rede Wi-Fi com SSID e senha
@@ -610,8 +616,13 @@ void setup() {
 
 void loop(void) {
   MDNS.update();
-  if (mp3->isRunning()) {
-    if (!mp3->loop()) mp3->stop();
+  // Report every 1 minute.
+  if(timeSinceLastRead > 60000) {
+    // Reading temperature or humidity takes about 250 milliseconds!
+    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    getTemperatureHumidity();
+    timeSinceLastRead = 0;
   }
-  getTemperatureHumidity();
+  delay(100);
+  timeSinceLastRead += 100;
 }

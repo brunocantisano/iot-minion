@@ -99,41 +99,57 @@ void getTemperatureHumidity() {
   String feedName = "temperature";
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-
+  
   // Le a temperatura como Celsius (padrao)
   float c = dht.readTemperature();
   float f = dht.readTemperature(true);
   float h = dht.readHumidity();
-
-  // Checa se qualquer leitura falha e saida mais cedo (para tentar de novo).
-  if (isnan(h) || isnan(c) || isnan(f)) {    
-    #ifdef DEBUG
-      Serial.println("Falha na leitura");
-    #endif
-  }
-
+  
   // Compute heat index in Celsius (isFahreheit = false)
   float hic = dht.computeHeatIndex(c, h, false);
   // Compute heat index in Fahrenheit (the default)
   float hif = dht.computeHeatIndex(f, h);
 
-  char celsius [MAX_PATH];
-  snprintf (celsius, MAX_PATH, "%.1f", c);
-  char fahrenheit [MAX_PATH];
-  snprintf (fahrenheit, MAX_PATH, "%.1f", f);
-  char humidity [MAX_PATH];
-  snprintf (humidity, MAX_PATH, "%.1f", h);
+  // Checa se qualquer leitura falha e saida mais cedo (para tentar de novo).
+  if (isnan(h) || isnan(c) || isnan(f) || isnan(hic) || isnan(hif)) {
+    c=0;
+    f=0;
+    h=0;
+    hic=0;
+    hif=0;
+  }
+  #ifdef DEBUG
+//    Serial.printf("Celsius: %f\n",c);
+//    Serial.printf("Fahrenheit: %f\n",f);
+//    Serial.printf("Humidity: %f\n",h);
+//    Serial.printf("HeatIndexCelsius: %f\n",hic);
+//    Serial.printf("HeatIndexFahrenheit: %f\n",hif);
+  #endif
+  
+  char celsius [MAX_FLOAT];
+  snprintf (celsius, MAX_FLOAT, "%d", (int)round(c));
+  char fahrenheit [MAX_FLOAT];
+  snprintf (fahrenheit, MAX_FLOAT, "%d", (int)round(f));
+  char humidity [MAX_FLOAT];
+  snprintf (humidity, MAX_FLOAT, "%d", (int)round(h));
 
-  char heatIndexCelsius [MAX_PATH];
-  snprintf (heatIndexCelsius, MAX_PATH, "%.1f", hic);
-
-  char heatIndexFahrenheit [MAX_PATH];
-  snprintf (heatIndexFahrenheit, MAX_PATH, "%.1f", hif);
-
+  char heatIndexCelsius [MAX_FLOAT];
+  snprintf (heatIndexCelsius, MAX_FLOAT, "%d", (int)round(hic));
+  
+  char heatIndexFahrenheit [MAX_FLOAT];
+  snprintf (heatIndexFahrenheit, MAX_FLOAT, "%d", (int)round(hif));
 
   iCelsius = atoi(celsius);
   iFahrenheit = atoi(fahrenheit);
   iHumidity = atoi(humidity);
   iHeatIndexCelsius = atoi(heatIndexCelsius);
   iHeatIndexFahrenheit = atoi(heatIndexFahrenheit);
+
+  #ifdef DEBUG
+//    Serial.printf("Celsius: %d\n",iCelsius);
+//    Serial.printf("Fahrenheit: %d\n",iFahrenheit);
+//    Serial.printf("Humidity: %d\n",iHumidity);
+//    Serial.printf("HeatIndexCelsius: %d\n",iHeatIndexCelsius);
+//    Serial.printf("HeatIndexFahrenheit: %d\n",iHeatIndexFahrenheit);
+  #endif
 }
