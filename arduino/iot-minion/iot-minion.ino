@@ -524,6 +524,9 @@ bool initWiFi() {
 
   while(WiFi.status() != WL_CONNECTED) {
     currentMillis = millis();
+    Serial.println("currentMillis: "+currentMillis);
+    Serial.println("previousMillis: "+previousMillis);
+    Serial.println("interval: "+interval);    
     if (currentMillis - previousMillis >= interval) {
       Serial.println("Falhou para conectar.");
       return false;
