@@ -138,7 +138,7 @@ IPAddress subnet(255, 255, 0, 0);
 // Timer variables
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
-
+bool WIFI_CONFIG = false;
 const char fingerprint[] = "36 87 B1 58 58 7A F8 E2 ED 79 A2 4F 49 81 7F 69 7B A7 4C A3";
 std::unique_ptr<BearSSL::WiFiClientSecure> clientSecureBearSSL (new BearSSL::WiFiClientSecure);
 
@@ -569,6 +569,7 @@ void setup() {
   Serial.println(gateway);
 
   if(initWiFi()) {
+    WIFI_CONFIG = true;
     #ifdef DEBUG
       Serial.println("\n\nNetwork Configuration:");
       Serial.println("----------------------");
@@ -615,7 +616,9 @@ void setup() {
 }
 
 void loop(void) {
-  MDNS.update();
+  if(WIFI_CONFIG){
+    MDNS.update();
+  }
   // Report every 1 minute.
   if(timeSinceLastRead > 60000) {
     // Reading temperature or humidity takes about 250 milliseconds!
