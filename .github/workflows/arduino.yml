@@ -60,7 +60,7 @@ jobs:
         pip install pyserial       
 
     - name: Install Arduino platforms and libraries
-      run: |   
+      run: |
         arduino-cli core update-index
         arduino-cli core update-index --additional-urls "https://arduino.esp8266.com/stable/package_esp8266com_index.json"
         arduino-cli core install "esp8266:esp8266" --additional-urls "https://arduino.esp8266.com/stable/package_esp8266com_index.json" 
@@ -72,13 +72,14 @@ jobs:
         arduino-cli lib install "ArduinoJson"
         arduino-cli lib install "AsyncElegantOTA"
         arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncWebServer.git
-        arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
+        arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncTCP.git
         arduino-cli lib install "esp8266-google-tts"
         arduino-cli lib install "DHT sensor library"
         arduino-cli lib install "NTPClient"
         arduino-cli lib install "PubSubClient"
         arduino-cli lib install "WiFi101"
         arduino-cli lib install "LittleFS_esp32"
+        arduino-cli lib install "Preferences"
         arduino-cli config dump
 
     - name: Change Firmware Username
