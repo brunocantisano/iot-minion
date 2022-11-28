@@ -222,7 +222,7 @@ String getContent(const char* filename) {
       #ifdef DEBUG
         Serial.println(mensagem);
       #endif
-      return String(mensagem);
+      return mensagem;
     }
     while (file.available()) {
       payload += file.readString();
@@ -571,8 +571,7 @@ void setup() {
   Serial.println(ip);
   Serial.println(gateway);
 
-  if(initWiFi()) {
-    WIFI_CONFIG = true;
+  if(initWiFi()) {    
     #ifdef DEBUG
       Serial.println("\n\nNetwork Configuration:");
       Serial.println("----------------------");
@@ -604,7 +603,8 @@ void setup() {
     }
     // carrega dados
     loadApplicationList();
-    Serial.println("Minion esta funcionando!");      
+    Serial.println("Minion esta funcionando!");
+    WIFI_CONFIG = true;      
   }
   else {
     // Conecta a rede Wi-Fi com SSID e senha
