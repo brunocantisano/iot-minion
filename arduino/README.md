@@ -229,7 +229,6 @@ npm run dev
 - [Load Wav File](https://www.xtronical.com/i2s-ep3/)
 - [Converte binário para hexadecimal](http://tomeko.net/online_tools/file_to_hex.php?lang=en)
 - [Audio para Google Assistente](https://github.com/pschatzmann/ESP32-A2DP)
-- [Escaneamento 3D](https://www.youtube.com/watch?v=zj_Fow9lvc0)
 - [Criando threads no ESP32](https://techtutorialsx.com/2017/05/06/esp32-arduino-creating-a-task/)
 - [Visualizar imagens como livro](http://www.turnjs.com/)
 - [ESP32 com métricas para prometheus](https://github.com/douglaszuqueto/esp32-prometheus)
@@ -238,12 +237,19 @@ npm run dev
 - [LittleFS esp32 issues](https://wellys.com/posts/esp32_issues/)
 - [ESP32 HTTPS web server](https://techtutorialsx.com/2019/04/07/esp32-https-web-server/)
 - [I2S MP3 Player](https://www.fernandok.com/2020/02/mp3-player-com-esp32-e-i2s.html)
+- [Google Actions](https://codelabs.developers.google.com/codelabs/actions-1/#0)
 
 ## Vídeos de referência 🎥
 
-* [Site DC motor](https://techtutorialsx.com/2019/03/31/esp32-arduino-controlling-a-dc-motor-remotely-using-http)
-* [Google Actions](https://codelabs.developers.google.com/codelabs/actions-1/#0)
-* [Utilizando Obsidian para fazer apresentações como código](https://www.youtube.com/watch?v=LtBK_iNcVEQ)
+[![Site DC motor](https://i3.ytimg.com/vi/ml366LJiwnk/maxresdefault.jpg)](https://www.youtube.com/watch?v=ml366LJiwnk&feature=emb_imp_woyt "Site DC motor")
+
+[![Utilizando Obsidian para fazer apresentações como código](https://i3.ytimg.com/vi/LtBK_iNcVEQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=LtBK_iNcVEQ "Utilizando Obsidian para fazer apresentações como código")
+
+[![Como fazer seu 1° Scan 3D DIY - PARTE 1](https://i3.ytimg.com/vi/rkg1X2hh-UQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=rkg1X2hh-UQ "Como fazer seu 1° Scan 3D DIY - PARTE 1")
+
+[![Como fazer seu 1° Scan 3D DIY - PARTE 2](https://i3.ytimg.com/vi/x33sCP0tmMQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=x33sCP0tmMQ "Como fazer seu 1° Scan 3D DIY - PARTE 2")
+
+[![Base para Scan 3D 360° - DIY](https://i3.ytimg.com/vi/EqOseV5hMpU/maxresdefault.jpg)](https://www.youtube.com/watch?v=EqOseV5hMpU "Base para Scan 3D 360° - DIY")
 
 ## Peças
 
@@ -284,7 +290,7 @@ npm run dev
         <td align="center"><a href="https://www.filipeflop.com/produto/modulo-cartao-micro-sd/"><img src="https://www.filipeflop.com/wp-content/uploads/2017/07/SKU122168a.jpg" width="100px;" alt="" /><br /><sub><b>1-Módulo Cartão Micro SD</b></sub></a><br />
         </td>
         <td align="center"><a href="https://shopee.com.br/sou%E2%98%AC-CJMCU-1334-DAC-Module-UDA1334A-Stereo-Decoder-Board-I2S-Output-Interface-Sound-Frequency-Decoding-Module-for-3.3V-to-5V-i.290382738.11917876698"><img src="https://www.baudaeletronica.com.br/media/catalog/product/cache/1/image/578x/9df78eab33525d08d6e5fb8d27136e95/u/d/uda1334a.jpg" width="100px;" alt="" /><br /><sub><b>1-UDA1334A</b></sub></a><br />
-        </td>                
+        </td>
     </tr>
 </table>
 
