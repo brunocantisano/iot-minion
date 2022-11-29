@@ -73,7 +73,6 @@ jobs:
         arduino-cli lib install "AsyncElegantOTA"
         arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncWebServer.git
         arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncTCP.git
-        arduino-cli lib install "esp8266-google-tts"
         arduino-cli lib install "DHT sensor library"
         arduino-cli lib install "NTPClient"
         arduino-cli lib install "PubSubClient"

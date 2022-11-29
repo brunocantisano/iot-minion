@@ -1,7 +1,6 @@
 #include "Credentials.h"
 #include "Tipos.h"
 #include "ListaEncadeada.h"
-#include <google-tts.h>
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -13,25 +12,6 @@
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <LittleFS.h>
-#include <SPI.h>
-#include <SD.h>
-#include <AudioFileSourceSPIFFS.h>
-#include <AudioFileSourceID3.h>
-#include <AudioGeneratorMP3.h>
-#include <AudioOutputI2SNoDAC.h>
-#include <AudioFileSourceICYStream.h>
-#include <AudioFileSourceBuffer.h>
-#include <AudioOutputSPDIF.h>
-
-AudioGeneratorMP3 *mp3;
-AudioFileSourceSPIFFS *file;
-AudioOutputI2SNoDAC *out;
-AudioFileSourceID3 *id3;
-AudioFileSourceICYStream *fileRemote;
-AudioFileSourceBuffer *buff;
-
-// Output device is SPDIF
-AudioOutputSPDIF *outSPDIF;
 
 const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
@@ -58,17 +38,6 @@ const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 #define RelayBlink                 D2
 #define RelayShake                 D3
 #define TemperatureHumidity        D4
-
-//Pinos de conexão do ESP8266 e o módulo de cartão SD
-#define SD_CS                      11
-#define SCK                        6
-#define MISO                       7
-#define MOSI                       8
-//
-//Pinos de conexão do ESP8266-I2S e o módulo I2S/DAC CJMCU 1334
-#define I2S_DOUT                   D5
-#define I2S_LRC                    D6
-#define I2S_BCLK                   D7
 
 #define MAX_STRING_LENGTH          2000
 #define MAX_PATH                   256
@@ -139,78 +108,6 @@ IPAddress subnet(255, 255, 0, 0);
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
 bool WIFI_CONFIG = false;
-const char fingerprint[] = "36 87 B1 58 58 7A F8 E2 ED 79 A2 4F 49 81 7F 69 7B A7 4C A3";
-std::unique_ptr<BearSSL::WiFiClientSecure> clientSecureBearSSL (new BearSSL::WiFiClientSecure);
-
-String getGoogleTranslateSpeech(String url) {
-  String payload;
-  // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
-  HTTPClient https;
-
-  Serial.print("[HTTPS] begin...\n");
-  if (https.begin(*clientSecureBearSSL, url)) {  // HTTPS
-    Serial.print("[HTTPS] GET...\n");
-    // start connection and send HTTP header
-    int httpCode = https.GET();
-
-    // httpCode will be negative on error
-    if (httpCode > 0) {
-      // HTTP header has been send and Server response header has been handled
-      Serial.printf("[HTTPS] GET... code: %d\n", httpCode);
-
-      // file found at server
-      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-        payload = https.getString();
-        Serial.println(payload);
-      }
-    } else {
-      Serial.printf("[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
-    }
-
-    https.end();
-  } else {
-    Serial.printf("[HTTPS] Unable to connect\n");
-  }
-  return payload;
-}
-
-/*
-// Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
-void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
-{
-  (void)cbData;
-  Serial.printf("ID3 callback for: %s = '", type);
-
-  if (isUnicode) {
-    string += 2;
-  }
-  
-  while (*string) {
-    char a = *(string++);
-    if (isUnicode) {
-      string++;
-    }
-    Serial.printf("%c", a);
-  }
-  Serial.printf("'\n");
-  Serial.flush();
-}
-*/
-
-// Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
-void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
-{
-  const char *ptr = reinterpret_cast<const char *>(cbData);
-  (void) isUnicode; // Punt this ball for now
-  // Note that the type and string may be in PROGMEM, so copy them to RAM for printf
-  char s1[32], s2[64];
-  strncpy_P(s1, type, sizeof(s1));
-  s1[sizeof(s1)-1]=0;
-  strncpy_P(s2, string, sizeof(s2));
-  s2[sizeof(s2)-1]=0;
-  Serial.printf("METADATA(%s) '%s' = '%s'\n", ptr, s1, s2);
-  Serial.flush();
-}
 
 String getContent(const char* filename) {
   String payload="";  
@@ -409,86 +306,6 @@ int loadApplicationList() {
   return 0;
 }
 
-// TODO
-void loadI2S() {
-  pinMode(SD_CS, OUTPUT);
-  digitalWrite(SD_CS, HIGH);
-  //SPI.begin(SCK, MISO, MOSI);
-  //SPI.setFrequency(1000000);
-  SD.begin(SD_CS);
-
-  //Ajusta os pinos de conexão I2S
-  //audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-
-  //Ajusta o volume de saída.
-  //audio.setVolume(DEFAULT_VOLUME); // 0...21
-}
-
-// TODO
-bool playSpeech(const char * mensagem)
-{
-  //Para executar uma síntese de voz
-  TTS tts;
-  String url = tts.getSpeechUrl(mensagem, "pt");
-  /*
-  if(getUtil(url, getContent("/text2speech.crt"), "/audio.mp3").length() == 0) {
-    Serial.println("Não foi possível tocar o arquivo: /audio.mp3");
-    return false;
-  }
-  */
-  // toca o áudio
-  playMidia("/audio.mp3");
-  return true;
-}
-
-// TODO
-void playMidia(const char * midia)
-{
-  char filenameMidia[strlen(midia)+1];
-  filenameMidia[0]='/';
-  filenameMidia[1]='\0';
-  strcat(filenameMidia, midia);
-  #ifdef DEBUG
-    Serial.printf("Arquivo a tocar: %s\n",filenameMidia);
-  #endif
-  
-  // exemplo: "/1.mp3"
-  audioLogger = &Serial;
-  file = new AudioFileSourceSPIFFS(filenameMidia);
-  id3 = new AudioFileSourceID3(file);
-  id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
-  out = new AudioOutputI2SNoDAC();
-  
-  mp3->begin(id3, out);  
-}
-
-// TODO
-void playRemoteMidia(const char * url)
-{ 
-  audioLogger = &Serial;
-  fileRemote = new AudioFileSourceICYStream(url);
-
-  // Commented out for performance issues with high rate MP3 stream
-  //file->RegisterMetadataCB(MDCallback, (void*)"ICY");
-
-  buff = new AudioFileSourceBuffer(fileRemote, 4096);  // Doubled form default 2048
-
-  // Commented out for performance issues with high rate MP3 stream
-  //buff->RegisterStatusCB(StatusCallback, (void*)"buffer");
-
-  // Set SPDIF output
-  outSPDIF = new AudioOutputSPDIF();
-  mp3 = new AudioGeneratorMP3();
-
-  // Commented out for performance issues with high rate MP3 stream
-  //mp3->RegisterStatusCB(StatusCallback, (void*)"mp3");
-  mp3 = new AudioGeneratorMP3();
-  if (mp3->isRunning()) {
-    if (!mp3->loop()) mp3->stop();
-  }
-  mp3->begin(buff, outSPDIF);
-}
-
 // Called when there's a warning or error (like a buffer underflow or decode hiccup)
 void StatusCallback(void *cbData, int code, const char *string)
 {
@@ -538,8 +355,6 @@ bool initWiFi() {
 
 void setup() {
   Serial.begin(SERIAL_PORT);
-
-  clientSecureBearSSL->setFingerprint(fingerprint);
 
   // métricas para prometheus
   setupStorage();
@@ -613,7 +428,7 @@ void setup() {
     WiFi.softAP("ESP-WIFI-MANAGER", NULL);
     IPAddress IP = WiFi.softAPIP();
     Serial.print("Endereço IP do ponto de acesso: ");
-    Serial.println(IP);     
+    Serial.println(IP);
     startWifiManagerServer();    
   }
 }
