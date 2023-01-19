@@ -359,12 +359,6 @@ npm run dev
 
 [![Utilizando Obsidian para fazer apresentações como código](https://i3.ytimg.com/vi/LtBK_iNcVEQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=LtBK_iNcVEQ "Utilizando Obsidian para fazer apresentações como código")
 
-[![Como fazer seu 1° Scan 3D DIY - PARTE 1](https://i3.ytimg.com/vi/rkg1X2hh-UQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=rkg1X2hh-UQ "Como fazer seu 1° Scan 3D DIY - PARTE 1")
-
-[![Como fazer seu 1° Scan 3D DIY - PARTE 2](https://i3.ytimg.com/vi/x33sCP0tmMQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=x33sCP0tmMQ "Como fazer seu 1° Scan 3D DIY - PARTE 2")
-
-[![Base para Scan 3D 360° - DIY](https://i3.ytimg.com/vi/EqOseV5hMpU/maxresdefault.jpg)](https://www.youtube.com/watch?v=EqOseV5hMpU "Base para Scan 3D 360° - DIY")
-
 ## Peças
 
 <table>
