@@ -18,21 +18,127 @@ A aplicação consiste em três desenvolvimentos:
 - Frontend feito com a metodologia de desenvolvimento de software chamada de [PWA](https://garagem.ipiranga.io/nativo-hibrido-ou-pwa), usando a linguagem `React`. Seu código-fonte encontra-se na pasta raíz do projeto.
 - Interfaces de Conversação feita na linguagem `javascript` para ser utilizada no [Dialog Flow](https://en.wikipedia.org/wiki/Dialogflow) da Google. Encontra-se dentro da pasta `arduino/dialogFlow`
 
+## Visão geral do projeto
+
+<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="../others/imgs/book.png" /></a>
+
 ## Pre-requisitos
 
-- [Plugin para gravar no filesystem do Esp32](https://github.com/me-no-dev/arduino-esp32fs-plugin)
-- [Usando o plugin para escrever no filesystem do Esp32](https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/)
-- [Informações de uso do plugin](https://techtutorialsx.com/2018/08/24/esp32-arduino-spiffs-file-upload-ide-plugin/)
-- [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
+### Instalar placas que serão usadas
+
+Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abaixo, **separadas por vírgulas**:
+
+* http://arduino.esp8266.com/stable/package_esp8266com_index.json
+* https://dl.espressif.com/dl/package_esp32_index.json
+
+
+![Preferências](../others/imgs/preferencias.png)
+
+#### Instalar as placas
+
+![ESP8266](../others/imgs/placa-esp8266.png)
+![ESP32](../others/imgs/placa-esp32.png)
+
+#### Referências
 - [Preparando o ambiente com arduino IDE para ESP32](https://blog.eletrogate.com/conhecendo-o-esp32-usando-arduino-ide-2/)
+- [Preparando o ambiente com arduino IDE para ESP8266](https://blog.smartkits.com.br/esp8266-como-programar-o-nodemcu-atraves-da-arduino-ide/)
+
+#### Instalar as bibliotecas
+
+* ArduinoWebsockets
+* Adafruit FONA Library
+* Adafruit MQTT Library
+* Adafruit SleepyDog Library
+* Adafruit Unified Sensor
+* ArduinoJson
+* AsyncElegantOTA
+* DHT sensor library
+* NTPClient
+* PubSubClient
+* WiFi101
+* LittleFS_esp32
+* Preferences
+
+#### Instalar as bibliotecas .zip (fazer download do código e importar no arduino IDE)
+
+* https://github.com/me-no-dev/ESPAsyncWebServer.git
+* https://github.com/me-no-dev/AsyncTCP.git
+* https://github.com/schreibfaul1/ESP32-audioI2S.git
+
+### Plugins
+
+> **O último código está usando o LittleFS para ler e escrever no storage, que serve para utilizar o filesystem com melhor performance e aproveitamento do espaço físico. No entanto, estou deixando a referência para o SPIFFS que foi o primeiro utilizado apenas para conhecimento, porque não é mais usado no código.**
+
+- [Plugin para gravar no filesystem do Esp32 (SPIFFS)](https://github.com/me-no-dev/arduino-esp32fs-plugin)
+- [Usando o plugin para escrever no filesystem do Esp32 (SPIFFS)](https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/)
+- [Informações de uso do plugin (SPIFFS)](https://techtutorialsx.com/2018/08/24/esp32-arduino-spiffs-file-upload-ide-plugin/)
+
+
+* Pre-requisito do arduino IDE: 
+
+```
+sudo apt install python3-serial -y
+```
+
+* Pre-requisito do ESP8266/ESP32 Exception Stack Trace Decoder:
+
+#### Referência
+
+- [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
+
+* Criar diretório se não existir
+
+```
+mkdir -p ~/Arduino/tools/
+```
+
+*  Mover o arquivo jar para dentro da pasta
+
+```
+mv ~/Downloads/EspExceptionDecoder-2.0.2.zip ~/Arduino/tools
+```
+
+* Descompactar
+
+```
+unzip EspExceptionDecoder-2.0.2.zip
+```
+
+* Remover arquivo
+
+```
+rm -rf EspExceptionDecoder-2.0.2.zip
+```
+
+* Instalar dependências
+
+```
+sudo apt install libncurses5 libpython2.7 -y
+```
+
+* Pre-requisito do ESP32 LittleFS filesystem uploader:
+
+#### Referência
+
 - [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32littlefs-plugin)
 
-* Instalando pre-requisito do arduino IDE: 
+* Criar diretório se não existir
 
-```python
-sudo apt-get install python3-serial -y
 ```
-<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="../others/imgs/book.png" /></a>
+mkdir -p ~/Arduino/tools/ESP32LittleFS/tool/
+```
+
+*  Mover o arquivo jar para dentro da pasta
+
+```
+mv ~/Downloads/esp32littlefs.jar ~/Arduino/tools/ESP32LittleFS/tool/esp32littlefs.jar
+```
+
+### Compilação
+
+1. No menu `Ferramentas`, escolha a opção `Upload Speed: "115200"`
+
+2. No menu `Ferramentas`, escolha a opção `Partition Scheme: "Minimal SPIFFS (1.9MB APP With OTA/190KB SPIFFS)"` (**o código supera o tamanho padrão de 1.2MB para o APP**)
 
 - **Não se esqueça de alterar as variáveis abaixo, que aparecem nos códigos do arduino (`credentials.h`) e dialogflow, para as suas chaves:**
 
@@ -45,6 +151,14 @@ sudo apt-get install python3-serial -y
 | <USER_FIRMWARE>                | Upload Firmware User           |
 | <PASS_FIRMWARE>                | Upload Firmware Senha          |
 | <API_VERSION>                  | Versão da API                  |
+
+3. Clique no botão de compilação ![compilar](../others/imgs/compilar.png)
+
+> Se por acaso a compilação do arduino aparecer a mensagem: `"exec: "python": executable file not found in $PATH`, faça essa instalação abaixo:
+
+```
+sudo apt install python-is-python3
+```
 
 ## Extras
 
