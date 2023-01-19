@@ -11,43 +11,167 @@ A aplicação consiste em três desenvolvimentos:
 - Interfaces de Conversação feita na linguagem `javascript` para ser utilizada no [Dialog Flow](https://en.wikipedia.org/wiki/Dialogflow) da Google. Encontra-se dentro da pasta `arduino/dialogFlow`
 
 ## Pre-requisitos
+
+### Instalar placas que serão usadas
+
+Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abaixo, **separadas por vírgulas**:
+
+* http://arduino.esp8266.com/stable/package_esp8266com_index.json
+* https://dl.espressif.com/dl/package_esp32_index.json
+
+
+![Preferências](./assets/preferencias.png)
+
+#### Instalar as placas
+
+![ESP8266](./assets/placa-esp8266.png)
+![ESP32](./assets/placa-esp32.png)
+
+#### Referências
+- [Preparando o ambiente com arduino IDE para ESP32](https://blog.eletrogate.com/conhecendo-o-esp32-usando-arduino-ide-2/)
+- [Preparando o ambiente com arduino IDE para ESP8266](https://blog.smartkits.com.br/esp8266-como-programar-o-nodemcu-atraves-da-arduino-ide/)
+
+#### Instalar as bibliotecas
+
+* ArduinoWebsockets
+* Adafruit FONA Library
+* Adafruit MQTT Library
+* Adafruit SleepyDog Library
+* Adafruit Unified Sensor
+* ArduinoJson
+* AsyncElegantOTA
+* DHT sensor library
+* NTPClient
+* PubSubClient
+* WiFi101
+* LittleFS_esp32
+* Preferences
+
+#### Instalar as bibliotecas .zip (fazer download do código e importar no arduino IDE)
+
+* https://github.com/me-no-dev/ESPAsyncWebServer.git
+* https://github.com/me-no-dev/ESPAsyncTCP.git
+
+### Plugins
+
+* Pre-requisito do arduino IDE: 
+
+```
+sudo apt install python3-serial -y
+```
+
+* Pre-requisito do ESP8266/ESP32 Exception Stack Trace Decoder:
+
+#### Referência
+
+1. [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
+
+* Criar diretório se não existir
+
+```
+mkdir -p ~/Arduino/tools/
+```
+
+*  Mover o arquivo jar para dentro da pasta
+
+```
+mv ~/Downloads/EspExceptionDecoder-2.0.2.zip ~/Arduino/tools
+```
+
+* Descompactar
+
+```
+unzip EspExceptionDecoder-2.0.2.zip
+```
+
+* Remover arquivo
+
+```
+rm -rf EspExceptionDecoder-2.0.2.zip
+```
+
+* Instalar dependências
+
+```
+sudo apt install libncurses5 libpython2.7 -y
+```
+
+* Pre-requisito do ESP32 LittleFS filesystem uploader:
+
+#### Referência
+
+1. [Install ESP8266 NodeMCU LittleFS Filesystem Uploader in Arduino IDE](https://randomnerdtutorials.com/install-esp8266-nodemcu-littlefs-arduino/)
+
+
+*  Mover o arquivo zip para dentro da pasta: `~/Arduino/tools/`
+
+```
+mv ~/Downloads/ESP8266LittleFS-2.6.0.zip ~/Arduino/tools/
+```
+
+* Descompactar
+
+```
+unzip ESP8266LittleFS-2.6.0.zip
+```
+
+* Remover arquivo
+
+```
+rm -rf ESP8266LittleFS-2.6.0.zip
+```
+
+### Compilação
+
+1. No menu `Ferramentas`, escolha a opção `Upload Speed: "115200"`
+
+2. No menu `Ferramentas`, escolha a opção `Flash Size: "2MB (FS:512KB OTA:~768KB)"` (**o código supera o tamanho padrão de 1.2MB para o APP**)
+
 - **Não se esqueça de alterar as variáveis abaixo, que aparecem nos códigos do arduino e dialogflow, para as suas chaves**
 
-,  abaixo no código a
 | Variáveis             | Serviço               |
 |-----------------------|-----------------------|
 | <AIO_USERNAME>        | Adafruit              |
 | <AIO_KEY>             | Adafruit              |
-| <API_TEXT2SPEECH_KEY> | Google Text To Speech |
-| <FIREBASE_TOKEN>      | Firebase              |
-| <wifi_ssid>           | WiFi SSID             |
-| <wifi_passwd>         | WiFi Senha            |
+| <API_MINION_TOKEN>    | Base64 Basic Auth     |
+| <USER_FIRMWARE>       | Upload Firmware User  |
+| <PASS_FIRMWARE>       | Upload Firmware Senha |
+| <API_VERSION>         | Versão da API         |
+
+
+3. Clique no botão de compilação ![compilar](./assets/compilar.png)
+
+> Se por acaso a compilação do arduino aparecer a mensagem: `"exec: "python": executable file not found in $PATH`, faça essa instalação abaixo:
+
+```
+sudo apt install python-is-python3
+```
 
 ## Extras
 
 - Firebase para armazenamento dos áudios utilizados neste projeto
 - `sonar-project.properties` para configurar o projeto a ser analisado pelo sonar.
 
-![minion-1](assets/minion-1.jpg)
-![minion-2](assets/minion-2.jpg)
-![minion-3](assets/minion-3.jpg) 
-![minion-4](assets/minion-4.jpg)
-![minion-5](assets/minion-5.jpg) 
-![minion-6](assets/minion-6.jpg) 
-![minion-7](assets/minion-7.jpg) 
-![minion-8](assets/minion-8.jpg)
-![minion-9](assets/minion-9.jpg) 
-![minion-10](assets/minion-10.jpg)
-![minion-11](assets/minion-11.jpg) 
-![minion-12](assets/minion-12.jpg)
-![minion-13](assets/minion-13.jpg) 
-![minion-14](assets/minion-14.jpg)
-![minion-15](assets/minion-15.jpg) 
-![minion-16](assets/minion-16.jpg)
-![minion-17](assets/minion-17.jpg) 
-![minion-18](assets/minion-18.jpg)
-![minion-19](assets/minion-19.jpg) 
-![working](assets/Working.gif)
+![minion-1](./assets/minion-1.jpg)
+![minion-2](./assets/minion-2.jpg)
+![minion-3](./assets/minion-3.jpg) 
+![minion-4](./assets/minion-4.jpg)
+![minion-5](./assets/minion-5.jpg) 
+![minion-6](./assets/minion-6.jpg) 
+![minion-7](./assets/minion-7.jpg) 
+![minion-8](./assets/minion-8.jpg)
+![minion-9](./assets/minion-9.jpg) 
+![minion-10](./assets/minion-10.jpg)
+![minion-11](./assets/minion-11.jpg) 
+![minion-12](./assets/minion-12.jpg)
+![minion-13](./assets/minion-13.jpg) 
+![minion-14](./assets/minion-14.jpg)
+![minion-15](./assets/minion-15.jpg) 
+![minion-16](./assets/minion-16.jpg)
+![minion-17](./assets/minion-17.jpg) 
+![minion-18](./assets/minion-18.jpg)
+![minion-19](./assets/minion-19.jpg) 
+![working](./assets/Working.gif)
 
 ## Google Home e Google Assistente
 
