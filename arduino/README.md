@@ -125,7 +125,7 @@ rm -rf ESP8266LittleFS-2.6.0.zip
 
 1. No menu `Ferramentas`, escolha a opção `Upload Speed: "115200"`
 
-2. No menu `Ferramentas`, escolha a opção `Flash Size: "2MB (FS:512KB OTA:~768KB)"` (**o código supera o tamanho padrão de 1.2MB para o APP**)
+2. No menu `Ferramentas`, escolha a opção `Flash Size: "4MB (FS:2MB OTA:~1019KB)"` (**o código supera o tamanho padrão de 1MB (FS:64KB OTA:~470KB)**)
 
 - **Não se esqueça de alterar as variáveis abaixo, que aparecem nos códigos do arduino e dialogflow, para as suas chaves**
 
