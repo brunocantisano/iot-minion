@@ -80,7 +80,7 @@ jobs:
         arduino-cli lib install "PubSubClient"
         arduino-cli lib install "WiFi101"
         arduino-cli lib install "LittleFS_esp32"
-        arduino-cli lib install "Preferences"        
+        arduino-cli lib install "Preferences"
         arduino-cli config dump
 
     - name: Change Firmware Username
