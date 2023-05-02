@@ -27,6 +27,30 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 ![ESP8266](./assets/placa-esp8266.png)
 ![ESP32](./assets/placa-esp32.png)
 
+### Google Home
+
+![df1](./docs/imgs/dialogflow/df1.png)
+![df2](./docs/imgs/dialogflow/df2.png)
+![ga1](./docs/imgs/dialogflow/ga1.png)
+![ga2](./docs/imgs/dialogflow/ga2.png)
+![ga3](./docs/imgs/dialogflow/ga3.png)
+![ga4](./docs/imgs/dialogflow/ga4.png)
+![g5](./docs/imgs/dialogflow/g5.png)
+![ga6](./docs/imgs/dialogflow/ga6.png)
+![ga7](./docs/imgs/dialogflow/ga7.png)
+![df3](./docs/imgs/dialogflow/df3.png)
+![df4](./docs/imgs/dialogflow/df4.png)
+![df5](./docs/imgs/dialogflow/df5.png)
+![df6](./docs/imgs/dialogflow/df6.png)
+![df7](./docs/imgs/dialogflow/df7.png)
+![df8](./docs/imgs/dialogflow/df8.png)
+![df9](./docs/imgs/dialogflow/df9.png)
+![gcp1](./docs/imgs/dialogflow/gcp1.png)
+![gcp2](./docs/imgs/dialogflow/gcp2.png)
+![df10](./docs/imgs/dialogflow/df10.png)
+![df11](./docs/imgs/dialogflow/df11.png)
+![df12](./docs/imgs/dialogflow/df12.png)
+
 #### Referências
 - [Preparando o ambiente com arduino IDE para ESP32](https://blog.eletrogate.com/conhecendo-o-esp32-usando-arduino-ide-2/)
 - [Preparando o ambiente com arduino IDE para ESP8266](https://blog.smartkits.com.br/esp8266-como-programar-o-nodemcu-atraves-da-arduino-ide/)
