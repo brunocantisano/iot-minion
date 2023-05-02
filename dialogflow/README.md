@@ -2,6 +2,30 @@
 
 ## Google Home
 
+### Pre requisitos
+
+![df1](../others/imgs/dialogflow/df1.png)
+![df2](../others/imgs/dialogflow/df2.png)
+![ga1](../others/imgs/dialogflow/ga1.png)
+![ga2](../others/imgs/dialogflow/ga2.png)
+![ga3](../others/imgs/dialogflow/ga3.png)
+![ga4](../others/imgs/dialogflow/ga4.png)
+![g5](../others/imgs/dialogflow/g5.png)
+![ga6](../others/imgs/dialogflow/ga6.png)
+![ga7](../others/imgs/dialogflow/ga7.png)
+![df3](../others/imgs/dialogflow/df3.png)
+![df4](../others/imgs/dialogflow/df4.png)
+![df5](../others/imgs/dialogflow/df5.png)
+![df6](../others/imgs/dialogflow/df6.png)
+![df7](../others/imgs/dialogflow/df7.png)
+![df8](../others/imgs/dialogflow/df8.png)
+![df9](../others/imgs/dialogflow/df9.png)
+![gcp1](../others/imgs/dialogflow/gcp1.png)
+![gcp2](../others/imgs/dialogflow/gcp2.png)
+![df10](../others/imgs/dialogflow/df10.png)
+![df11](../others/imgs/dialogflow/df11.png)
+![df12](../others/imgs/dialogflow/df12.png)
+
 ### Configurar rotinas do Google Assistant
 
 **Comandos de voz** 👂
