@@ -269,6 +269,44 @@ void handle_InsertTalk(){
   });
 }
 
+void handle_InsertAsk(){
+  server.on("/ask", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+    if(check_authorization_header(request)) {      
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);
+      String JSONmessageBody = getData(data, len);
+      DeserializationError error = deserializeJson(doc, JSONmessageBody);
+      if(error) {
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
+      } else {
+          const char * mensagem = doc["mensagem"];
+          #ifdef DEBUG
+            Serial.printf("Mensagem: %s\n",mensagem);
+          #endif        
+  
+          // Add message to messages array
+          chat.putMessage(mensagem, strlen(mensagem));
+            
+          // Send message array and receive response
+          chat.getResponse();
+          
+          mensagem = chat.getLastMessageContent();
+          
+          // Print response
+          Serial.println(mensagem);
+          
+          // toca o audio
+          playSpeech(mensagem);
+          
+          doc.clear();
+          request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+      }
+    } else {
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
+    }
+  });
+}
+
 void handle_InsertPlay(){
   server.on("/play", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
@@ -612,6 +650,7 @@ void startWebServer() {
   handle_Lists();
   handle_TemperatureAndHumidity();
   handle_InsertTalk();
+  handle_InsertAsk();
   handle_InsertPlay();
   handle_InsertPlayRemote();
   handle_UpdateSensors();

@@ -14,6 +14,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Audio.h>
+#include <ChatGPTuino.h>
 
 #define FILESYSTEM "LittleFS"
 #define CONFIG_LITTLEFS_FOR_IDF_3_2
@@ -101,6 +102,13 @@ IPAddress subnet(255, 255, 0, 0);
 // Timer variables
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
+
+// A quick primer on the chatGPT API https://www.programmingelectronics.com/chatgpt-api/
+const int TOKENS = 100; // How lengthy a response you want, every token is about 3/4 a word
+const int NUM_MESSAGES = 20; 
+
+ChatGPTuino chat{ TOKENS, NUM_MESSAGES }; // Will store and send your most recent messages (up to NUM_MESSAGES)
+const char *model = "gpt-3.5-turbo";  // OpenAI Model being used
 
 String getContent(const char* filename) {
   String payload="";  
@@ -498,6 +506,9 @@ void setup(void)
   pinMode(RelayShake, OUTPUT);
   pinMode(TemperatureHumidity, OUTPUT);
 
+  // Initialize OPEN IA (CHAT GPT) messages array
+  chat.init(OPEN_IA_KEY, model);
+  
   #ifdef DEBUG
     Serial.println("Versão: "+String(version));
   #endif
