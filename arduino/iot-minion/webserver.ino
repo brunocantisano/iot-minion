@@ -291,10 +291,12 @@ void handle_InsertAsk(){
           chat.getResponse();
           
           mensagem = chat.getLastMessageContent();
-          
-          // Print response
-          Serial.println(mensagem);
-          
+
+          // Print response          
+          char buffer[MAX_PATH];
+          snprintf ( buffer, MAX_PATH, "Tamanho da mensagem: %d. Mensagem: %s", strlen(mensagem), mensagem );  
+          Serial.printf("%s\n", buffer);
+        
           // toca o audio
           playSpeech(mensagem);
           
