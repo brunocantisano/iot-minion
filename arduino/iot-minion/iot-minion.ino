@@ -17,7 +17,7 @@
 #include <ChatGPTuino.h>
 
 #define FILESYSTEM "LittleFS"
-#define CONFIG_LITTLEFS_FOR_IDF_3_2
+#define CONFIG_LITTLEFS_FOR_cIDF_3_2
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
 #include <LITTLEFS.h> 
 
