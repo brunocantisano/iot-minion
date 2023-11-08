@@ -81,7 +81,7 @@ jobs:
         arduino-cli lib install "WiFi101"
         arduino-cli lib install "LittleFS_esp32"
         arduino-cli lib install "Preferences"
-        arduino-cli lib install "ChatGPTuino"        
+        arduino-cli lib install "ChatGPT_Client"        
         arduino-cli config dump
 
     - name: Change Firmware Username
