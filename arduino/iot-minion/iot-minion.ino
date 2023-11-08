@@ -9,17 +9,18 @@
 #include <DHT.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
+//#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <SPI.h>
 #include <SD.h>
 #include <Audio.h>
-#include <ChatGPTuino.h>
-
+//#include <ChatGPT.hpp>
+ 
 #define FILESYSTEM "LittleFS"
 #define CONFIG_LITTLEFS_FOR_IDF_3_2
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
-#include <LITTLEFS.h> 
+#include <LittleFS.h>
 
 const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
@@ -104,18 +105,14 @@ IPAddress subnet(255, 255, 0, 0);
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
 
-// A quick primer on the chatGPT API https://www.programmingelectronics.com/chatgpt-api/
-const int TOKENS = 100; // How lengthy a response you want, every token is about 3/4 a word
-const int NUM_MESSAGES = 20; 
-
-ChatGPTuino chat{ TOKENS, NUM_MESSAGES }; // Will store and send your most recent messages (up to NUM_MESSAGES)
-const char *model = "gpt-3.5-turbo";  // OpenAI Model being used
+//WiFiClientSecure clientSec;
+//ChatGPT<WiFiClientSecure> chat_gpt(&clientSec, "v1", OPEN_IA_KEY);
 
 String getContent(const char* filename) {
   String payload="";  
-  bool exists = LITTLEFS.exists(filename);
+  bool exists = LittleFS.exists(filename);
   if(exists){
-    File file = LITTLEFS.open(filename, "r"); 
+    File file = LittleFS.open(filename, "r"); 
     String mensagem = "Falhou para abrir para leitura";
     if(!file){    
       #ifdef DEBUG
@@ -145,7 +142,7 @@ String getContentType(String filename) { // convert the file extension to the MI
 }
 
 bool writeContent(String filename, String content){
-  File file = LITTLEFS.open(filename, "w");
+  File file = LittleFS.open(filename, "w");
   return writeContent(&file, content);
 }
 
@@ -506,15 +503,12 @@ void setup(void)
   pinMode(RelayBlink, OUTPUT);
   pinMode(RelayShake, OUTPUT);
   pinMode(TemperatureHumidity, OUTPUT);
-
-  // Initialize OPEN IA (CHAT GPT) messages array
-  chat.init(OPEN_IA_KEY, model);
-  
+ 
   #ifdef DEBUG
     Serial.println("Versão: "+String(version));
   #endif
 
-  if(!LITTLEFS.begin(true)){
+  if(!LittleFS.begin(true)){
     #ifdef DEBUG
       Serial.println(LITTLEFS_ERROR);
     #endif      
@@ -632,7 +626,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
     String(topic) == (String(MQTT_USERNAME)+String("/feeds/humidity")).c_str()) {
     #ifdef DEBUG
       // busca temperatura e umidade
-    Serial.println("busca temperatura e umidade")
+    Serial.println("busca temperatura e umidade");
     #endif
   }
   #ifdef DEBUG

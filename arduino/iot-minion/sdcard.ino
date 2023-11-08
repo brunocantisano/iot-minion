@@ -65,7 +65,7 @@ bool loadSdCardMedias() {
 String listFiles(bool ishtml) {
   String returnText = "";
   Serial.println(F("Listando arquivos armazenados no storage"));
-  File root = LITTLEFS.open("/", "r");
+  File root = LittleFS.open("/", "r");
   File foundfile = root.openNextFile();
   if (ishtml) {
     returnText += "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th></tr>";

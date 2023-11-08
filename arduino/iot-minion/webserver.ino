@@ -31,14 +31,14 @@ void handle_OnError(){
 void handle_MinionLogo(){
   server.on("/minion-logo", HTTP_GET, [](AsyncWebServerRequest *request) {    
     char filename[] = "/minion-logo.png";
-    request->send(LITTLEFS, filename, getContentType(filename));
+    request->send(LittleFS, filename, getContentType(filename));
   });
 }
 
 void handle_MinionList(){
   server.on("/minion-list", HTTP_GET, [](AsyncWebServerRequest *request) {    
     char filename[] = "/minion-list.png";
-    request->send(LITTLEFS, filename, getContentType(filename));
+    request->send(LittleFS, filename, getContentType(filename));
   });
 }
   
@@ -46,14 +46,14 @@ void handle_MinionList(){
 void handle_MinionIco(){
   server.on("/minion-ico", HTTP_GET, [](AsyncWebServerRequest *request) {
     char filename[] = "/minion-ico.ico";
-    request->send(LITTLEFS, filename, getContentType(filename));
+    request->send(LittleFS, filename, getContentType(filename));
   });
 }
 
 void handle_Style(){
   server.on("/style", HTTP_GET, [](AsyncWebServerRequest *request) {    
     char filename[] = "/style.css";
-    request->send(LITTLEFS, filename, getContentType(filename));
+    request->send(LittleFS, filename, getContentType(filename));
   });
 }
 
@@ -283,23 +283,21 @@ void handle_InsertAsk(){
           #ifdef DEBUG
             Serial.printf("Mensagem: %s\n",mensagem);
           #endif        
-  
-          // Add message to messages array
-          chat.putMessage(mensagem, strlen(mensagem));
-            
-          // Send message array and receive response
-          chat.getResponse();
           
-          mensagem = chat.getLastMessageContent();
-
-          // Print response          
-          char buffer[MAX_PATH];
-          snprintf ( buffer, MAX_PATH, "Tamanho da mensagem: %d. Mensagem: %s", strlen(mensagem), mensagem );  
-          Serial.printf("%s\n", buffer);
-        
+          Serial.printf("Mensagem: %s\n",mensagem);
+          /*
+          String result;
+          if (chat_gpt.simple_message("gpt-3.5-turbo-0301", "user", "Planning a 3-day trip to San Diego", result)) {
+              Serial.println("===OK===");
+              Serial.println(result);
+          } else {
+              Serial.println("===ERROR===");
+              Serial.println(result);
+          }
+          Serial.printf("Mensagem: %s\n",result);
           // toca o audio
-          playSpeech(mensagem);
-          
+          playSpeech(result.c_str());
+          */
           doc.clear();
           request->send(HTTP_OK, getContentType(".txt"), PLAYED);
       }
@@ -551,9 +549,9 @@ void handle_UploadStorage() {
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
       html.replace("FILELIST",listFiles(true));
-      html.replace("FREESTORAGE",humanReadableSize((LITTLEFS.totalBytes() - LITTLEFS.usedBytes())));
-      html.replace("USEDSTORAGE",humanReadableSize(LITTLEFS.usedBytes()));
-      html.replace("TOTALSTORAGE",humanReadableSize(LITTLEFS.totalBytes()));
+      html.replace("FREESTORAGE",humanReadableSize((LittleFS.totalBytes() - LittleFS.usedBytes())));
+      html.replace("USEDSTORAGE",humanReadableSize(LittleFS.usedBytes()));
+      html.replace("TOTALSTORAGE",humanReadableSize(LittleFS.totalBytes()));
     }
     request->send(HTTP_OK, getContentType(filename), html);
   });
@@ -595,7 +593,7 @@ void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t
   if (!index) {
     logmessage = "Upload Iniciado: " + String(filename);
     // open the file on first call and store the file handle in the request object
-    request->_tempFile = LITTLEFS.open("/" + filename, "w");
+    request->_tempFile = LittleFS.open("/" + filename, "w");
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
@@ -684,14 +682,14 @@ void startWifiManagerServer() {
   handle_Style();
   handle_WifiManager();
   handle_WifiInfo();
-  server.serveStatic("/", LITTLEFS, "/");
+  server.serveStatic("/", LittleFS, "/");
   
   server.begin();
 }
 
 void handle_WifiManager(){
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LITTLEFS, "/wifimanager.html", getContentType("/wifimanager.html"));
+    request->send(LittleFS, "/wifimanager.html", getContentType("/wifimanager.html"));
   });
 }
 
