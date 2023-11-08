@@ -85,7 +85,8 @@ ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-
+// variavel para checar se já conectou na rede
+bool rede = false;
 // Inicia sensor DHT
 DHT dht(TemperatureHumidity, DHT11);
 
@@ -440,7 +441,7 @@ bool initWiFi() {
   String gateway = preferences.getString("gateway");
 
   Serial.println(ssid);
-  Serial.println(pass);
+  /*Serial.println(pass);*/
   Serial.println(ip);
   Serial.println(gateway);
   
@@ -551,7 +552,7 @@ void setup(void)
     }
     // carrega lista de arquivos de media no SDCARD
     if(loadSdCardMedias()) loadI2S(); //Configura e inicia o SPI para conexão com o cartão SD
-        
+    rede=true;    
     //connecting to a mqtt broker
     client.setServer(MQTT_BROKER, MQTT_PORT);
     client.setCallback(callback);
@@ -673,9 +674,11 @@ void reconnect() {
 void loop()
 { 
   if (!client.connected()) {
-    reconnect();
+    // tento conectar no MQTT somente se já tiver rede
+    if(rede) reconnect();
   }
   client.loop();
+
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
 
@@ -683,11 +686,11 @@ void loop()
   if(timeSinceLastRead > 60000) {
     // Reading temperature or humidity takes about 250 milliseconds!
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-    getTemperatureHumidity();
+    if(rede) getTemperatureHumidity();
     timeSinceLastRead = 0;
   }
   delay(100);
-  timeSinceLastRead += 100;  
+  timeSinceLastRead += 100;
 }
 
 #ifdef __cplusplus
