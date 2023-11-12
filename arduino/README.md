@@ -53,11 +53,15 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 * ArduinoJson
 * AsyncElegantOTA
 * DHT sensor library
-* NTPClient
 * PubSubClient
 * WiFi101
 * LittleFS_esp32
 * Preferences
+* ESPAsyncWebServer
+* AsyncTCP
+* ESP32-audioI2S
+* DHT sensor library
+* ChatGPTuino
 
 #### Instalar as bibliotecas .zip (fazer download do código e importar no arduino IDE)
 

@@ -76,12 +76,11 @@ jobs:
         arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
         arduino-cli lib install --git-url https://github.com/schreibfaul1/ESP32-audioI2S.git
         arduino-cli lib install "DHT sensor library"
-        arduino-cli lib install "NTPClient"
         arduino-cli lib install "PubSubClient"
         arduino-cli lib install "WiFi101"
         arduino-cli lib install "LittleFS_esp32"
         arduino-cli lib install "Preferences"
-        arduino-cli lib install "ChatGPT_Client"        
+        arduino-cli lib install "ChatGPTuino"
         arduino-cli config dump
 
     - name: Change Firmware Username

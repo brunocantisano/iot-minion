@@ -9,13 +9,11 @@
 #include <DHT.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
-//#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <SPI.h>
 #include <SD.h>
 #include <Audio.h>
-//#include <ChatGPT.hpp>
  
 #define FILESYSTEM "LittleFS"
 #define CONFIG_LITTLEFS_FOR_IDF_3_2
@@ -104,9 +102,6 @@ IPAddress subnet(255, 255, 0, 0);
 // Timer variables
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
-
-//WiFiClientSecure clientSec;
-//ChatGPT<WiFiClientSecure> chat_gpt(&clientSec, "v1", OPEN_IA_KEY);
 
 String getContent(const char* filename) {
   String payload="";  
@@ -227,21 +222,6 @@ String humanReadableSize(const size_t bytes) {
   else if (bytes < (1024 * 1024)) return String(bytes / 1024.0) + " KB";
   else if (bytes < (1024 * 1024 * 1024)) return String(bytes / 1024.0 / 1024.0) + " MB";
   else return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
-}
-
-String getDataHora() {
-    // Busca tempo no NTP. Padrao de data: ISO-8601
-    time_t nowSecs = time(nullptr);
-    struct tm timeinfo;
-    char buffer[80];
-    while (nowSecs < 8 * 3600 * 2) {
-      delay(500);
-      nowSecs = time(nullptr);
-    }
-    gmtime_r(&nowSecs, &timeinfo);
-    // ISO 8601: 2021-10-04T14:12:26+00:00
-    strftime (buffer,80,"%FT%T%z",&timeinfo);
-    return String(buffer);
 }
 
 int searchList(String name, String language) {
@@ -473,7 +453,7 @@ bool initWiFi() {
 }
 
 void setup(void)
-{
+{  
   Serial.begin(SERIAL_PORT);
 
   // métricas para prometheus
@@ -672,7 +652,7 @@ void loop()
     if(rede) reconnect();
   }
   client.loop();
-
+  
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
 

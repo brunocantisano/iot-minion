@@ -117,8 +117,19 @@ void handle_SwaggerUI(){
 
 void handle_Health(){
   server.on("/health", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String mqttConnected = client.connected()?"true":"false";
-    String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"date\": \""+String(getDataHora())+"\",\"url\": \"/health\",\"mqtt\": \""+mqttConnected+"\",\"version\": \""+version+"\",\"ip\": \""+String(IpAddress2String(WiFi.localIP()))+"\"}";
+    String mqttConnected = "false";
+    if(client.connected()) mqttConnected = "true";
+    String ip = String(IpAddress2String(WiFi.localIP()));
+    // Retorna o número de milissegundos passados desde que a placa Arduino começou a executar o programa atual. 
+    // Esse número irá sofrer overflow (chegar ao maior número possível e então voltar pra zero), após aproximadamente 50 dias.
+    time_t nowSecs = millis()/1000;
+    struct tm timeinfo;
+    char time_converted[80];
+    gmtime_r(&nowSecs, &timeinfo);
+    // HH:MM:SS
+    strftime (time_converted,80,"%H:%M:%S",&timeinfo);
+    String time_working = time_converted;
+    String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"time_working\": \""+time_working+"\",\"url\": \"/health\",\"mqtt\": \""+mqttConnected+"\",\"version\": \""+version+"\",\"ip\": \""+ip+"\"}";
     request->send(HTTP_OK, getContentType(".json"), JSONmessage);
   });
 }
@@ -285,19 +296,8 @@ void handle_InsertAsk(){
           #endif        
           
           Serial.printf("Mensagem: %s\n",mensagem);
-          /*
-          String result;
-          if (chat_gpt.simple_message("gpt-3.5-turbo-0301", "user", "Planning a 3-day trip to San Diego", result)) {
-              Serial.println("===OK===");
-              Serial.println(result);
-          } else {
-              Serial.println("===ERROR===");
-              Serial.println(result);
-          }
-          Serial.printf("Mensagem: %s\n",result);
           // toca o audio
-          playSpeech(result.c_str());
-          */
+          //playSpeech();
           doc.clear();
           request->send(HTTP_OK, getContentType(".txt"), PLAYED);
       }
