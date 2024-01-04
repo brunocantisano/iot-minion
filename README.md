@@ -8,6 +8,7 @@
 ![Forks](https://img.shields.io/github/forks/brunocantisano/iot-minion.svg)
 ![Watchers](https://img.shields.io/github/watchers/brunocantisano/iot-minion.svg)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Naereen/StrapDown.js/blob/master/LICENSE)
+<a href='https://ko-fi.com/brunocantisano' target='_blank'><img height='15' style='border:0px;height:26px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
 
 Este projeto foi criado com [Create React App](https://github.com/facebook/create-react-app).
 
