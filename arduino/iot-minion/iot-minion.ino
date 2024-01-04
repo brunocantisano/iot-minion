@@ -14,7 +14,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Audio.h>
- 
+
 #define FILESYSTEM "LittleFS"
 #define CONFIG_LITTLEFS_FOR_IDF_3_2
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
@@ -102,7 +102,7 @@ IPAddress subnet(255, 255, 0, 0);
 // Timer variables
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
-
+    
 String getContent(const char* filename) {
   String payload="";  
   bool exists = LittleFS.exists(filename);
@@ -342,7 +342,7 @@ void saveApplicationList() {
   JSONmessage = '['+JSONmessage.substring(0, JSONmessage.length()-1)+']';
   // Grava no storage
   writeContent("/lista.json",JSONmessage); 
-  // Grava no adafruit
+  // Grava no adafruit  
   client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
 }
 
@@ -448,19 +448,19 @@ bool initWiFi() {
       return false;
     }
   }
-  Serial.println(WiFi.localIP());
+    Serial.println(WiFi.localIP());
   return true;
 }
 
 void setup(void)
 {  
   Serial.begin(SERIAL_PORT);
-
+      
   // métricas para prometheus
   setupStorage();
   incrementBootCounter();
   //
-  
+
   #ifdef DEBUG
     Serial.println(F("modo debug"));
   #else
@@ -517,7 +517,7 @@ void setup(void)
     Serial.println("mDNS configurado e inicializado;");    
     if (!MDNS.begin(HOST)) 
     { 
-        //http://temperatura.local        
+        //http://minion.local
         #ifdef DEBUG
           Serial.println("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s...");
         #endif
@@ -526,8 +526,8 @@ void setup(void)
     }
     // carrega lista de arquivos de media no SDCARD
     if(loadSdCardMedias()) loadI2S(); //Configura e inicia o SPI para conexão com o cartão SD
-    rede=true;    
-    //connecting to a mqtt broker
+    rede=true;
+//connecting to a mqtt broker
     client.setServer(MQTT_BROKER, MQTT_PORT);
     client.setCallback(callback);
     Serial.println(F("Minion funcionando!"));
@@ -623,7 +623,7 @@ void reconnect() {
       Serial.printf("O cliente %s conecta ao mqtt broker publico\n", client_id.c_str());
     #endif      
     if (client.connect(client_id.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) {
-      Serial.println(F("Adafruit mqtt broker conectado"));
+Serial.println(F("Adafruit mqtt broker conectado"));
       // Subscribe
       client.subscribe((String(MQTT_USERNAME)+String("/feeds/eye")).c_str());
       client.subscribe((String(MQTT_USERNAME)+String("/feeds/hat")).c_str());
@@ -640,19 +640,19 @@ void reconnect() {
       #ifdef DEBUG
         Serial.printf("Falhou com o estado %d\nNao foi possivel conectar com o broker mqtt.\nPor favor, verifique as credenciais e instale uma nova versão de firmware.\nTentando novamente em 5 segundos.", client.state());
       #endif
-      delay(5000);
+delay(5000);
     }
-  }
+    }
 }
 
 void loop()
-{ 
+{   
   if (!client.connected()) {
     // tento conectar no MQTT somente se já tiver rede
     if(rede) reconnect();
   }
   client.loop();
-  
+
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
 
