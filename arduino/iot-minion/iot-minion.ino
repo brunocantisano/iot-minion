@@ -9,11 +9,12 @@
 #include <DHT.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
-#include <PubSubClient.h>
+//#include <PubSubClient.h>
 #include <Preferences.h>
 #include <SPI.h>
 #include <SD.h>
 #include <Audio.h>
+#include <HTTPClient.h>
 
 #define FILESYSTEM "LittleFS"
 #define CONFIG_LITTLEFS_FOR_IDF_3_2
@@ -83,7 +84,7 @@ ListaEncadeada<Application*> applicationListaEncadeada = ListaEncadeada<Applicat
 ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
 
 WiFiClient espClient;
-PubSubClient client(espClient);
+//PubSubClient client(espClient);
 // variavel para checar se já conectou na rede
 bool rede = false;
 // Inicia sensor DHT
@@ -102,7 +103,8 @@ IPAddress subnet(255, 255, 0, 0);
 // Timer variables
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
-    
+const char *chatGPTUrl = "https://api.openai.com/v1/chat/completions";
+
 String getContent(const char* filename) {
   String payload="";  
   bool exists = LittleFS.exists(filename);
@@ -169,6 +171,7 @@ char* substr(char* arr, int begin, int len)
     res[len] = 0;
     return res;
 }
+
 String IpAddress2String(const IPAddress& ipAddress)
 {
     return (String(ipAddress[0]) + String(".") +
@@ -343,7 +346,7 @@ void saveApplicationList() {
   // Grava no storage
   writeContent("/lista.json",JSONmessage); 
   // Grava no adafruit  
-  client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+  //client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
 }
 
 int loadApplicationList() {
@@ -427,17 +430,18 @@ bool initWiFi() {
     return false;
   }
 
-  WiFi.mode(WIFI_STA);
-  localIP.fromString(ip.c_str());
-  localGateway.fromString(gateway.c_str());
-
-  if (!WiFi.config(localIP, localGateway, subnet)){
-    Serial.println("STA Falhou para configurar");
-    return false;
-  }
   WiFi.begin(ssid.c_str(), pass.c_str());
-  Serial.println("Conectando ao WiFi...");
-
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Conectando ao WiFi...");
+  }
+  ip = String(IpAddress2String(WiFi.localIP()));
+  Serial.println("Conectado ao WiFi");  
+  Serial.println(ip);
+  
+  preferences.putString("ip", ip.c_str());
+  preferences.putString("gateway", gateway.c_str());
+  
   unsigned long currentMillis = millis();
   previousMillis = currentMillis;
 
@@ -448,14 +452,13 @@ bool initWiFi() {
       return false;
     }
   }
-    Serial.println(WiFi.localIP());
   return true;
 }
 
-void setup(void)
-{  
+void setup()
+{
   Serial.begin(SERIAL_PORT);
-      
+
   // métricas para prometheus
   setupStorage();
   incrementBootCounter();
@@ -467,14 +470,6 @@ void setup(void)
     Serial.println(F("modo produção"));
   #endif
 
-  // carrega sensores
-  bool load = loadSensorList();
-  if(!load) {
-    #ifdef DEBUG
-      Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
-    #endif
-  }
-        
   // DH11 inicia temperatura
   dht.begin();
 
@@ -483,7 +478,15 @@ void setup(void)
   pinMode(RelayBlink, OUTPUT);
   pinMode(RelayShake, OUTPUT);
   pinMode(TemperatureHumidity, OUTPUT);
- 
+  /*
+  // carrega sensores  
+  bool load = loadSensorList();
+  if(!load) {
+    #ifdef DEBUG
+      Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
+    #endif
+  }
+  */  
   #ifdef DEBUG
     Serial.println("Versão: "+String(version));
   #endif
@@ -493,7 +496,7 @@ void setup(void)
       Serial.println(LITTLEFS_ERROR);
     #endif      
   }
-
+  
   if(initWiFi()) {
     #ifdef DEBUG
       Serial.println("\n\nNetwork Configuration:");
@@ -527,9 +530,9 @@ void setup(void)
     // carrega lista de arquivos de media no SDCARD
     if(loadSdCardMedias()) loadI2S(); //Configura e inicia o SPI para conexão com o cartão SD
     rede=true;
-//connecting to a mqtt broker
-    client.setServer(MQTT_BROKER, MQTT_PORT);
-    client.setCallback(callback);
+    //connecting to a mqtt broker
+    //client.setServer(MQTT_BROKER, MQTT_PORT);
+    //client.setCallback(callback);
     Serial.println(F("Minion funcionando!"));
   }
   else {
@@ -615,6 +618,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
 }
 
 void reconnect() {
+  /*
   // Loop até que esteja reconectado
   while (!client.connected()) {
     Serial.println("Tentando conexão com o servidor MQTT...");
@@ -623,7 +627,7 @@ void reconnect() {
       Serial.printf("O cliente %s conecta ao mqtt broker publico\n", client_id.c_str());
     #endif      
     if (client.connect(client_id.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) {
-Serial.println(F("Adafruit mqtt broker conectado"));
+      Serial.println(F("Adafruit mqtt broker conectado"));
       // Subscribe
       client.subscribe((String(MQTT_USERNAME)+String("/feeds/eye")).c_str());
       client.subscribe((String(MQTT_USERNAME)+String("/feeds/hat")).c_str());
@@ -640,19 +644,21 @@ Serial.println(F("Adafruit mqtt broker conectado"));
       #ifdef DEBUG
         Serial.printf("Falhou com o estado %d\nNao foi possivel conectar com o broker mqtt.\nPor favor, verifique as credenciais e instale uma nova versão de firmware.\nTentando novamente em 5 segundos.", client.state());
       #endif
-delay(5000);
+      delay(5000);
     }
-    }
+  }
+  */
 }
 
-void loop()
-{   
+void loop() 
+{
+/*
   if (!client.connected()) {
     // tento conectar no MQTT somente se já tiver rede
     if(rede) reconnect();
   }
   client.loop();
-
+*/
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
 
@@ -663,8 +669,9 @@ void loop()
     if(rede) getTemperatureHumidity();
     timeSinceLastRead = 0;
   }
-  delay(100);
-  timeSinceLastRead += 100;
+  // Lidar com eventos assíncronos, se necessário
+  delay(10); // Adicionando um pequeno atraso para evitar o bloqueio prolongado
+  timeSinceLastRead += 10;
 }
 
 #ifdef __cplusplus

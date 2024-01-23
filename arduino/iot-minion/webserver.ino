@@ -118,7 +118,7 @@ void handle_SwaggerUI(){
 void handle_Health(){
   server.on("/health", HTTP_GET, [](AsyncWebServerRequest *request) {
     String mqttConnected = "false";
-    if(client.connected()) mqttConnected = "true";
+    //if(client.connected()) mqttConnected = "true";
     String ip = String(IpAddress2String(WiFi.localIP()));
     // Retorna o número de milissegundos passados desde que a placa Arduino começou a executar o programa atual. 
     // Esse número irá sofrer overflow (chegar ao maior número possível e então voltar pra zero), após aproximadamente 50 dias.
@@ -268,7 +268,7 @@ void handle_InsertTalk(){
           #endif        
           String feedName="talk";
           // publish
-          client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), mensagem);        
+          //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), mensagem);        
           // toca o audio
           playSpeech(mensagem);
           doc.clear();
@@ -278,6 +278,44 @@ void handle_InsertTalk(){
       request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
     }
   });
+}
+
+String enviarMensagemParaChatGPT(String mensagem) {
+  String resposta = "";
+  HTTPClient http;
+  http.begin(chatGPTUrl);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", "Bearer " + String(OPEN_IA_KEY));
+
+  String payload = "{\"model\": \"gpt-3.5-turbo-0301\",\"messages\": [{\"role\": \"user\", \"content\": \""+mensagem+"\"}],\"temperature\": 0.7,\"max_tokens\": 100, \"top_p\": 0.9,\"frequency_penalty\": 0.5,\"presence_penalty\": 0.9}";
+  int httpCode = http.POST(payload);
+
+  if (httpCode > 0) {
+    Serial.printf("[HTTP] POST para o ChatGPT retornou código: %d\n", httpCode);
+
+    if (httpCode == HTTP_CODE_OK) {
+      resposta = http.getString();
+      Serial.println("Resposta do ChatGPT: " + resposta);
+
+      /*
+      // Parse da resposta JSON
+      DynamicJsonDocument jsonDoc(1024);  // Ajuste o tamanho conforme necessário
+      DeserializationError jsonError = deserializeJson(jsonDoc, resposta);
+            
+      if (jsonError) {
+        Serial.println("Erro ao analisar a resposta JSON do ChatGPT");
+      } else {
+        const char *respostaFinal = jsonDoc["resposta"];
+        Serial.println("Resposta final: " + String(respostaFinal));
+        // Aqui você pode fazer o que quiser com a resposta, como enviá-la de volta para o cliente HTTP        
+      }
+      */
+    }
+  } else {
+    Serial.printf("[HTTP] Falha na conexão ao ChatGPT\n");
+  }
+  http.end();
+  return resposta;
 }
 
 void handle_InsertAsk(){
@@ -291,13 +329,21 @@ void handle_InsertAsk(){
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
           const char * mensagem = doc["mensagem"];
-          #ifdef DEBUG
-            Serial.printf("Mensagem: %s\n",mensagem);
-          #endif        
-          
           Serial.printf("Mensagem: %s\n",mensagem);
+
+          // Fazer uma pergunta ao ChatGPT
+          //String pergunta = "Qual é a resposta para a vida, o universo e tudo?";
+          String retorno = enviarMensagemParaChatGPT(mensagem);
+          if(retorno.length() > 0) {
+            // Responder ao cliente com uma mensagem padrão
+            request->send(200, "text/plain", retorno.c_str());
+          } else {
+            // Responder ao cliente com uma mensagem padrão
+            request->send(400, "text/plain", "Erro ao conversar com o chato gepeto.");
+          }
+    
           // toca o audio
-          //playSpeech();
+          //playSpeech(mensagem);
           doc.clear();
           request->send(HTTP_OK, getContentType(".txt"), PLAYED);
       }
@@ -323,7 +369,7 @@ void handle_InsertPlay(){
         #endif        
         String feedName="play";
         // publish
-        client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), midia);        
+        //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), midia);        
         // toca o audio
         playMidia(midia);
         doc.clear();
@@ -380,7 +426,7 @@ void handle_Volume(){
         snprintf ( buffer, MAX_PATH, "%d", getVolumeAudio() );   
         
         // publish
-        client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
+        //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
         snprintf ( buffer, MAX_PATH, "Intensidade do volume foi alterada para: %d", getVolumeAudio());  
         doc.clear();      
         request->send(HTTP_OK, getContentType(".txt"), buffer);
@@ -428,7 +474,7 @@ void handle_UpdateSensors(){
           }
           digitalWrite(arduinoSensorPort->gpio, arduinoSensorPort->status);
           // publish
-          client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), arduinoSensorPort->status==0?"OFF":"ON");
+          //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), arduinoSensorPort->status==0?"OFF":"ON");
           doc.clear();
           request->send(HTTP_OK, getContentType(".json"), JSONmessage);
         } else {
@@ -477,7 +523,7 @@ void handle_InsertItemList(){
           #endif
           // Grava no adafruit
           // publish
-          client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+          //client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
           doc.clear();
           request->send(HTTP_OK, getContentType(".json"), JSONmessage);
         } else {
@@ -525,7 +571,7 @@ void handle_DeleteItemList(){
         #endif
         // Grava no adafruit
         // publish
-        client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+        //client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
         doc.clear();
         request->send(HTTP_OK, getContentType(".txt"), REMOVED_ITEM);
       } else {

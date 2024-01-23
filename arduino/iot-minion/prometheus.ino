@@ -148,6 +148,6 @@ void getTemperatureHumidity() {
   timeSinceLastRead = 0;
 
   // publish
-  client.publish((String(MQTT_USERNAME)+String("/feeds/temperature")).c_str(), celsius);
-  client.publish((String(MQTT_USERNAME)+String("/feeds/humidity")).c_str(), humidity);
+  //client.publish((String(MQTT_USERNAME)+String("/feeds/temperature")).c_str(), celsius);
+  //client.publish((String(MQTT_USERNAME)+String("/feeds/humidity")).c_str(), humidity);
 }
