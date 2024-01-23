@@ -118,7 +118,7 @@ void handle_SwaggerUI(){
 void handle_Health(){
   server.on("/health", HTTP_GET, [](AsyncWebServerRequest *request) {
     String mqttConnected = "false";
-    //if(client.connected()) mqttConnected = "true";
+    if(client.connected()) mqttConnected = "true";
     String ip = String(IpAddress2String(WiFi.localIP()));
     // Retorna o número de milissegundos passados desde que a placa Arduino começou a executar o programa atual. 
     // Esse número irá sofrer overflow (chegar ao maior número possível e então voltar pra zero), após aproximadamente 50 dias.
@@ -268,7 +268,7 @@ void handle_InsertTalk(){
           #endif        
           String feedName="talk";
           // publish
-          //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), mensagem);        
+          client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), mensagem);        
           // toca o audio
           playSpeech(mensagem);
           doc.clear();
@@ -295,21 +295,24 @@ String enviarMensagemParaChatGPT(String mensagem) {
 
     if (httpCode == HTTP_CODE_OK) {
       resposta = http.getString();
-      Serial.println("Resposta do ChatGPT: " + resposta);
+      //Serial.println("Resposta do ChatGPT: " + resposta);
 
-      /*
       // Parse da resposta JSON
-      DynamicJsonDocument jsonDoc(1024);  // Ajuste o tamanho conforme necessário
-      DeserializationError jsonError = deserializeJson(jsonDoc, resposta);
-            
-      if (jsonError) {
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);  // Ajuste o tamanho conforme necessário
+      DeserializationError error = deserializeJson(doc, resposta);
+      if (error) {
         Serial.println("Erro ao analisar a resposta JSON do ChatGPT");
-      } else {
-        const char *respostaFinal = jsonDoc["resposta"];
-        Serial.println("Resposta final: " + String(respostaFinal));
-        // Aqui você pode fazer o que quiser com a resposta, como enviá-la de volta para o cliente HTTP        
+      } else {          
+        DynamicJsonDocument doc_choices(MAX_STRING_LENGTH);  // Ajuste o tamanho conforme necessário
+        DeserializationError error = deserializeJson(doc_choices, doc["choices"][0].as<String>());
+        if (error) {
+          Serial.println("Erro ao analisar o parser do array choices do ChatGPT");
+        } else {
+          const char * mensagem = doc_choices["message"]["content"];
+          resposta = String(mensagem);
+          Serial.println("Resposta final: " + resposta);
+        }
       }
-      */
     }
   } else {
     Serial.printf("[HTTP] Falha na conexão ao ChatGPT\n");
@@ -330,20 +333,18 @@ void handle_InsertAsk(){
       } else {
           const char * mensagem = doc["mensagem"];
           Serial.printf("Mensagem: %s\n",mensagem);
-
           // Fazer uma pergunta ao ChatGPT
-          //String pergunta = "Qual é a resposta para a vida, o universo e tudo?";
           String retorno = enviarMensagemParaChatGPT(mensagem);
           if(retorno.length() > 0) {
             // Responder ao cliente com uma mensagem padrão
-            request->send(200, "text/plain", retorno.c_str());
+            request->send(HTTP_OK, "text/plain", retorno.c_str());
           } else {
             // Responder ao cliente com uma mensagem padrão
-            request->send(400, "text/plain", "Erro ao conversar com o chato gepeto.");
+            request->send(HTTP_BAD_REQUEST, "text/plain", "Erro ao conversar com o chato gepeto.");
           }
     
           // toca o audio
-          //playSpeech(mensagem);
+          playSpeech(retorno.c_str());
           doc.clear();
           request->send(HTTP_OK, getContentType(".txt"), PLAYED);
       }
@@ -369,7 +370,7 @@ void handle_InsertPlay(){
         #endif        
         String feedName="play";
         // publish
-        //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), midia);        
+        client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), midia);        
         // toca o audio
         playMidia(midia);
         doc.clear();
@@ -426,7 +427,7 @@ void handle_Volume(){
         snprintf ( buffer, MAX_PATH, "%d", getVolumeAudio() );   
         
         // publish
-        //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
+        client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
         snprintf ( buffer, MAX_PATH, "Intensidade do volume foi alterada para: %d", getVolumeAudio());  
         doc.clear();      
         request->send(HTTP_OK, getContentType(".txt"), buffer);
@@ -445,36 +446,37 @@ void handle_UpdateSensors(){
   server.on("/sensor", HTTP_PUT, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
-      int sensor = RelayEyes;
-      String feedName = "eye";
-      int paramsNr = request->params();
-      for(int i=0;i<paramsNr;i++){
-        AsyncWebParameter* p = request->getParam(i);
-        feedName = p->value();
-        if(strcmp("hat", p->value().c_str())==0){
-          sensor = RelayHat;
-        } else if (strcmp("blink", p->value().c_str())==0){
-          sensor = RelayBlink;
-        }
-        else if (strcmp("shake", p->value().c_str())==0){
-          sensor = RelayShake;
-        }
-      }
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
-      } else {
-        String JSONmessage;
+      } else {        
+        int sensor = RelayEyes;
+        String feedName = "eye";
+        int paramsNr = request->params();
+        for(int i=0;i<paramsNr;i++){
+          AsyncWebParameter* p = request->getParam(i);
+          feedName = p->value();
+          Serial.println("feedName: "+feedName);
+          if(strcmp("hat",feedName.c_str())==0){
+            sensor = RelayHat;
+          } else if (strcmp("blink", feedName.c_str())==0){
+            sensor = RelayBlink;
+          }
+          else if (strcmp("shake", feedName.c_str())==0){
+            sensor = RelayShake;
+          }
+        }
         if(readBodySensorData(doc["status"], sensor)) {
+          String JSONmessage;
           ArduinoSensorPort *arduinoSensorPort = searchListSensor(sensor);
           if(arduinoSensorPort != NULL) {
             JSONmessage="{\"id\":\""+String(arduinoSensorPort->id)+"\",\"name\":\""+String(arduinoSensorPort->name)+"\",\"gpio\":\""+String(arduinoSensorPort->gpio)+"\",\"status\":\""+String(arduinoSensorPort->status)+"\"}";
           }
           digitalWrite(arduinoSensorPort->gpio, arduinoSensorPort->status);
           // publish
-          //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), arduinoSensorPort->status==0?"OFF":"ON");
+          client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), arduinoSensorPort->status==0?"OFF":"ON");
           doc.clear();
           request->send(HTTP_OK, getContentType(".json"), JSONmessage);
         } else {
@@ -506,24 +508,15 @@ void handle_InsertItemList(){
           addApplication(doc["name"], doc["language"], doc["description"]);  
 
           // Grava no Storage
-          saveApplicationList();
+          JSONmessage = saveApplicationList();
         
-          Application *app;
-          for(int i = 0; i < applicationListaEncadeada.size(); i++){
-            // Obtem a aplicação da lista
-            app = applicationListaEncadeada.get(i);
-            JSONmessage="{\"name\": \""+String(app->name)+"\",\"language\": \""+String(app->language)+"\",\"description\": \""+String(app->description)+"\"}";
-            if((i < applicationListaEncadeada.size()) && (i < applicationListaEncadeada.size()-1)) {
-              JSONmessage+=',';
-            }
-          }
-          JSONmessage='[' + JSONmessage +']';
           #ifdef DEBUG
             Serial.println("handle_InsertItemList:"+JSONmessage);
           #endif
           // Grava no adafruit
           // publish
-          //client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+          client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+          
           doc.clear();
           request->send(HTTP_OK, getContentType(".json"), JSONmessage);
         } else {
@@ -552,26 +545,16 @@ void handle_DeleteItemList(){
         String JSONmessage;
         //removo
         applicationListaEncadeada.remove(index);
-        
+
         // Grava no Storage
-        saveApplicationList();
-        
-        Application *app;
-        for(int i = 0; i < applicationListaEncadeada.size(); i++){
-          // Obtem a aplicação da lista
-          app = applicationListaEncadeada.get(i);
-          JSONmessage="{\"name\": \""+String(app->name)+"\",\"language\": \""+String(app->language)+"\",\"description\": \""+String(app->description)+"\"}";
-          if((i < applicationListaEncadeada.size()) && (i < applicationListaEncadeada.size()-1)) {
-            JSONmessage+=',';
-          }
-        }
-        JSONmessage='[' + JSONmessage +']';          
+        JSONmessage = saveApplicationList();
+
         #ifdef DEBUG
           Serial.println("handle_DeleteItemList:"+JSONmessage);
         #endif
         // Grava no adafruit
         // publish
-        //client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+        client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
         doc.clear();
         request->send(HTTP_OK, getContentType(".txt"), REMOVED_ITEM);
       } else {
@@ -776,7 +759,7 @@ void handle_WifiInfo(){
         //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
       }
     }
-    request->send(200, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local");
+    request->send(HTTP_OK, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local");
     delay(3000);
     ESP.restart();
   });

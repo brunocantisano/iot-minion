@@ -9,7 +9,7 @@
 #include <DHT.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
-//#include <PubSubClient.h>
+#include <PubSubClient.h>
 #include <Preferences.h>
 #include <SPI.h>
 #include <SD.h>
@@ -84,7 +84,7 @@ ListaEncadeada<Application*> applicationListaEncadeada = ListaEncadeada<Applicat
 ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
 
 WiFiClient espClient;
-//PubSubClient client(espClient);
+PubSubClient client(espClient);
 // variavel para checar se já conectou na rede
 bool rede = false;
 // Inicia sensor DHT
@@ -93,11 +93,8 @@ DHT dht(TemperatureHumidity, DHT11);
 AsyncWebServer server(HTTP_REST_PORT);               // initialise webserver
 
 IPAddress localIP;
-//IPAddress localIP(192, 168, 1, 200); // hardcoded
-
 // Set your Gateway IP address
 IPAddress localGateway;
-//IPAddress localGateway(192, 168, 1, 1); //hardcoded
 IPAddress subnet(255, 255, 0, 0);
 
 // Timer variables
@@ -245,6 +242,7 @@ String getData(uint8_t *data, size_t len) {
     //Serial.write(data[i]);
     raw[i] = data[i];
   }
+  raw[len]=0x00;
   return String(raw);
 }
 
@@ -315,13 +313,14 @@ String readSensorStatus(byte gpio){
 }
 
 void addApplication(String name, String language, String description) {
-  Application *app = new Application();
-  app->name = name;
-  app->language = language;
-  app->description = description;
-
-  // Adiciona a aplicação na lista
-  applicationListaEncadeada.add(app);
+  if(searchList(name, language)== -1) {
+    Application *app = new Application();
+    app->name = name;
+    app->language = language;
+    app->description = description;
+    // Adiciona a aplicação na lista
+    applicationListaEncadeada.add(app);
+  }
 }
 
 void addMedia(String name, int size, String lastModified) {
@@ -334,7 +333,7 @@ void addMedia(String name, int size, String lastModified) {
   mediaListaEncadeada.add(media);
 }
 
-void saveApplicationList() {
+String saveApplicationList() {
   Application *app;
   String JSONmessage;
   for(int i = 0; i < applicationListaEncadeada.size(); i++){
@@ -345,8 +344,7 @@ void saveApplicationList() {
   JSONmessage = '['+JSONmessage.substring(0, JSONmessage.length()-1)+']';
   // Grava no storage
   writeContent("/lista.json",JSONmessage); 
-  // Grava no adafruit  
-  //client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+  return JSONmessage;
 }
 
 int loadApplicationList() {
@@ -478,7 +476,7 @@ void setup()
   pinMode(RelayBlink, OUTPUT);
   pinMode(RelayShake, OUTPUT);
   pinMode(TemperatureHumidity, OUTPUT);
-  /*
+
   // carrega sensores  
   bool load = loadSensorList();
   if(!load) {
@@ -486,7 +484,7 @@ void setup()
       Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
     #endif
   }
-  */  
+
   #ifdef DEBUG
     Serial.println("Versão: "+String(version));
   #endif
@@ -531,8 +529,8 @@ void setup()
     if(loadSdCardMedias()) loadI2S(); //Configura e inicia o SPI para conexão com o cartão SD
     rede=true;
     //connecting to a mqtt broker
-    //client.setServer(MQTT_BROKER, MQTT_PORT);
-    //client.setCallback(callback);
+    client.setServer(MQTT_BROKER, MQTT_PORT);
+    client.setCallback(callback);
     Serial.println(F("Minion funcionando!"));
   }
   else {
@@ -578,7 +576,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/list")).c_str()) {
     DynamicJsonDocument doc(MAX_STRING_LENGTH);
     // ler do feed list no adafruit
-    if(message == "") {    
+ if(message == "") {    
       #ifdef DEBUG
         Serial.println(F("Lista de aplicações vazia"));
       #endif
@@ -618,7 +616,6 @@ void callback(char *topic, byte *payload, unsigned int length) {
 }
 
 void reconnect() {
-  /*
   // Loop até que esteja reconectado
   while (!client.connected()) {
     Serial.println("Tentando conexão com o servidor MQTT...");
@@ -647,18 +644,16 @@ void reconnect() {
       delay(5000);
     }
   }
-  */
 }
 
 void loop() 
 {
-/*
   if (!client.connected()) {
     // tento conectar no MQTT somente se já tiver rede
     if(rede) reconnect();
   }
   client.loop();
-*/
+
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
 
