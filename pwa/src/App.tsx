@@ -20,6 +20,7 @@ import './assets/styles/global.css';
 import packageInfo from '../package.json';
 import VolumeSlider from './components/VolumeSlider';
 import PushButtonListening from './components/PushButtonListening';
+import SpeechMinion from './components/SpeechMinion';
 
 function App() {
   const [minionBehavior, setMinionBehavior] = useState<MinionBehavior>({ freezing: false, hungry: false, stress: false, wakeUp: false, listening: false });
@@ -114,6 +115,7 @@ function App() {
         <div className="grid-container">
           <div className="item1">
             <InputMinion minionTalk={minionTalk} callbackFromParent={changeTalk}/>
+            <SpeechMinion/>            
             <VolumeSlider minionSpeechVolume={minionSpeechVolume} callbackFromParent={changeSpeechVolume}/>
           </div>
           <div className="item2"><SwitchButtonMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} /></div>

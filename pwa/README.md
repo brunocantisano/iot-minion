@@ -27,11 +27,11 @@ git secrets --register-gcp
 
 3. Environment Variables
 ```
-export REACT_APP_URL="https://minion.local:3000"
-export REACT_APP_API_MINION_TOKEN="bWluaW9uOkRlc3BpY2FibGVNZQ=="
+export REACT_APP_URL="http://minion.local"
+export REACT_APP_API_MINION_TOKEN="YnJ1bm86bWluaW9uMTIz"
 ```
 
-**Base64**: `bWluaW9uOkRlc3BpY2FibGVNZQ==` é um exemplo de base64 criptografado no padrão `usuario`:`senha`
+**Base64**: `YnJ1bm86bWluaW9uMTIz` é um exemplo de base64 criptografado no padrão `usuario`:`senha`
 * usuário: `minion`
 * senha: `DespicableMe`
 
