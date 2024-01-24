@@ -657,7 +657,7 @@ void handle_ListSdcard() {
 
 void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
   if(check_authorization_header(request)) {
-    if(!getAllowedPhotoSdCardFiles(filename)) {
+    if(!getAllowedSdCardFiles(filename)) {
       request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
     } else {
       String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
@@ -666,8 +666,13 @@ void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t 
       #endif
       if (!index) {
         logmessage = "Upload Iniciado: " + String(filename);
-        // open the file on first call and store the file handle in the request object
-        request->_tempFile = SD.open("/photos/" + filename, "w");
+        if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
+          // open the file on first call and store the file handle in the request object
+          request->_tempFile = SD.open("/" + filename, "w");        
+        } else {
+          // open the file on first call and store the file handle in the request object
+          request->_tempFile = SD.open("/photos/" + filename, "w");          
+        }
         #ifdef DEBUG
           Serial.println(logmessage);
         #endif

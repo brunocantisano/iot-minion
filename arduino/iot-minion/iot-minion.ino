@@ -136,14 +136,13 @@ String getContentType(String filename) { // convert the file extension to the MI
 }
 
 bool getAllowedStorageFiles(String filename) {  
-  if (filename.endsWith(".html") || filename.endsWith(".htm")) return true;
-  else if (filename.endsWith(".pem")) return true;
-  else if (filename.endsWith(".crt")) return true;
+  if (filename.endsWith(".crt")) return true;
   return false;
 }
 
-bool getAllowedPhotoSdCardFiles(String filename) {  
+bool getAllowedSdCardFiles(String filename) {  
   if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".bmp") || filename.endsWith(".gif")) return true;
+  else if (filename.endsWith(".wav") || filename.endsWith(".mp3")) return true;
   return false;
 }
 
