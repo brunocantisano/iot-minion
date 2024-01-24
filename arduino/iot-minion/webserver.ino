@@ -25,36 +25,20 @@ void handle_OnError(){
     if(request->method() == HTTP_OPTIONS) {
       request->send(HTTP_NO_CONTENT);
     }
-      char filename[] = "/error.html";
-      request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
+    char filename[] = "/error.html";
+    request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
   });
 }
 
-void handle_MinionLogo(){
-  server.on("/minion-logo", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    char filename[] = "/minion-logo.png";
-    request->send(LittleFS, filename, getContentType(filename));
-  });
-}
-
-void handle_MinionList(){
-  server.on("/minion-list", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    char filename[] = "/minion-list.png";
-    request->send(LittleFS, filename, getContentType(filename));
-  });
-}
-  
-  
-void handle_MinionIco(){
-  server.on("/minion-ico", HTTP_GET, [](AsyncWebServerRequest *request) {
-    char filename[] = "/minion-ico.ico";
-    request->send(LittleFS, filename, getContentType(filename));
-  });
-}
-
-void handle_Style(){
-  server.on("/style", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    char filename[] = "/style.css";
+void handle_GetFile(){
+  server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request) {
+    //"/get-file?name=delete.png"
+    int paramsNr = request->params();
+    AsyncWebParameter* p = request->getParam(paramsNr-1);    
+    char filename[MAX_PATH];
+    memset(filename, 0x00, MAX_PATH);
+    strcat(filename, "/");
+    strcat(filename, p->value().c_str());
     request->send(LittleFS, filename, getContentType(filename));
   });
 }
@@ -718,12 +702,11 @@ void startWebServer() {
    *  Configura as páginas de login e upload 
    *  de firmware OTA 
    */
-  // Rotas das imagens a serem usadas na página home e o Health (não estão com basic auth)
-  handle_MinionLogo();
-  handle_MinionList();
-  handle_MinionIco();
-  handle_Style();
+  // Rotas das imagens a serem usadas na página (não tem basic auth)
+  handle_GetFile();
+  //não tem basic auth)
   handle_Health();
+  //não tem basic auth
   handle_Metrics();
 
   handle_Home();
@@ -772,7 +755,6 @@ void startWebServer() {
 void startWifiManagerServer() {
   Serial.println("\nConfigurando o gerenciador de Wifi ...");
   
-  handle_Style();
   handle_WifiManager();
   handle_WifiInfo();
   server.serveStatic("/", LittleFS, "/");
