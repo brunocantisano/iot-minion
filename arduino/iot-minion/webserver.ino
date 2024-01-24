@@ -1,5 +1,7 @@
 const char WRONG_CLIMATE[] PROGMEM = "Erro desconhecido ao buscar temperatura e umidade";
 const char WRONG_AUTHORIZATION[] PROGMEM = "Authorization token errado";
+const char NOT_AUTHORIZED_EXTENTIONS[] PROGMEM = "Extensão de arquivo inválida para upload";
+const char SDCARD_PHOTO_WRITTEN[] PROGMEM = "Imagem salva no cartão SD com sucesso";
 const char WRONG_STATUS[] PROGMEM = "Erro ao atualizar o status";
 const char PLAYED[] PROGMEM = "Arquivo foi colocado para tocar.";
 const char EXISTING_ITEM[] PROGMEM = "Item já existente na lista";
@@ -567,7 +569,7 @@ void handle_DeleteItemList(){
   });
 }
 
-void handle_UploadStorage() {
+void handle_ListStorage() {
   server.on("/storage", HTTP_GET, [](AsyncWebServerRequest * request) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     #ifdef DEBUG
@@ -584,13 +586,53 @@ void handle_UploadStorage() {
     }
     request->send(HTTP_OK, getContentType(filename), html);
   });
+}
 
+// handles uploads to storage
+void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  if(!getAllowedStorageFiles(filename)) {
+    request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
+  } else {
+    String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
+    #ifdef DEBUG
+      Serial.println(logmessage);
+    #endif
+    if (!index) {
+      logmessage = "Upload Iniciado: " + String(filename);
+      // open the file on first call and store the file handle in the request object
+      request->_tempFile = LittleFS.open("/" + filename, "w");
+      #ifdef DEBUG
+        Serial.println(logmessage);
+      #endif
+    }
+  
+    if (len) {
+      // stream the incoming chunk to the opened file
+      request->_tempFile.write(data, len);
+      logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+      #ifdef DEBUG
+        Serial.println(logmessage);
+      #endif
+    }
+  
+    if (final) {
+      logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
+      // close the file handle as the upload is now done
+      request->_tempFile.close();
+      #ifdef DEBUG
+        Serial.println(logmessage);
+      #endif
+      request->redirect("/storage");
+    }
+  }
+}
+
+void handle_UploadStorage() {
   // run handleUpload function when any file is uploaded
   server.on("/uploadStorage", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(HTTP_OK);
       }, handleUploadStorage);
 }
-
 
 void handle_ListSdcard() {
   server.on("/sdcard", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -613,39 +655,54 @@ void handle_ListSdcard() {
   });
 }
 
-// handles uploads to storage
-void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;  
-  #ifdef DEBUG
-    Serial.println(logmessage);
-  #endif
-  if (!index) {
-    logmessage = "Upload Iniciado: " + String(filename);
-    // open the file on first call and store the file handle in the request object
-    request->_tempFile = LittleFS.open("/" + filename, "w");
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
+void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  if(check_authorization_header(request)) {
+    if(!getAllowedPhotoSdCardFiles(filename)) {
+      request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
+    } else {
+      String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
+      #ifdef DEBUG
+        Serial.println(logmessage);
+      #endif
+      if (!index) {
+        logmessage = "Upload Iniciado: " + String(filename);
+        // open the file on first call and store the file handle in the request object
+        request->_tempFile = SD.open("/photos/" + filename, "w");
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+      }
+    
+      if (len) {
+        // stream the incoming chunk to the opened file
+        request->_tempFile.write(data, len);
+        logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+      }
+    
+      if (final) {
+        logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
+        // close the file handle as the upload is now done
+        request->_tempFile.close();
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+        request->send(HTTP_OK, getContentType(".txt"), SDCARD_PHOTO_WRITTEN);
+      }    
+    }      
+  } else {
+    request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
   }
+}
 
-  if (len) {
-    // stream the incoming chunk to the opened file
-    request->_tempFile.write(data, len);
-    logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-  }
-
-  if (final) {
-    logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
-    // close the file handle as the upload is now done
-    request->_tempFile.close();
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-    request->redirect("/");
-  }
+// handles uploads to sd card
+void handle_UploadSdCard() {
+  // run handleUpload function when any file is uploaded
+  server.on("/uploadSdcard", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(HTTP_OK);
+      }, handleUploadSdcard);
 }
 
 void startWebServer() {
@@ -685,8 +742,10 @@ void startWebServer() {
   handle_UpdateSensors();
   handle_InsertItemList();
   handle_DeleteItemList();
+  handle_ListStorage();
   handle_UploadStorage();
   handle_ListSdcard();
+  handle_UploadSdCard();
   // ------------------------------------ //
   // se não se enquadrar em nenhuma das rotas
   handle_OnError();

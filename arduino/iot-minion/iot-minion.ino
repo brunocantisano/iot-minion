@@ -135,6 +135,18 @@ String getContentType(String filename) { // convert the file extension to the MI
   return "text/plain";
 }
 
+bool getAllowedStorageFiles(String filename) {  
+  if (filename.endsWith(".html") || filename.endsWith(".htm")) return true;
+  else if (filename.endsWith(".pem")) return true;
+  else if (filename.endsWith(".crt")) return true;
+  return false;
+}
+
+bool getAllowedPhotoSdCardFiles(String filename) {  
+  if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".bmp") || filename.endsWith(".gif")) return true;
+  return false;
+}
+
 bool writeContent(String filename, String content){
   File file = LittleFS.open(filename, "w");
   return writeContent(&file, content);
