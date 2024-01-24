@@ -6,6 +6,7 @@ const char WRONG_STATUS[] PROGMEM = "Erro ao atualizar o status";
 const char PLAYED[] PROGMEM = "Arquivo foi colocado para tocar.";
 const char EXISTING_ITEM[] PROGMEM = "Item já existente na lista";
 const char REMOVED_ITEM[] PROGMEM = "Item removido da lista";
+const char REMOVED_FILE[] PROGMEM = "Arquivo removido";
 const char NOT_FOUND_ITEM[] PROGMEM = "Item não encontrado na lista";
 const char NOT_FOUND_ROUTE[] PROGMEM = "Rota nao encontrada";
 const char PARSER_ERROR[] PROGMEM = "{\"message\": \"Erro ao fazer parser do json\"}";
@@ -548,8 +549,40 @@ void handle_DeleteItemList(){
       }
     }
    } else {
-    request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
-   }
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
+    }
+  });
+}
+
+void handle_DeleteFile(){
+  server.on("/deleteFile", HTTP_DELETE, [](AsyncWebServerRequest * request){}, NULL,
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+    //"/deleteFile?type=storage"
+    //"/deleteFile?type=sdcard"
+    if(check_authorization_header(request)) {
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);
+      String JSONmessageBody = getData(data, len);
+      DeserializationError error = deserializeJson(doc, JSONmessageBody);     
+      if(error) {
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
+      } else {
+        int paramsNr = request->params();
+        AsyncWebParameter* p = request->getParam(0);
+        const char * midia = doc["midia"];
+        String filename = String(midia);
+        if(p->value() == "storage") {          
+          LittleFS.remove("/"+filename);
+          Serial.println("apagando arquivos do storage do ESP32:"+filename);
+        } else if(p->value() == "sdcard"){
+          SD.remove(filename);
+          Serial.println("apagando arquivos do sdcard:"+filename);
+        }
+        doc.clear();
+        request->send(HTTP_OK, getContentType(".txt"), REMOVED_FILE);
+      }
+    } else {
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
+    }
   });
 }
 
@@ -574,40 +607,44 @@ void handle_ListStorage() {
 
 // handles uploads to storage
 void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  if(!getAllowedStorageFiles(filename)) {
-    request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
+  if(check_authorization_header(request)) {
+    if(!getAllowedStorageFiles(filename)) {
+      request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
+    } else {
+      String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
+      #ifdef DEBUG
+        Serial.println(logmessage);
+      #endif
+      if (!index) {
+        logmessage = "Upload Iniciado: " + String(filename);
+        // open the file on first call and store the file handle in the request object
+        request->_tempFile = LittleFS.open("/" + filename, "w");
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+      }
+    
+      if (len) {
+        // stream the incoming chunk to the opened file
+        request->_tempFile.write(data, len);
+        logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+      }
+    
+      if (final) {
+        logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
+        // close the file handle as the upload is now done
+        request->_tempFile.close();
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+        request->redirect("/storage");
+      }
+    }      
   } else {
-    String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-    if (!index) {
-      logmessage = "Upload Iniciado: " + String(filename);
-      // open the file on first call and store the file handle in the request object
-      request->_tempFile = LittleFS.open("/" + filename, "w");
-      #ifdef DEBUG
-        Serial.println(logmessage);
-      #endif
-    }
-  
-    if (len) {
-      // stream the incoming chunk to the opened file
-      request->_tempFile.write(data, len);
-      logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-      #ifdef DEBUG
-        Serial.println(logmessage);
-      #endif
-    }
-  
-    if (final) {
-      logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
-      // close the file handle as the upload is now done
-      request->_tempFile.close();
-      #ifdef DEBUG
-        Serial.println(logmessage);
-      #endif
-      request->redirect("/storage");
-    }
+    request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
   }
 }
 
@@ -730,6 +767,7 @@ void startWebServer() {
   handle_UpdateSensors();
   handle_InsertItemList();
   handle_DeleteItemList();
+  handle_DeleteFile();
   handle_ListStorage();
   handle_UploadStorage();
   handle_ListSdcard();

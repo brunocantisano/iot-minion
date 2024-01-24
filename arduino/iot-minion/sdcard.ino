@@ -112,14 +112,15 @@ String listFilesSD(File dir, int numTabs) {
         struct tm * tmstruct = localtime(&lw);
         lastModified = String((tmstruct->tm_year) + 1900,2)+"-"+String((tmstruct->tm_mon) + 1,2)+"-"+String(tmstruct->tm_mday,2)+" "+String(tmstruct->tm_hour,2)+":"+String(tmstruct->tm_min,2)+":"+String(tmstruct->tm_sec,2);
         addMedia(String(entry.name()), entry.size(), lastModified);
-        
-        String ext = "mp3";        
-        /*
-        if (filename.endsWith(".wav")) ext="wav";
-        else if (filename.endsWith(".mp3")) ext="mp3";
-        else if (filename.endsWith(".mp3")) ext="mp3";
-        */
-        returnText += "<tr align='left'><td>" + String(entry.name()) + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><img src='get-file?name="+ext+".webp' height='32' width='32'/></td><td align='center'><img src='get-file?name=delete.webp' height='32' width='32'/></td></tr>";
+        String filename = String(entry.name());
+        int tam = filename.length();
+        String ext =  filename.substring(tam-3, tam);
+        if (ext == "wav" || ext == "mp3") {                
+          returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><img src='get-file?name="+ext+".webp' height='32' width='32'/></td><td align='center'><img src='get-file?name=delete.webp' height='32' width='32'/></td></tr>"; 
+        }
+        else  {
+          returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><img src='get-file?name="+filename+"' height='192' width='108'/></td><td align='center'><img src='get-file?name=delete.webp' height='32' width='32'/></td></tr>";  
+        }
       }
     }    
     entry.close();
