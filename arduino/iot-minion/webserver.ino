@@ -7,6 +7,7 @@ const char PLAYED[] PROGMEM = "Arquivo foi colocado para tocar.";
 const char EXISTING_ITEM[] PROGMEM = "Item já existente na lista";
 const char REMOVED_ITEM[] PROGMEM = "Item removido da lista";
 const char REMOVED_FILE[] PROGMEM = "Arquivo removido";
+const char UPLOADED_FILE[] PROGMEM = "Arquivo criado com sucesso";
 const char NOT_FOUND_ITEM[] PROGMEM = "Item não encontrado na lista";
 const char NOT_FOUND_ROUTE[] PROGMEM = "Rota nao encontrada";
 const char PARSER_ERROR[] PROGMEM = "{\"message\": \"Erro ao fazer parser do json\"}";
@@ -596,6 +597,7 @@ void handle_ListStorage() {
     String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
+      html.replace("API_MINION_TOKEN",API_MINION_TOKEN);
       html.replace("FILELIST",listFiles(true));
       html.replace("FREESTORAGE",humanReadableSize((LittleFS.totalBytes() - LittleFS.usedBytes())));
       html.replace("USEDSTORAGE",humanReadableSize(LittleFS.usedBytes()));
@@ -640,7 +642,7 @@ void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t
         #ifdef DEBUG
           Serial.println(logmessage);
         #endif
-        request->redirect("/storage");
+        request->send(HTTP_OK, getContentType(".txt"), UPLOADED_FILE);
       }
     }      
   } else {
@@ -666,6 +668,7 @@ void handle_ListSdcard() {
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
       File entry =  SD.open("/");
+      html.replace("API_MINION_TOKEN",API_MINION_TOKEN);
       html.replace("FILELIST",listFilesSD(entry, 0));
       html.replace("FREESDCARD",humanReadableSize((SD.totalBytes() - SD.usedBytes())));
       html.replace("USEDSDCARD",humanReadableSize(SD.usedBytes()));
@@ -691,6 +694,8 @@ void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t 
           // open the file on first call and store the file handle in the request object
           request->_tempFile = SD.open("/" + filename, "w");        
         } else {
+          // check if folder photos exists, if not create the folder
+          if(!SD.exists("/photos")) SD.mkdir("/photos");
           // open the file on first call and store the file handle in the request object
           request->_tempFile = SD.open("/photos/" + filename, "w");          
         }
