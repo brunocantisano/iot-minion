@@ -32,8 +32,8 @@ export REACT_APP_API_MINION_TOKEN="YnJ1bm86bWluaW9uMTIz"
 ```
 
 **Base64**: `YnJ1bm86bWluaW9uMTIz` é um exemplo de base64 criptografado no padrão `usuario`:`senha`
-* usuário: `minion`
-* senha: `DespicableMe`
+* usuário: `bruno`
+* senha: `minion123`
 
 3. Node Version: `v16.13.2`
 
