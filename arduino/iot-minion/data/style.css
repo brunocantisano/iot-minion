@@ -1,1 +1,186 @@
-body{position: relative;}.container{width: 970px; margin: 0 auto; padding-top: 850px; transition: ease 0.3s all;}.container h1,h6{text-align: center; color: #696969; font-family: tahoma; margin-bottom: 30px}h6 a{text-decoration: none; color: #95A4B8;}h6 a:hover{color: #6180A8;}.logoGaragem{position: absolute; bottom: -55px; left: 50%; transform: translateX(-50%);}.developer{position: absolute; bottom: 55px; left: 110%; transform: translateX(-50%);}.info{position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)}.info{text-align: center; margin-bottom: 0;}.info p{text-align: center; margin-bottom: 3em; margin-top: 1em;}.ssid{margin-bottom: 3em; margin-top: 1em; color: #0A1128;}@media (prefers-color-scheme: dark){body{background-color: rgb(29, 30, 32); color: white;}a, a:visited{color: #4990e2;}a:hover, a:focus, a:active{color: #2b78ff;}}table,td{border: 0px;}table{border-collapse: collapse; width: 50%; margin-left: auto; margin-right: auto;}th,td{text-align: left; height: 32px;}html{font-family: Arial, Helvetica, sans-serif; display: inline-block; text-align: center;}p{font-size: 1.4rem;}.topnav{overflow: hidden; background-color: #0A1128;}.content{padding: 5%;}.card-grid{max-width: 800px; margin: 0 auto; display: grid;}.card{background-color: white; box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);}input[type=submit]{border: none; color: #FEFCFB; background-color: #034078; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; width: 100px; margin-right: 10px; border-radius: 4px; transition-duration: 0.4s;}input[type=submit]:hover{background-color: #1282A2;}input[type=text],input[type=number],select{width: 50%; margin: 18px; display: inline-block; border-radius: 4px;}label{font-size: 1.2rem;}
+body {
+    position: relative;
+}
+
+.container {
+    width: 970px;
+    margin: 0 auto;
+    padding-top: 850px;
+    transition: ease 0.3s all;
+}
+
+.container h1,
+h6 {
+    text-align: center;
+    color: #696969;
+    font-family: tahoma;
+    margin-bottom: 30px
+}
+
+h6 a {
+    text-decoration: none;
+    color: #95A4B8;
+}
+
+h6 a:hover {
+    color: #6180A8;
+}
+
+.logoGaragem {
+    position: absolute;
+    bottom: -55px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.developer {
+    position: absolute;
+    bottom: 55px;
+    left: 110%;
+    transform: translateX(-50%);
+}
+
+.info {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%)
+}
+
+.info {
+    text-align: center;
+    margin-bottom: 0;
+}
+
+.info p {
+    text-align: center;
+    margin-bottom: 3em;
+    margin-top: 1em;
+}
+
+.ssid {
+    margin-bottom: 3em;
+    margin-top: 1em;
+    color: #0A1128;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: rgb(29, 30, 32);
+        color: white;
+    }
+
+    a,
+    a:visited {
+        color: #4990e2;
+    }
+
+    a:hover,
+    a:focus,
+    a:active {
+        color: #2b78ff;
+    }
+}
+
+table,
+td {
+    border: 0px;
+}
+
+table {
+    border-collapse: collapse;
+    width: 50%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+th,
+td {
+    text-align: left;
+    height: 32px;
+}
+
+html {
+    font-family: Arial, Helvetica, sans-serif;
+    display: inline-block;
+    text-align: center;
+}
+
+p {
+    font-size: 1.4rem;
+}
+
+.topnav {
+    overflow: hidden;
+    background-color: #0A1128;
+}
+
+.content {
+    padding: 5%;
+}
+
+.card-grid {
+    max-width: 800px;
+    margin: 0 auto;
+    display: grid;
+}
+
+.card {
+    background-color: white;
+    box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);
+}
+
+input[type=submit] {
+    border: none;
+    color: #FEFCFB;
+    background-color: #034078;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    width: 100px;
+    margin-right: 10px;
+    border-radius: 4px;
+    transition-duration: 0.4s;
+}
+
+input[type=submit]:hover {
+    background-color: #1282A2;
+}
+
+input[type=text],
+input[type=number],
+select {
+    width: 50%;
+    margin: 18px;
+    display: inline-block;
+    border-radius: 4px;
+}
+
+label {
+    font-size: 1.2rem;
+}
+
+.toast {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+ 
+.fileUpload {
+    position: relative;
+    overflow: hidden;
+    margin: 10px;
+}
+
+.fileUpload input.upload {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0;
+    filter: alpha(opacity=0);
+}

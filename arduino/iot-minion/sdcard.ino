@@ -75,7 +75,7 @@ String listFiles(bool ishtml) {
     if (ishtml) {
       filename = String(foundfile.name());
       if (filename.endsWith(".crt")) {        
-        returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(foundfile.size()) + "</td><td align='center'><a onclick=deleteFile('storage','"+filename+"')><img src='get-file?name=delete.webp' height='32' width='32'/></a></td></tr>";  
+        returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(foundfile.size()) + "</td><td align='center'><a onclick=deleteFile('storage','"+filename+"','"+API_MINION_TOKEN+"')><img src='get-file?name=delete.webp' height='32' width='32'/></a></td></tr>";  
       } else {
         returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(foundfile.size()) + "</td><td align='center'><img src='get-file?name=na.webp' height='32' width='32'/></td></tr>";
       }
@@ -116,10 +116,10 @@ String listFilesSD(File dir, int numTabs) {
         int tam = filename.length();
         String ext =  filename.substring(tam-3, tam);
         if (ext == "wav" || ext == "mp3") {                
-          returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><a onclick=deleteFile('sdcard','"+filename+"')><img src='get-file?name="+ext+".webp' height='32' width='32'/></a></td><td align='center'><img src='get-file?name=delete.webp' height='32' width='32'/></td></tr>"; 
+          returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><a onclick=deleteFile('sdcard','"+filename+"','"+API_MINION_TOKEN+"')><img src='get-file?name="+ext+".webp' height='32' width='32'/></a></td><td align='center'><img src='get-file?name=delete.webp' height='32' width='32'/></td></tr>"; 
         }
         else  {
-          returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><a onclick=deleteFile('sdcard','"+filename+"')><img src='get-file?name="+filename+"' height='192' width='108'/></a></td><td align='center'><img src='get-file?name=delete.webp' height='32' width='32'/></td></tr>";  
+          returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><a onclick=deleteFile('sdcard','"+filename+"','"+API_MINION_TOKEN+"')><img src='get-file?name="+filename+"' height='192' width='108'/></a></td><td align='center'><img src='get-file?name=delete.webp' height='32' width='32'/></td></tr>";  
         }
       }
     }    
