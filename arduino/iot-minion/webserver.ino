@@ -290,7 +290,7 @@ String enviarMensagemParaChatGPT(String mensagem) {
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization", "Bearer " + String(OPEN_IA_KEY));
 
-  String payload = "{\"model\": \"gpt-3.5-turbo-0301\",\"messages\": [{\"role\": \"user\", \"content\": \""+mensagem+"\"}],\"temperature\": 0.7,\"max_tokens\": 100, \"top_p\": 0.9,\"frequency_penalty\": 0.5,\"presence_penalty\": 0.9}";
+  String payload = "{\"model\": \"gpt-3.5-turbo\",\"messages\": [{\"role\": \"user\", \"content\": \""+mensagem+"\"}],\"temperature\": 0.7,\"max_tokens\": 100, \"top_p\": 0.9,\"frequency_penalty\": 0.5,\"presence_penalty\": 0.9}";
   int httpCode = http.POST(payload);
 
   if (httpCode > 0) {
@@ -654,14 +654,16 @@ void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t
     if(!getAllowedStorageFiles(filename)) {
       request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
     } else {
-      String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
-      #ifdef DEBUG      
-        int headers = request->headers();
-        int i;
-        for(i=0;i<headers;i++){
-          AsyncWebHeader* h = request->getHeader(i);        
+      String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;      
+      int headers = request->headers();
+      int i;
+      for(i=0;i<headers;i++){
+        AsyncWebHeader* h = request->getHeader(i);        
+        #ifdef DEBUG
           Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
-        }
+        #endif
+      }
+      #ifdef DEBUG
         Serial.println(logmessage);
       #endif
       if (!index) {
@@ -732,14 +734,16 @@ void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t 
     if(!getAllowedSdCardFiles(filename)) {
       request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
     } else {
-      String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
-      #ifdef DEBUG      
-        int headers = request->headers();
-        int i;
-        for(i=0;i<headers;i++){
-          AsyncWebHeader* h = request->getHeader(i);        
+      String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;      
+      int headers = request->headers();
+      int i;
+      for(i=0;i<headers;i++){
+        AsyncWebHeader* h = request->getHeader(i);        
+        #ifdef DEBUG
           Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
-        }
+        #endif
+      }
+      #ifdef DEBUG
         Serial.println(logmessage);
       #endif
       if (!index) {
@@ -838,8 +842,8 @@ void startWebServer() {
   // permitindo todas as origens. O ideal é trocar o '*' pela url do frontend poder utilizar a api com maior segurança
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Credentials", "true");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT,DELETE");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", CALLER_ORIGIN);
 
   // startup web server
   server.begin();

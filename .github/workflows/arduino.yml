@@ -22,6 +22,7 @@ jobs:
         - arduino/iot-minion
     env:
       ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: true
+      CALLER_ORIGIN: ${{secrets.CALLER_ORIGIN}}
       API_MINION_TOKEN: ${{secrets.API_MINION_TOKEN}}
       USER_FIRMWARE: ${{secrets.USER_FIRMWARE}}
       PASS_FIRMWARE: ${{secrets.PASS_FIRMWARE}}
@@ -116,6 +117,13 @@ jobs:
       with:
         find: <API_MINION_TOKEN>
         replace: ${{ env.API_MINION_TOKEN }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change caller Origin allowed
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <CALLER_ORIGIN>
+        replace: ${{ env.CALLER_ORIGIN }}
         include: "${{ env.App_Packages_Archive }}/Credentials.h"
 
     - name: Change firmware version
