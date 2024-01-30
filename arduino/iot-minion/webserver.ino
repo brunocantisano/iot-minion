@@ -593,15 +593,16 @@ void handle_ListStorage() {
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
-    char filename[] = "/uploadStorage.html";
+    char filename[] = "/storageAndSdcard.html";
     String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
       html.replace("API_MINION_TOKEN",API_MINION_TOKEN);
       html.replace("FILELIST",listFiles(true));
-      html.replace("FREESTORAGE",humanReadableSize((LittleFS.totalBytes() - LittleFS.usedBytes())));
-      html.replace("USEDSTORAGE",humanReadableSize(LittleFS.usedBytes()));
-      html.replace("TOTALSTORAGE",humanReadableSize(LittleFS.totalBytes()));
+      html.replace("MESSAGE", "Upload de arquivos para o storage interno do ESP32");
+      html.replace("FREE",humanReadableSize((LittleFS.totalBytes() - LittleFS.usedBytes())));
+      html.replace("USED",humanReadableSize(LittleFS.usedBytes()));
+      html.replace("TOTAL",humanReadableSize(LittleFS.totalBytes()));
     }
     request->send(HTTP_OK, getContentType(filename), html);
   });
@@ -614,7 +615,13 @@ void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t
       request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
     } else {
       String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
-      #ifdef DEBUG
+      #ifdef DEBUG      
+        int headers = request->headers();
+        int i;
+        for(i=0;i<headers;i++){
+          AsyncWebHeader* h = request->getHeader(i);        
+          Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+        }
         Serial.println(logmessage);
       #endif
       if (!index) {
@@ -663,16 +670,17 @@ void handle_ListSdcard() {
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
-    char filename[] = "/listSdcard.html";
+    char filename[] = "/storageAndSdcard.html";
     String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
       File entry =  SD.open("/");
       html.replace("API_MINION_TOKEN",API_MINION_TOKEN);
       html.replace("FILELIST",listFilesSD(entry, 0));
-      html.replace("FREESDCARD",humanReadableSize((SD.totalBytes() - SD.usedBytes())));
-      html.replace("USEDSDCARD",humanReadableSize(SD.usedBytes()));
-      html.replace("TOTALSDCARD",humanReadableSize(SD.totalBytes()));
+      html.replace("MESSAGE", "Mídias no cartão SD");
+      html.replace("FREE",humanReadableSize((SD.totalBytes() - SD.usedBytes())));
+      html.replace("USED",humanReadableSize(SD.usedBytes()));
+      html.replace("TOTAL",humanReadableSize(SD.totalBytes()));
       entry.close();
     }
     request->send(HTTP_OK, getContentType(filename), html);
@@ -685,7 +693,13 @@ void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t 
       request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
     } else {
       String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;
-      #ifdef DEBUG
+      #ifdef DEBUG      
+        int headers = request->headers();
+        int i;
+        for(i=0;i<headers;i++){
+          AsyncWebHeader* h = request->getHeader(i);        
+          Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+        }
         Serial.println(logmessage);
       #endif
       if (!index) {
