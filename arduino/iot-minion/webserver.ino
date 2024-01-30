@@ -4,6 +4,7 @@ const char NOT_AUTHORIZED_EXTENTIONS[] PROGMEM = "Extensão de arquivo inválida
 const char SDCARD_PHOTO_WRITTEN[] PROGMEM = "Imagem salva no cartão SD com sucesso";
 const char WRONG_STATUS[] PROGMEM = "Erro ao atualizar o status";
 const char PLAYED[] PROGMEM = "Arquivo foi colocado para tocar.";
+const char NOT_PLAYED[] PROGMEM = "Não foi possível tocar o áudio.";
 const char EXISTING_ITEM[] PROGMEM = "Item já existente na lista";
 const char REMOVED_ITEM[] PROGMEM = "Item removido da lista";
 const char REMOVED_FILE[] PROGMEM = "Arquivo removido";
@@ -243,7 +244,16 @@ String treatTemperatureAndHumidity(String field, String value)
 void handle_InsertTalk(){
   server.on("/talk", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if(check_authorization_header(request)) {      
+    if(check_authorization_header(request)) {
+      int headers = request->headers();
+      String host = "Host não encontrado";
+      for(int i=0;i<headers;i++){
+        AsyncWebHeader* h = request->getHeader(i);
+        if(h->name() == "Host") host = h->value();
+          #ifdef DEBUG
+            Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+          #endif
+      }
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
@@ -253,14 +263,19 @@ void handle_InsertTalk(){
           const char * mensagem = doc["mensagem"];
           #ifdef DEBUG
             Serial.printf("Mensagem: %s\n",mensagem);
-          #endif        
+          #endif
           String feedName="talk";
+          host +="->"+String(mensagem);
+          
           // publish
-          client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), mensagem);        
-          // toca o audio
-          playSpeech(mensagem);
+          client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), host.c_str());
           doc.clear();
-          request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+          // toca o audio
+          if(playSpeech(mensagem)) {
+            request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+          } else {
+            request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_PLAYED);
+          }
       }
     } else {
       request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
@@ -312,7 +327,16 @@ String enviarMensagemParaChatGPT(String mensagem) {
 void handle_InsertAsk(){
   server.on("/ask", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if(check_authorization_header(request)) {      
+    if(check_authorization_header(request)) {
+      int headers = request->headers();
+      String host = "Host não encontrado";
+      for(int i=0;i<headers;i++){
+        AsyncWebHeader* h = request->getHeader(i);
+        if(h->name() == "Host") host = h->value();
+          #ifdef DEBUG
+            Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+          #endif
+      }      
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
@@ -320,7 +344,7 @@ void handle_InsertAsk(){
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
           const char * mensagem = doc["mensagem"];
-          Serial.printf("Mensagem: %s\n",mensagem);
+          Serial.printf("%s->Mensagem: %s\n",host, mensagem);
           // Fazer uma pergunta ao ChatGPT
           String retorno = enviarMensagemParaChatGPT(mensagem);
           if(retorno.length() > 0) {
@@ -330,11 +354,13 @@ void handle_InsertAsk(){
             // Responder ao cliente com uma mensagem padrão
             request->send(HTTP_BAD_REQUEST, "text/plain", "Erro ao conversar com o chato gepeto.");
           }
-    
-          // toca o audio
-          playSpeech(retorno.c_str());
           doc.clear();
-          request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+          // toca o audio
+          if(playSpeech(retorno.c_str())) {
+            request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+          } else {
+            request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_PLAYED);
+          }
       }
     } else {
       request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
@@ -346,6 +372,15 @@ void handle_InsertPlay(){
   server.on("/play", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
+      int headers = request->headers();
+      String host = "Host não encontrado";
+      for(int i=0;i<headers;i++){
+        AsyncWebHeader* h = request->getHeader(i);
+        if(h->name() == "Host") host = h->value();
+          #ifdef DEBUG
+            Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+          #endif
+      }      
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
@@ -357,12 +392,17 @@ void handle_InsertPlay(){
           Serial.printf("Arquivo: %s\n",midia);
         #endif        
         String feedName="play";
+        host +="->"+String(midia);
+
         // publish
-        client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), midia);        
-        // toca o audio
-        playMidia(midia);
+        client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), host.c_str());
         doc.clear();
-        request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+        // toca o audio
+        if(playMidia(midia)) {
+          request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+        } else {
+          request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_PLAYED);
+        }
       }
     } else {
       request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
@@ -374,7 +414,7 @@ void handle_InsertPlayRemote(){
   server.on("/playRemote", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
-            DynamicJsonDocument doc(MAX_STRING_LENGTH);
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
