@@ -38,6 +38,7 @@ function App() {
         let dados: any = await axios.get(rota,
           {
             headers: {
+              'Content-Type': 'application/json',
               'Accept': 'application/json',
               'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
             }
@@ -57,6 +58,7 @@ function App() {
         let dados: any = await axios.get(rota,      
           {
             headers: {
+              'Content-Type': 'application/json',
               'Accept': 'application/json',
               'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
             }
@@ -69,15 +71,13 @@ function App() {
       console.log(`😱 Axios request failed: ${e}`);
     }
   }
+ 
   useEffect(() => {
     setCelsius(celsius);
     setHumidity(humidity);
-  }, [celsius, humidity]);
-
-  useEffect(() => {
     console.log("Iniciando componente");
     setMinionBehavior({ freezing: false, hungry: false, stress: false, wakeUp: false , listening: false});
-  }, []);
+  }, [celsius, humidity]);
 
   const changeBehavior = (newMinionBehavior: MinionBehavior) => {
     setMinionBehavior(newMinionBehavior);

@@ -10,16 +10,16 @@ interface VolumeSliderMinionProps {
 }
 
 const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/volume':'';
   const [volume, setVolume] = useState(50);
   const [muted, setMuted] = useState(false);
   
   async function callApi() {
     try {
+      let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/volume':'';
       if(rota !== ''){
           const newMinionSpeechVolume: MinionSpeechVolume = {...props.minionSpeechVolume};
           props.callbackFromParent(newMinionSpeechVolume);
-          console.log('👉 Resultado:', props.minionSpeechVolume.volume);
+          // console.log('👉 Resultado:', props.minionSpeechVolume.volume);
           props.minionSpeechVolume.volume = volume;    
           const response = await axios.put(rota,
           {
@@ -28,6 +28,7 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
           {
             headers: {
               'Content-Type': 'application/json',
+              'Accept': 'application/json',
               'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
             }
           });
