@@ -10,17 +10,18 @@ interface SwitchButtonMinionProps {
 }
 
 const SwitchButtonMinion: React.FC<SwitchButtonMinionProps> = (props: SwitchButtonMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL + '/sensor?type=eye';
+  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/sensor?type=eye':'';
 
   const [estado] = useState(true);
 
   async function handleClick() {
-    props.minionBehavior.wakeUp = !props.minionBehavior.wakeUp;
-    const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
-    props.callbackFromParent(newMinionBehavior);
-    console.log('👉 Resultado:', props.minionBehavior.wakeUp);
     try {
-      const response = await axios.put(rota, 
+      if(rota !== ''){
+        props.minionBehavior.wakeUp = !props.minionBehavior.wakeUp;
+        const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
+        props.callbackFromParent(newMinionBehavior);
+        console.log('👉 Resultado:', props.minionBehavior.wakeUp);
+        const response = await axios.put(rota, 
         {
           "status": estado ? 1 : 0
         },
@@ -30,7 +31,8 @@ const SwitchButtonMinion: React.FC<SwitchButtonMinionProps> = (props: SwitchButt
             'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
           }
         });
-      console.log('👉 Returned data:', response);
+        console.log('👉 Returned data:', response);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }

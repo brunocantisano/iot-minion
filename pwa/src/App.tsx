@@ -33,34 +33,38 @@ function App() {
 
   async function getTemperatureCelsius() {
     try {
-      let rota: string = process.env.REACT_APP_URL + '/climate?type=celsius';
-      let dados: any = await axios.get(rota,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      let data:Climate = dados.data;
-      setCelsius(data.celsius);
-      //console.log('celsius: '+ celsius);
+      let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/climate?type=celsius':'';
+      if(rota !== '') {
+        let dados: any = await axios.get(rota,
+          {
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+        let data:Climate = dados.data;
+        setCelsius(data.celsius);
+        console.log('celsius: '+ celsius);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }
   }
   async function getHumidity() {
     try {
-      let rota: string = process.env.REACT_APP_URL + '/climate?type=humidity';
-      let dados: any = await axios.get(rota,      
-        {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      let data:Climate = dados.data; 
-      setHumidity(data.humidity);
-      //console.log('humidity: '+ humidity);
+      let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/climate?type=humidity':'';
+      if(rota !== '') {
+        let dados: any = await axios.get(rota,      
+          {
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+        let data:Climate = dados.data; 
+        setHumidity(data.humidity);
+        console.log('humidity: '+ humidity);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }

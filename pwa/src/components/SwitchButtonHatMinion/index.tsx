@@ -10,27 +10,29 @@ interface SwitchButtonMinionProps {
 }
 
 const SwitchButtonHatMinion: React.FC<SwitchButtonMinionProps> = (props: SwitchButtonMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL + '/sensor?type=hat';
+  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/sensor?type=hat':'';
 
   const [estado] = useState(true);
 
   async function handleClick() {
-    props.minionBehavior.stress = !props.minionBehavior.stress;
-    const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
-    props.callbackFromParent(newMinionBehavior);
-    console.log('👉 Resultado:', props.minionBehavior.stress);
     try {
-      const response = await axios.put(rota, 
-        {
-          "status": estado ? 1 : 0
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      console.log('👉 Returned data:', response);
+      if(rota !== ''){
+        props.minionBehavior.stress = !props.minionBehavior.stress;
+        const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
+        props.callbackFromParent(newMinionBehavior);
+        console.log('👉 Resultado:', props.minionBehavior.stress);
+        const response = await axios.put(rota, 
+          {
+            "status": estado ? 1 : 0
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+          console.log('👉 Returned data:', response);
+        }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }

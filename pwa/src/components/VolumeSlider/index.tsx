@@ -10,27 +10,29 @@ interface VolumeSliderMinionProps {
 }
 
 const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL + '/volume';
+  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/volume':'';
   const [volume, setVolume] = useState(50);
   const [muted, setMuted] = useState(false);
   
   async function callApi() {
-    const newMinionSpeechVolume: MinionSpeechVolume = {...props.minionSpeechVolume};
-    props.callbackFromParent(newMinionSpeechVolume);
-    console.log('👉 Resultado:', props.minionSpeechVolume.volume);
-    props.minionSpeechVolume.volume = volume;    
     try {
-      const response = await axios.put(rota,
-        {
-          "intensidade": muted ? 0 : volume
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-        console.log('👉 Returned data:', response);
+      if(rota !== ''){
+          const newMinionSpeechVolume: MinionSpeechVolume = {...props.minionSpeechVolume};
+          props.callbackFromParent(newMinionSpeechVolume);
+          console.log('👉 Resultado:', props.minionSpeechVolume.volume);
+          props.minionSpeechVolume.volume = volume;    
+          const response = await axios.put(rota,
+          {
+            "intensidade": muted ? 0 : volume
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+          console.log('👉 Returned data:', response);
+        }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }
