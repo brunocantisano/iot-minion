@@ -13,7 +13,7 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
   const [volume, setVolume] = useState(50);
   const [muted, setMuted] = useState(false);
   
-  async function callApi() {
+  async function callVolumeApi() {
     try {
       let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/volume':'';
       if(rota !== ''){
@@ -39,9 +39,9 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
     }
   }
 
-  useEffect(() => {
-    callApi();
-  },);
+  // useEffect(() => {
+  //   setVolume(50);
+  // },);
 
   return (
     <main>
@@ -53,11 +53,14 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
           step={10}
           value={volume}
           onChange={(event) => {
-            setVolume(event.target.valueAsNumber);
+            const target = event.target as HTMLInputElement;
+            setVolume(parseInt(target.value));
+            callVolumeApi();
           }}
         />
         <button onClick={(event) => {
-          setMuted((m) => !m);          
+          setMuted((m) => !m);
+          callVolumeApi();
         }}>
           {muted ? "mutar" : "desmutar"}
         </button>

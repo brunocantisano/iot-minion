@@ -11,7 +11,6 @@ const SpeechMinion: React.FC = () => {
     error,
     interimResult,
     isRecording,
-    results,
     startSpeechToText,
     stopSpeechToText,
   } = useSpeechToText({
@@ -24,7 +23,7 @@ const SpeechMinion: React.FC = () => {
   async function handleAsk() {
     try {
       if(rota !== '') {
-        const response = await axios.post(rota ,
+        const response = await axios.post(rota,
           {
             "mensagem": interimResult
           },
@@ -44,7 +43,7 @@ const SpeechMinion: React.FC = () => {
 
   return (
     <div>
-      <button onClick={isRecording?stopSpeechToText:startSpeechToText} onChange={handleAsk}>
+      <button onClick={isRecording ? stopSpeechToText : startSpeechToText}>
         <img src={isRecording ? micrecording : microphone} width="32" height="32" alt="ask minion"/>
       </button>
       <h6 className={isRecording?"blink":"notblink"}>{isRecording?"gravando":""}</h6>

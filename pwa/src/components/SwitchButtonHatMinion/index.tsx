@@ -13,17 +13,17 @@ const SwitchButtonHatMinion: React.FC<SwitchButtonMinionProps> = (props: SwitchB
   let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/sensor?type=hat':'';
 
   const [estado] = useState(true);
-
+ 
   async function handleClick() {
     try {
-      if(rota !== ''){
+      if(rota !== '') {
         props.minionBehavior.stress = !props.minionBehavior.stress;
         const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
         props.callbackFromParent(newMinionBehavior);
         console.log('👉 Resultado:', props.minionBehavior.stress);
-        const response = await axios.put(rota, 
+        const response = await axios.put(rota,
           {
-            "status": estado ? 1 : 0
+            "status": props.minionBehavior.stress ? 1 : 0
           },
           {
             headers: {
@@ -31,8 +31,8 @@ const SwitchButtonHatMinion: React.FC<SwitchButtonMinionProps> = (props: SwitchB
               'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
             }
           });
-          console.log('👉 Returned data:', response);
-        }
+        console.log('👉 Returned data:', response);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }

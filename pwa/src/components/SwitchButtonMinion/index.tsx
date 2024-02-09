@@ -16,21 +16,21 @@ const SwitchButtonMinion: React.FC<SwitchButtonMinionProps> = (props: SwitchButt
 
   async function handleClick() {
     try {
-      if(rota !== ''){
+      if(rota !== '') {
         props.minionBehavior.wakeUp = !props.minionBehavior.wakeUp;
         const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
         props.callbackFromParent(newMinionBehavior);
         console.log('👉 Resultado:', props.minionBehavior.wakeUp);
-        const response = await axios.put(rota, 
-        {
-          "status": estado ? 1 : 0
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
+        const response = await axios.put(rota,
+          {
+            "status": props.minionBehavior.wakeUp ? 1 : 0
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
         console.log('👉 Returned data:', response);
       }
     } catch (e) {

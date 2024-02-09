@@ -26,8 +26,12 @@ git secrets --register-gcp
 ```
 
 3. Environment Variables
+
 ```
 export REACT_APP_URL="http://minion.local"
+```
+
+```
 export REACT_APP_API_MINION_TOKEN="YnJ1bm86bWluaW9uMTIz"
 ```
 
