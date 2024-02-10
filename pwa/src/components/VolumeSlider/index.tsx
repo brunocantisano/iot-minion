@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import axios from 'axios';
 import './styles.scss';
 
@@ -12,9 +12,8 @@ interface VolumeSliderMinionProps {
 const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMinionProps) => {
   const [volume, setVolume] = useState(50);
   const [muted, setMuted] = useState(false);
-  
   async function callVolumeApi() {
-    try {
+    try {      
       let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/volume':'';
       if(rota !== ''){
           const newMinionSpeechVolume: MinionSpeechVolume = {...props.minionSpeechVolume};
@@ -38,11 +37,6 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
       console.log(`😱 Axios request failed: ${e}`);
     }
   }
-
-  // useEffect(() => {
-  //   setVolume(50);
-  // },);
-
   return (
     <main>
       <section>
@@ -52,9 +46,11 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
           max={100}
           step={10}
           value={volume}
-          onChange={(event) => {
-            const target = event.target as HTMLInputElement;
+          onChangeCapture={(event) => {
+            const target = event.target as HTMLInputElement;            
             setVolume(parseInt(target.value));
+          }}
+          onChange={() => {                        
             callVolumeApi();
           }}
         />

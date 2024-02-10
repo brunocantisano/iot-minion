@@ -21,6 +21,7 @@ import packageInfo from '../package.json';
 import VolumeSlider from './components/VolumeSlider';
 import PushButtonListening from './components/PushButtonListening';
 import SpeechMinion from './components/SpeechMinion';
+import { useTimer } from 'use-timer';
 
 function App() {
   const [minionBehavior, setMinionBehavior] = useState<MinionBehavior>({ freezing: false, hungry: false, stress: false, wakeUp: false, listening: false });
@@ -30,7 +31,17 @@ function App() {
   const [celsius, setCelsius] = useState(25);
   //const [fahrenheit, setFahrenheit] = useState(75);
   const [humidity, setHumidity] = useState(80);
-
+  const { time, start } = useTimer({
+    endTime: 120, // a cada 2 minutos eu checo a temperatura e umidade
+    onTimeOver: async () => {
+      // alert('chamo');
+      await getTemperatureCelsius();
+      await getHumidity();
+      start();
+    },
+    initialTime: 1,
+    autostart: true
+  });
   async function getTemperatureCelsius() {
     try {
       let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/climate?type=celsius':'';
@@ -88,12 +99,9 @@ function App() {
   const changeSpeechVolume = (newMinionSpeechVolume: MinionSpeechVolume) => {
     setMinionSpeechVolume(newMinionSpeechVolume);
   }
-  async function handleLoad() {
-    await getTemperatureCelsius();
-    await getHumidity();
-  }
   return (
-    <div id="page-body" onLoad={handleLoad} >
+    <div id="page-body">
+      {/* <p>tempo: {time}</p> */}
       <div className="hat-minion-container">
         <div className="grid-container">
           <div className="item1"><HatMinion stressed={minionBehavior.stress} /></div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import axios from 'axios';
 import './styles.scss';
 
@@ -11,9 +11,6 @@ interface SwitchButtonMinionProps {
 
 const SwitchButtonHatMinion: React.FC<SwitchButtonMinionProps> = (props: SwitchButtonMinionProps) => {
   let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/sensor?type=hat':'';
-
-  const [estado] = useState(true);
- 
   async function handleClick() {
     try {
       if(rota !== '') {

@@ -22,7 +22,8 @@
         "react-hook-speech-to-text": "^0.8.0",
         "react-scripts": "^5.0.0",
         "react-thermometer": "0.0.3",
-        "typescript": "~3.7.2"
+        "typescript": "~3.7.2",
+        "use-timer": "^2.0.1"
     },
     "scripts": {
         "start": "react-scripts start",
