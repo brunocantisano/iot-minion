@@ -31,7 +31,8 @@ function App() {
   const [celsius, setCelsius] = useState(25);
   //const [fahrenheit, setFahrenheit] = useState(75);
   const [humidity, setHumidity] = useState(80);
-  const { time, start } = useTimer({
+  // const { time, start } = useTimer({
+  const { start } = useTimer({
     endTime: 120, // a cada 2 minutos eu checo a temperatura e umidade
     onTimeOver: async () => {
       // alert('chamo');
