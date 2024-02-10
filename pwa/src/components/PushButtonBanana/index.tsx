@@ -10,25 +10,27 @@ interface SwitchButtonMinionProps {
 }
 
 const PushButtonBanana: React.FC<SwitchButtonMinionProps> = (props: SwitchButtonMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL + '/sensor?type=blink';
+  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/sensor?type=blink':'';
 
   async function handleClick() {
-    props.minionBehavior.hungry = !props.minionBehavior.hungry;
-    const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
-    props.callbackFromParent(newMinionBehavior);
-    console.log('👉 Resultado:', props.minionBehavior.hungry);
     try {
-      const response = await axios.put(rota,
-        {
-          "status": props.minionBehavior.hungry ? 1 : 0
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      console.log('👉 Returned data:', response);
+      if(rota !== '') {
+        props.minionBehavior.hungry = !props.minionBehavior.hungry;
+        const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
+        props.callbackFromParent(newMinionBehavior);
+        console.log('👉 Resultado:', props.minionBehavior.hungry);
+        const response = await axios.put(rota,
+          {
+            "status": props.minionBehavior.hungry ? 1 : 0
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+        console.log('👉 Returned data:', response);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }

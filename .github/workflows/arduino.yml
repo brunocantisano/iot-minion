@@ -22,6 +22,7 @@ jobs:
         - arduino/iot-minion
     env:
       ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: true
+      CALLER_ORIGIN: ${{secrets.CALLER_ORIGIN}}
       API_MINION_TOKEN: ${{secrets.API_MINION_TOKEN}}
       USER_FIRMWARE: ${{secrets.USER_FIRMWARE}}
       PASS_FIRMWARE: ${{secrets.PASS_FIRMWARE}}
@@ -76,11 +77,11 @@ jobs:
         arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
         arduino-cli lib install --git-url https://github.com/schreibfaul1/ESP32-audioI2S.git
         arduino-cli lib install "DHT sensor library"
-        arduino-cli lib install "NTPClient"
         arduino-cli lib install "PubSubClient"
         arduino-cli lib install "WiFi101"
         arduino-cli lib install "LittleFS_esp32"
-        arduino-cli lib install "Preferences"        
+        arduino-cli lib install "Preferences"
+        arduino-cli lib install "ChatGPTuino"
         arduino-cli config dump
 
     - name: Change Firmware Username
@@ -116,6 +117,13 @@ jobs:
       with:
         find: <API_MINION_TOKEN>
         replace: ${{ env.API_MINION_TOKEN }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change caller Origin allowed
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <CALLER_ORIGIN>
+        replace: ${{ env.CALLER_ORIGIN }}
         include: "${{ env.App_Packages_Archive }}/Credentials.h"
 
     - name: Change firmware version

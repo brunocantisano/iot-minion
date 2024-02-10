@@ -15,4 +15,6 @@
 #define USER_FIRMWARE              "<USER_FIRMWARE>"
 #define PASS_FIRMWARE              "<PASS_FIRMWARE>"
 #define API_VERSION                "<API_VERSION>"
+#define OPEN_IA_KEY                "<OPEN_IA_KEY>"          /* Your private API Key see https://bit.ly/OpenAI-Dev to get setup */
+#define CALLER_ORIGIN              "<CALLER_ORIGIN>"
 #endif
