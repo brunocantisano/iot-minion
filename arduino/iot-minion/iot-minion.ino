@@ -426,14 +426,27 @@ void playRemoteMidia(const char * url)
   audio.connecttohost(url); //  128k mp3
 }
 
+void StoreData(const char* key, const char* val){
+  preferences.begin("store",false);
+  preferences.putString(key, val);
+  preferences.end();
+}
+
+String ReadData(const char* val){
+  preferences.begin("store",false);
+  String ret = preferences.getString(val);
+  preferences.end();
+  return ret;
+}
+
 // Initialize WiFi
 bool initWiFi() {
   // Search for parameter in HTTP POST request
   //Variables to save values from HTML form
-  String ssid = preferences.getString("ssid");
-  String pass = preferences.getString("pass");
-  String ip = preferences.getString("ip");
-  String gateway = preferences.getString("gateway");
+  String ssid = ReadData("ssid");
+  String pass = ReadData("pass");
+  String ip = ReadData("ip");
+  String gateway = ReadData("gateway");
 
   Serial.println(ssid);
   /*Serial.println(pass);*/
@@ -454,8 +467,8 @@ bool initWiFi() {
   Serial.println("Conectado ao WiFi");  
   Serial.println(ip);
   
-  preferences.putString("ip", ip.c_str());
-  preferences.putString("gateway", gateway.c_str());
+  StoreData("ip", ip.c_str());
+  StoreData("gateway", gateway.c_str());
   
   unsigned long currentMillis = millis();
   previousMillis = currentMillis;
