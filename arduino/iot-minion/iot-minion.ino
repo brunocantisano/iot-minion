@@ -400,6 +400,11 @@ bool playSpeech(const char * mensagem)
   // voice speed: 74%
   // pitch: 52%
   // audio.connecttomarytts(mensagem, "it", "istc-lucia-hsmm");
+               
+  // Open IA Speech
+  //audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT, -1);
+  //audio.openai_speech(OPEN_IA_KEY, "tts-1", message, "fable", "mp3", "55");
+  ///////////////////  
   return true;
 }
 
@@ -415,7 +420,7 @@ bool playMidia(const char * midia)
   // exemplo: "/1.mp3"
   bool exists = SD.exists(filenameMidia);
   if(exists){
-    audio.connecttoSD(filenameMidia);
+    audio.connecttoFS(SD, filenameMidia);
     return true;
   }
   return false;
