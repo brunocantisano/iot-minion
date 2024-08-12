@@ -3,7 +3,7 @@
 #include "ListaEncadeada.h"
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
+#include <ElegantOTA.h>
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
@@ -101,6 +101,31 @@ IPAddress subnet(255, 255, 0, 0);
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
 const char *chatGPTUrl = "https://api.openai.com/v1/chat/completions";
+unsigned long ota_progress_millis = 0;
+
+void onOTAStart() {
+  // Log when OTA has started
+  Serial.println("Update OTA iniciado!");
+  // <Add your own code here>
+}
+
+void onOTAProgress(size_t current, size_t final) {
+  // Log every 1 second
+  if (millis() - ota_progress_millis > 1000) {
+    ota_progress_millis = millis();
+    Serial.printf("Progresso atual OTA: %u bytes, Final: %u bytes\n", current, final);
+  }
+}
+
+void onOTAEnd(bool success) {
+  // Log when OTA has finished
+  if (success) {
+    Serial.println("Atualização OTA terminado com sucesso!");
+  } else {
+    Serial.println("Aconteceu um erro durante a atualização ãOTA!");
+  }
+  // <Add your own code here>
+}
 
 String getContent(const char* filename) {
   String payload="";  
@@ -257,7 +282,7 @@ String getData(uint8_t *data, size_t len) {
   return String(raw);
 }
 
-bool addSensor(byte id, byte gpio, byte status, char* name) {
+bool addSensor(uint8_t id, uint8_t gpio, uint8_t status, char* name) {
   ArduinoSensorPort *arduinoSensorPort = new ArduinoSensorPort(); 
   arduinoSensorPort->id = id;
   arduinoSensorPort->gpio = gpio;
@@ -285,7 +310,7 @@ bool loadSensorList()
   if(!ret) return false;
 }
 
-bool readBodySensorData(byte status, byte gpio) {
+bool readBodySensorData(uint8_t status, uint8_t gpio) {
   #ifdef DEBUG
     Serial.println(status);
   #endif
@@ -297,7 +322,7 @@ bool readBodySensorData(byte status, byte gpio) {
   return false;
 }
 
-ArduinoSensorPort * searchListSensor(byte gpio) {
+ArduinoSensorPort * searchListSensor(uint8_t gpio) {
   ArduinoSensorPort *arduinoSensorPort;
   for(int i = 0; i < sensorListaEncadeada.size(); i++){
     // Obtem a aplicação da lista
@@ -309,7 +334,7 @@ ArduinoSensorPort * searchListSensor(byte gpio) {
   return NULL;
 }
 
-String readSensor(byte gpio){
+String readSensor(uint8_t gpio){
   String data="";
   ArduinoSensorPort *arduinoSensorPort = searchListSensor(gpio);  
   if(arduinoSensorPort != NULL) {
@@ -319,7 +344,7 @@ String readSensor(byte gpio){
   return data;
 }
 
-String readSensorStatus(byte gpio){
+String readSensorStatus(uint8_t gpio){
   return String(digitalRead(gpio));
 }
 
@@ -546,8 +571,6 @@ void setup()
       Serial.print("        DNS 3: "); Serial.println(WiFi.dnsIP(2));   
     #endif
     startWebServer();
-    // exibindo rota /update para atualização de firmware e filesystem
-    AsyncElegantOTA.begin(&server, USER_FIRMWARE, PASS_FIRMWARE);
     setClock();
     /* Usa MDNS para resolver o DNS */
     Serial.println("mDNS configurado e inicializado;");    
@@ -580,8 +603,8 @@ void setup()
   }
 }
 
-void callback(char *topic, byte *payload, unsigned int length) {
-  byte gpio;
+void callback(char *topic, uint8_t *payload, unsigned int length) {
+  uint8_t gpio;
   String message;
   
   #ifdef DEBUG
@@ -685,6 +708,7 @@ void reconnect() {
 
 void loop() 
 {
+  ElegantOTA.loop();
   if (!client.connected()) {
     // tento conectar no MQTT somente se já tiver rede
     if(rede) reconnect();
