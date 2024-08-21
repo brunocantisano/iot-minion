@@ -37,7 +37,7 @@ void handle_GetFile(){
   server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request) {
     //"/get-file?name=delete.png"
     int paramsNr = request->params();
-    AsyncWebParameter* p = request->getParam(paramsNr-1);    
+    const AsyncWebParameter* p = request->getParam(paramsNr-1);    
     char filename[MAX_PATH];
     memset(filename, 0x00, MAX_PATH);
     strcat(filename, "/");
@@ -174,7 +174,7 @@ void handle_Sensors() {
       int relayPin = RelayEyes;
       int paramsNr = request->params();
       for(int i=0;i<paramsNr;i++){
-        AsyncWebParameter* p = request->getParam(i);
+        const AsyncWebParameter* p = request->getParam(i);
         if (strcmp("hat", p->value().c_str())==0){
           relayPin = RelayHat;
         }
@@ -215,7 +215,7 @@ void handle_TemperatureAndHumidity(){
     if(check_authorization_header(request)) {
       int paramsNr = request->params();
       for(int i=0;i<paramsNr;i++){
-        AsyncWebParameter* p = request->getParam(i);
+        const AsyncWebParameter* p = request->getParam(i);
         if(strcmp("celsius", p->value().c_str())==0){
           request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("celsius", strCelsius));
         } else if (strcmp("fahrenheit", p->value().c_str())==0){
@@ -248,7 +248,7 @@ void handle_InsertTalk(){
       int headers = request->headers();
       String host = "Host não encontrado";
       for(int i=0;i<headers;i++){
-        AsyncWebHeader* h = request->getHeader(i);
+        const AsyncWebHeader* h = request->getHeader(i);
         if(h->name() == "Host") host = h->value();
           #ifdef DEBUG
             Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
@@ -331,7 +331,7 @@ void handle_InsertAsk(){
       int headers = request->headers();
       String host = "Host não encontrado";
       for(int i=0;i<headers;i++){
-        AsyncWebHeader* h = request->getHeader(i);
+        const AsyncWebHeader* h = request->getHeader(i);
         if(h->name() == "Host") host = h->value();
           #ifdef DEBUG
             Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
@@ -375,7 +375,7 @@ void handle_InsertPlay(){
       int headers = request->headers();
       String host = "Host não encontrado";
       for(int i=0;i<headers;i++){
-        AsyncWebHeader* h = request->getHeader(i);
+        const AsyncWebHeader* h = request->getHeader(i);
         if(h->name() == "Host") host = h->value();
           #ifdef DEBUG
             Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
@@ -484,7 +484,7 @@ void handle_UpdateSensors(){
         String feedName = "eye";
         int paramsNr = request->params();
         for(int i=0;i<paramsNr;i++){
-          AsyncWebParameter* p = request->getParam(i);
+          const AsyncWebParameter* p = request->getParam(i);
           feedName = p->value();
           Serial.println("feedName: "+feedName);
           if(strcmp("hat",feedName.c_str())==0){
@@ -608,7 +608,7 @@ void handle_DeleteFile(){
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
         int paramsNr = request->params();
-        AsyncWebParameter* p = request->getParam(0);
+        const AsyncWebParameter* p = request->getParam(static_cast<size_t>(paramsNr-1));
         const char * midia = doc["midia"];
         String filename = String(midia);
         if(p->value() == "storage") {          
@@ -658,7 +658,7 @@ void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t
       int headers = request->headers();
       int i;
       for(i=0;i<headers;i++){
-        AsyncWebHeader* h = request->getHeader(i);        
+        const AsyncWebHeader* h = request->getHeader(i);        
         #ifdef DEBUG
           Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
         #endif
@@ -738,7 +738,7 @@ void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t 
       int headers = request->headers();
       int i;
       for(i=0;i<headers;i++){
-        AsyncWebHeader* h = request->getHeader(i);        
+        const AsyncWebHeader* h = request->getHeader(i);        
         #ifdef DEBUG
           Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
         #endif
@@ -886,7 +886,7 @@ void handle_WifiInfo(){
   server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
     int params = request->params();
     for(int i=0;i<params;i++){
-      AsyncWebParameter* p = request->getParam(i);
+      const AsyncWebParameter* p = request->getParam(i);
       if(p->isPost()){
         // HTTP POST ssid value
         if (p->name() == "ssid") {
@@ -929,7 +929,7 @@ bool check_authorization_header(AsyncWebServerRequest * request){
   int headers = request->headers();
   int i;
   for(i=0;i<headers;i++){
-    AsyncWebHeader* h = request->getHeader(i);
+    const AsyncWebHeader* h = request->getHeader(i);
     //Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
     if(h->name()=="Authorization" && h->value()=="Basic "+String(API_MINION_TOKEN)){
       return true;

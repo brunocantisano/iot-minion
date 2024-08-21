@@ -707,14 +707,13 @@ void reconnect() {
 }
 
 void loop() 
-{
-  ElegantOTA.loop();
+{  
   if (!client.connected()) {
     // tento conectar no MQTT somente se já tiver rede
     if(rede) reconnect();
   }
   client.loop();
-
+  ElegantOTA.loop();
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
 
