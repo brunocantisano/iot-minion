@@ -71,12 +71,9 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 
 ### Plugins
 
-> **O último código está usando o LittleFS para ler e escrever no storage, que serve para utilizar o filesystem com melhor performance e aproveitamento do espaço físico. No entanto, estou deixando a referência para o SPIFFS que foi o primeiro utilizado apenas para conhecimento, porque não é mais usado no código.**
+> **O código está usando o LittleFS para ler e escrever no storage, que serve para utilizar o filesystem com melhor performance e aproveitamento do espaço físico.**
 
-- [Plugin para gravar no filesystem do Esp32 (SPIFFS)](https://github.com/me-no-dev/arduino-esp32fs-plugin)
-- [Usando o plugin para escrever no filesystem do Esp32 (SPIFFS)](https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/)
-- [Informações de uso do plugin (SPIFFS)](https://techtutorialsx.com/2018/08/24/esp32-arduino-spiffs-file-upload-ide-plugin/)
-
+- [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32fs-plugin)
 
 * Pre-requisito do arduino IDE: 
 
@@ -124,18 +121,18 @@ sudo apt install libncurses5 libpython2.7 -y
 
 #### Referência
 
-- [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32littlefs-plugin)
+- [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32fs-plugin)
 
 * Criar diretório se não existir
 
 ```
-mkdir -p ~/Arduino/tools/ESP32LittleFS/tool/
+mkdir -p ~/Arduino/tools/esp32fs/tool/
 ```
 
 *  Mover o arquivo jar para dentro da pasta
 
 ```
-mv ~/Downloads/esp32littlefs.jar ~/Arduino/tools/ESP32LittleFS/tool/esp32littlefs.jar
+mv ~/Downloads/esp32fs.jar ~/Arduino/tools/esp32fs/tool/esp32fs.jar
 ```
 
 ### Compilação
