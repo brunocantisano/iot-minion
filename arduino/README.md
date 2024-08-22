@@ -69,23 +69,18 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 * https://github.com/me-no-dev/AsyncTCP.git
 * https://github.com/schreibfaul1/ESP32-audioI2S.git
 
-### Plugins
-
-> **O código está usando o LittleFS para ler e escrever no storage, que serve para utilizar o filesystem com melhor performance e aproveitamento do espaço físico.**
+### Plugins (Pre-requisito do ESP8266/ESP32 para decodificar Exception Stack Trace e para gravar arquivos do webserver na pasta `data` - LittleFS filesystem uploader)
 
 - [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32fs-plugin)
-
+> **O código está usando o LittleFS para ler e escrever no storage, que serve para utilizar o filesystem com melhor performance e aproveitamento do espaço físico.**
+ 
+- [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
+ 
 * Pre-requisito do arduino IDE: 
 
 ```
 sudo apt install python3-serial -y
 ```
-
-* Pre-requisito do ESP8266/ESP32 Exception Stack Trace Decoder:
-
-#### Referência
-
-- [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
 
 * Criar diretório se não existir
 
@@ -96,19 +91,19 @@ mkdir -p ~/Arduino/tools/
 *  Mover o arquivo jar para dentro da pasta
 
 ```
-mv ~/Downloads/EspExceptionDecoder-2.0.2.zip ~/Arduino/tools
+mv ~/Downloads/EspExceptionDecoder-*.zip ~/Arduino/tools
 ```
 
 * Descompactar
 
 ```
-unzip EspExceptionDecoder-2.0.2.zip
+unzip EspExceptionDecoder-*.zip
 ```
 
 * Remover arquivo
 
 ```
-rm -rf EspExceptionDecoder-2.0.2.zip
+rm -rf EspExceptionDecoder-*.zip
 ```
 
 * Instalar dependências
@@ -117,11 +112,7 @@ rm -rf EspExceptionDecoder-2.0.2.zip
 sudo apt install libncurses5 libpython2.7 -y
 ```
 
-* Pre-requisito do ESP32 LittleFS filesystem uploader:
-
-#### Referência
-
-- [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32fs-plugin)
+#### Referência para o LittleFS filesystem uploader
 
 * Criar diretório se não existir
 
