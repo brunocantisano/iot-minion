@@ -71,7 +71,8 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 
 ### Plugins (Pre-requisito do ESP8266/ESP32 para decodificar Exception Stack Trace e para gravar arquivos do webserver na pasta `data` - LittleFS filesystem uploader)
 
-- [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32fs-plugin)
+- [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32littlefs-plugin)
+
 > **O código está usando o LittleFS para ler e escrever no storage, que serve para utilizar o filesystem com melhor performance e aproveitamento do espaço físico.**
  
 - [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
@@ -117,13 +118,13 @@ sudo apt install libncurses5 libpython2.7 -y
 * Criar diretório se não existir
 
 ```
-mkdir -p ~/Arduino/tools/esp32fs/tool/
+mkdir -p ~/Arduino/tools/ESP32LittleFS/tool/
 ```
 
 *  Mover o arquivo jar para dentro da pasta
 
 ```
-mv ~/Downloads/esp32fs.jar ~/Arduino/tools/esp32fs/tool/esp32fs.jar
+mv ~/Downloads/esp32littlefs.jar ~/Arduino/tools/ESP32LittleFS/tool/esp32littlefs.jar
 ```
 
 ### Compilação
