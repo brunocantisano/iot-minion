@@ -794,11 +794,13 @@ void handle_UploadSdCard() {
       }, handleUploadSdcard);
 }
 
+/*
 void handle_UpdateFirmware() {
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "ElegantOTA");
   });
 }
+*/
 
 void startWebServer() {
   /* Webserver para se comunicar via browser com ESP32  */
@@ -841,13 +843,14 @@ void startWebServer() {
   handle_UploadStorage();
   handle_ListSdcard();
   handle_UploadSdCard();
-  handle_UpdateFirmware();
+  //handle_UpdateFirmware();
 
   ElegantOTA.begin(&server);    // Start ElegantOTA
   // ElegantOTA callbacks
   ElegantOTA.onStart(onOTAStart);
   ElegantOTA.onProgress(onOTAProgress);
   ElegantOTA.onEnd(onOTAEnd);
+
   // ------------------------------------ //
   // se não se enquadrar em nenhuma das rotas
   handle_OnError();

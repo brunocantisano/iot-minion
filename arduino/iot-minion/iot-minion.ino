@@ -1,6 +1,6 @@
 #include "Credentials.h"
 #include "Tipos.h"
-#include "ListaEncadeada.h"
+#include <LinkedList.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ElegantOTA.h>
@@ -20,6 +20,8 @@
 #define CONFIG_LITTLEFS_FOR_IDF_3_2
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
 #include <LittleFS.h>
+
+#define ELEGANTOTA_USE_ASYNC_WEBSERVER 0
 
 const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
@@ -75,13 +77,13 @@ String strHeatIndexCelsius;
 const char version[] PROGMEM = API_VERSION;
 
 // Lista de sensores
-ListaEncadeada<ArduinoSensorPort*> sensorListaEncadeada = ListaEncadeada<ArduinoSensorPort*>();
+LinkedList<ArduinoSensorPort*> sensorListaEncadeada = LinkedList<ArduinoSensorPort*>();
 
 // Lista de aplicacoes do jenkins
-ListaEncadeada<Application*> applicationListaEncadeada = ListaEncadeada<Application*>();
+LinkedList<Application*> applicationListaEncadeada = LinkedList<Application*>();
 
 // Lista de media no sdcard
-ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
+LinkedList<Media*> mediaListaEncadeada = LinkedList<Media*>();
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -171,11 +173,6 @@ bool getAllowedSdCardFiles(String filename) {
   return false;
 }
 
-bool writeContent(String filename, String content){
-  File file = LittleFS.open(filename, "w");
-  return writeContent(&file, content);
-}
-
 bool writeContent(File * file, String content){
   if (!file) {    
     #ifdef DEBUG
@@ -195,6 +192,13 @@ bool writeContent(File * file, String content){
   file->close();
   return true; 
 }
+
+bool writeContentFile(String filename, String content){
+  File file = LittleFS.open(filename, "w");
+  return writeContent(&file, content);
+}
+
+
 
 char* substr(char* arr, int begin, int len)
 {
@@ -379,7 +383,7 @@ String saveApplicationList() {
   }
   JSONmessage = '['+JSONmessage.substring(0, JSONmessage.length()-1)+']';
   // Grava no storage
-  writeContent("/lista.json",JSONmessage); 
+  writeContentFile("/lista.json",JSONmessage); 
   return JSONmessage;
 }
 
@@ -537,14 +541,6 @@ void setup()
   pinMode(RelayShake, OUTPUT);
   pinMode(TemperatureHumidity, OUTPUT);
 
-  // carrega sensores  
-  bool load = loadSensorList();
-  if(!load) {
-    #ifdef DEBUG
-      Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
-    #endif
-  }
-
   #ifdef DEBUG
     Serial.println("Versão: "+String(version));
   #endif
@@ -554,7 +550,15 @@ void setup()
       Serial.println(LITTLEFS_ERROR);
     #endif      
   }
-  
+/*
+  // carrega sensores  
+  bool load = loadSensorList();
+  if(!load) {
+    #ifdef DEBUG
+      Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
+    #endif
+  }
+*/
   if(initWiFi()) {
     #ifdef DEBUG
       Serial.println("\n\nNetwork Configuration:");
@@ -588,7 +592,7 @@ void setup()
     rede=true;
     //connecting to a mqtt broker
     client.setServer(MQTT_BROKER, MQTT_PORT);
-    client.setCallback(callback);
+    client.setCallback(callback);  
     Serial.println(F("Minion funcionando!"));
   }
   else {

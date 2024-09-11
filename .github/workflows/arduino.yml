@@ -82,6 +82,7 @@ jobs:
         arduino-cli lib install "LittleFS_esp32"
         arduino-cli lib install "Preferences"
         arduino-cli lib install "ChatGPTuino"
+        arduino-cli lib install "LinkedList"
         arduino-cli config dump
 
     - name: Change Firmware Username
