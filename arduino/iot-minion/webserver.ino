@@ -871,6 +871,7 @@ void handle_WifiManager(){
 
 void handle_WifiInfo(){
   server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
+    preferences.begin("store",false);
     int params = request->params();
     for(int i=0;i<params;i++){
       const AsyncWebParameter* p = request->getParam(i);
@@ -906,7 +907,9 @@ void handle_WifiInfo(){
         //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
       }
     }
-    request->send(HTTP_OK, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local");
+    preferences.end();
+    
+    request->send(HTTP_OK, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local");    
     delay(3000);
     ESP.restart();
   });

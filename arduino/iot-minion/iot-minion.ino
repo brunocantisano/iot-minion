@@ -192,17 +192,6 @@ void setClock() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 }
 
-// match - search for regular expression anywhere in text
-int match(char* regexp, char* text) {
-  if(regexp[0] == '^') {
-    return matchHere(++regexp, text);
-  }
-  do{
-    if(matchHere(regexp, text)) {return 1;}
-  }while(*text++ != '\0');
-    return 0;
-}
-
 // matchHere - search for regex at beginning of text
 int matchHere(char* regexp, char* text) {
   if(regexp[0] == '\0') {return 1;}
@@ -216,6 +205,17 @@ int matchHere(char* regexp, char* text) {
     return matchHere(++regexp, ++text);
   }
   return 0;
+}
+
+// match - search for regular expression anywhere in text
+int match(char* regexp, char* text) {
+  if(regexp[0] == '^') {
+    return matchHere(++regexp, text);
+  }
+  do{
+    if(matchHere(regexp, text)) {return 1;}
+  }while(*text++ != '\0');
+    return 0;
 }
 
 // matchStar - search for c*regexp at beginning of text
@@ -459,6 +459,8 @@ bool initWiFi() {
   Serial.println("Conectado ao WiFi");  
   Serial.println(ip);
 
+  preferences.putString("ssid", ssid.c_str());
+  preferences.putString("pass", pass.c_str());
   preferences.putString("ip", ip.c_str());
   preferences.putString("gateway", gateway.c_str());
  
