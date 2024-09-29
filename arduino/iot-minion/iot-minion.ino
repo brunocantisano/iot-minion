@@ -3,11 +3,9 @@
 #include <LinkedList.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <ElegantOTA.h>
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
-#include <WiFi.h>
 #include <WiFiClient.h>
 #include <PubSubClient.h>
 #include <Preferences.h>
@@ -20,8 +18,6 @@
 #define CONFIG_LITTLEFS_FOR_IDF_3_2
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
 #include <LittleFS.h>
-
-#define ELEGANTOTA_USE_ASYNC_WEBSERVER 0
 
 const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
@@ -103,31 +99,6 @@ IPAddress subnet(255, 255, 0, 0);
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
 const char *chatGPTUrl = "https://api.openai.com/v1/chat/completions";
-unsigned long ota_progress_millis = 0;
-
-void onOTAStart() {
-  // Log when OTA has started
-  Serial.println("Update OTA iniciado!");
-  // <Add your own code here>
-}
-
-void onOTAProgress(size_t current, size_t final) {
-  // Log every 1 second
-  if (millis() - ota_progress_millis > 1000) {
-    ota_progress_millis = millis();
-    Serial.printf("Progresso atual OTA: %u bytes, Final: %u bytes\n", current, final);
-  }
-}
-
-void onOTAEnd(bool success) {
-  // Log when OTA has finished
-  if (success) {
-    Serial.println("Atualização OTA terminado com sucesso!");
-  } else {
-    Serial.println("Aconteceu um erro durante a atualização ãOTA!");
-  }
-  // <Add your own code here>
-}
 
 String getContent(const char* filename) {
   String payload="";  
@@ -286,14 +257,14 @@ String getData(uint8_t *data, size_t len) {
   return String(raw);
 }
 
-bool addSensor(uint8_t id, uint8_t gpio, uint8_t status, char* name) {
+bool addSensor(int id, int gpio, int status, String name) {
   ArduinoSensorPort *arduinoSensorPort = new ArduinoSensorPort(); 
+  pinMode(gpio, OUTPUT);
+  
   arduinoSensorPort->id = id;
   arduinoSensorPort->gpio = gpio;
   arduinoSensorPort->status = status;
-  arduinoSensorPort->name = name;
-  pinMode(gpio, OUTPUT);
-
+  arduinoSensorPort->name = name;  
   // Adiciona sensor na lista
   sensorListaEncadeada.add(arduinoSensorPort);
   return true;
@@ -460,27 +431,14 @@ void playRemoteMidia(const char * url)
   audio.connecttohost(url); //  128k mp3
 }
 
-void StoreData(const char* key, const char* val){
-  preferences.begin("store",false);
-  preferences.putString(key, val);
-  preferences.end();
-}
-
-String ReadData(const char* val){
-  preferences.begin("store",false);
-  String ret = preferences.getString(val);
-  preferences.end();
-  return ret;
-}
-
 // Initialize WiFi
 bool initWiFi() {
   // Search for parameter in HTTP POST request
   //Variables to save values from HTML form
-  String ssid = ReadData("ssid");
-  String pass = ReadData("pass");
-  String ip = ReadData("ip");
-  String gateway = ReadData("gateway");
+  String ssid = preferences.getString("ssid");
+  String pass = preferences.getString("pass");
+  String ip = preferences.getString("ip");
+  String gateway = preferences.getString("gateway");
 
   Serial.println(ssid);
   /*Serial.println(pass);*/
@@ -500,10 +458,10 @@ bool initWiFi() {
   ip = String(IpAddress2String(WiFi.localIP()));
   Serial.println("Conectado ao WiFi");  
   Serial.println(ip);
-  
-  StoreData("ip", ip.c_str());
-  StoreData("gateway", gateway.c_str());
-  
+
+  preferences.putString("ip", ip.c_str());
+  preferences.putString("gateway", gateway.c_str());
+ 
   unsigned long currentMillis = millis();
   previousMillis = currentMillis;
 
@@ -513,14 +471,16 @@ bool initWiFi() {
       Serial.println("Falhou para conectar.");
       return false;
     }
-  }
+  }  
   return true;
 }
 
 void setup()
 {
   Serial.begin(SERIAL_PORT);
-
+  
+  preferences.begin("store",false);
+   
   // métricas para prometheus
   setupStorage();
   incrementBootCounter();
@@ -550,7 +510,7 @@ void setup()
       Serial.println(LITTLEFS_ERROR);
     #endif      
   }
-/*
+
   // carrega sensores  
   bool load = loadSensorList();
   if(!load) {
@@ -558,7 +518,7 @@ void setup()
       Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
     #endif
   }
-*/
+
   if(initWiFi()) {
     #ifdef DEBUG
       Serial.println("\n\nNetwork Configuration:");
@@ -605,6 +565,7 @@ void setup()
     Serial.println(IP);     
     startWifiManagerServer();    
   }
+  preferences.end();
 }
 
 void callback(char *topic, uint8_t *payload, unsigned int length) {
@@ -717,7 +678,6 @@ void loop()
     if(rede) reconnect();
   }
   client.loop();
-  ElegantOTA.loop();
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
 

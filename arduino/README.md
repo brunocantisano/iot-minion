@@ -141,8 +141,6 @@ mv ~/Downloads/esp32littlefs.jar ~/Arduino/tools/ESP32LittleFS/tool/esp32littlef
 | <AIO_KEY>                      | Adafruit                       |
 | <FIREBASE_API_KEY>             | Firebase API Key               |
 | <API_MINION_TOKEN>             | Base64 Basic Auth              |
-| <USER_FIRMWARE>                | Upload Firmware User           |
-| <PASS_FIRMWARE>                | Upload Firmware Senha          |
 | <API_VERSION>                  | Versão da API                  |
 
 3. Clique no botão de compilação ![compilar](../others/imgs/compilar.png)

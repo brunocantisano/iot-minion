@@ -12,8 +12,6 @@
 #define WIFI_SSID                  "<WIFI_SSID>" /* coloque aqui o nome da rede wi-fi que o ESP32 deve se conectar */
 #define WIFI_PASSWD                "<WIFI_PASSWD>" /* coloque aqui a senha da rede wi-fi que o ESP32 deve se conectar */
 #define API_MINION_TOKEN           "<API_MINION_TOKEN>"
-#define USER_FIRMWARE              "<USER_FIRMWARE>"
-#define PASS_FIRMWARE              "<PASS_FIRMWARE>"
 #define API_VERSION                "<API_VERSION>"
 #define OPEN_IA_KEY                "<OPEN_IA_KEY>"          /* Your private API Key see https://bit.ly/OpenAI-Dev to get setup */
 #define CALLER_ORIGIN              "<CALLER_ORIGIN>"
