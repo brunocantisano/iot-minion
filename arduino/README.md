@@ -289,17 +289,17 @@ npm run dev
 
 <table>
     <tr>
-        <td align="center"><a href="https://free3d.com/3d-model/two-minions-ready-for-rigging-8605.html"><img src="https://freepikpsd.com/file/2020/01/Single-Minion-Free-PNG-Image.png" width="100px;" alt="" /><br /><sub><b>Minion</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/two-minions-ready-for-rigging-8605.html"><img src="https://preview.free3d.com/img/2014/10/1714721518392444385/sc9p1dne.jpg" width="100px;" alt="" /><br /><sub><b>Minion</b></sub></a><br />
         </td>
         <td align="center"><a href="https://sketchfab.com/3d-models/dr-nefario-dab-dance-af530ffc10e94117a78363f7a3b204f6"><img src="https://static.wikia.nocookie.net/villains/images/f/fb/DrNefario.png/revision/latest/scale-to-width-down/206?cb=20210303191340" width="100px;" alt="" /><br /><sub><b>Dr Nefário</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://free3d.com/3d-model/ricken-backer-4003---bass-888215.html"><img src="https://free3d.com/imgd/l96/5ac7fb2326be8b18328b4567/2893-ricken-backer-4003---bass.png" width="100px;" alt="" /><br /><sub><b>Ricken Backer Bass</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/ricken-backer-4003---bass-888215.html"><img src="https://images.free3d.com/imgd/l96/5ac7fb2326be8b18328b4567/2893-ricken-backer-4003---bass.png" width="100px;" alt="" /><br /><sub><b>Ricken Backer Bass</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://free3d.com/3d-model/classic-flying-v-54812.html"><img src="https://free3d.com/imgd/l65871-classic-flying-v-54812.jpg" width="100px;" alt="" /><br /><sub><b>Classic Flying V</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/classic-flying-v-54812.html"><img src="https://images.free3d.com/imgd/l65871-classic-flying-v-54812.jpg" width="100px;" alt="" /><br /><sub><b>Classic Flying V</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://free3d.com/3d-model/drum-set-99664.html"><img src="https://free3d.com/imgd/l52925-drum-set-99664.jpg" width="100px;" alt="" /><br /><sub><b>Drum Set</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/drum-set-99664.html"><img src="https://images.free3d.com/imgd/l52925-drum-set-99664.jpg" width="100px;" alt="" /><br /><sub><b>Drum Set</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://free3d.com/3d-model/iphonex-113534.html"><img src="https://free3d.com/imgd/l45/5a8085c926be8b954b8b4567/8356-iphonex.png" width="100px;" alt="" /><br /><sub><b>Iphonex</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/iphonex-113534.html"><img src="https://images.free3d.com/imgd/l45/5a8085c926be8b954b8b4567/8356-iphonex.png" width="100px;" alt="" /><br /><sub><b>Iphonex</b></sub></a><br />
         </td>
     </tr>
 </table>
@@ -388,7 +388,7 @@ npm run dev
         </td>
         <td align="center"><a href="https://www.filipeflop.com/produto/modulo-cartao-micro-sd/"><img src="https://www.filipeflop.com/wp-content/uploads/2017/07/SKU122168a.jpg" width="100px;" alt="" /><br /><sub><b>1-Módulo Cartão Micro SD</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://shopee.com.br/sou%E2%98%AC-CJMCU-1334-DAC-Module-UDA1334A-Stereo-Decoder-Board-I2S-Output-Interface-Sound-Frequency-Decoding-Module-for-3.3V-to-5V-i.290382738.11917876698"><img src="https://www.baudaeletronica.com.br/media/catalog/product/cache/1/image/578x/9df78eab33525d08d6e5fb8d27136e95/u/d/uda1334a.jpg" width="100px;" alt="" /><br /><sub><b>1-UDA1334A</b></sub></a><br />
+        <td align="center"><a href="https://shopee.com.br/sou%E2%98%AC-CJMCU-1334-DAC-Module-UDA1334A-Stereo-Decoder-Board-I2S-Output-Interface-Sound-Frequency-Decoding-Module-for-3.3V-to-5V-i.290382738.11917876698"><img src="https://tse2.mm.bing.net/th?id=OIP.3tM_B4FqtTu4CucxvSPF9QHaHa&pid=Api&P=0&h=180" width="100px;" alt="" /><br /><sub><b>1-UDA1334A</b></sub></a><br />
         </td>
     </tr>
 </table>
