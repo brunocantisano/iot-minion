@@ -1,6 +1,6 @@
 #include "Credentials.h"
 #include "Tipos.h"
-#include <LinkedList.h>
+#include "ListaEncadeada.h"
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
@@ -72,14 +72,20 @@ String strHeatIndexCelsius;
 /* versão do firmware */
 const char version[] PROGMEM = API_VERSION;
 
+enum AudioType {
+  GOOGLE, // 0
+  MARYTTS, // 1
+  OPENAI,
+};
+
 // Lista de sensores
-LinkedList<ArduinoSensorPort*> sensorListaEncadeada = LinkedList<ArduinoSensorPort*>();
+ListaEncadeada<ArduinoSensorPort*> sensorListaEncadeada = ListaEncadeada<ArduinoSensorPort*>();
 
 // Lista de aplicacoes do jenkins
-LinkedList<Application*> applicationListaEncadeada = LinkedList<Application*>();
+ListaEncadeada<Application*> applicationListaEncadeada = ListaEncadeada<Application*>();
 
 // Lista de media no sdcard
-LinkedList<Media*> mediaListaEncadeada = LinkedList<Media*>();
+ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -385,26 +391,29 @@ void loadI2S() {
   SPI.begin(SCK, MISO, MOSI);
   SPI.setFrequency(1000000);
   SD.begin(SD_CS);
-
-  //Ajusta os pinos de conexão I2S
-  audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-
-  //Ajusta o volume de saída.
-  audio.setVolume(DEFAULT_VOLUME); // 0...21
 }
 
-bool playSpeech(const char * mensagem)
+bool playSpeech(const char * mensagem, AudioType tipo=AudioType::GOOGLE)
 {
-  //Para executar uma síntese de voz
-  audio.connecttospeech(mensagem, "pt");
-  // voice speed: 74%
-  // pitch: 52%
-  // audio.connecttomarytts(mensagem, "it", "istc-lucia-hsmm");
-               
-  // Open IA Speech
-  //audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT, -1);
-  //audio.openai_speech(OPEN_IA_KEY, "tts-1", message, "fable", "mp3", "55");
-  ///////////////////  
+  switch(tipo) {
+    case AudioType::GOOGLE:
+      //Para executar uma síntese de voz
+      audio.connecttospeech(mensagem, "pt");
+      break;
+    case AudioType::MARYTTS:
+      // voice speed: 74%
+      // pitch: 52%
+      //audio.connecttomarytts(mensagem, "it", "istc-lucia-hsmm");
+      Serial.println("Foi removido o uso da Marytts no código recente");
+      break;   
+    case AudioType::OPENAI:
+      // Open IA Speech
+      audio.openai_speech(OPEN_IA_KEY, "tts-1", mensagem, "fable", "mp3", "55");
+      break;
+    default:
+      Serial.println("Não encontrei o tipo de audio a ser executado!");
+      return false;
+  }
   return true;
 }
 
@@ -551,6 +560,13 @@ void setup()
     }
     // carrega lista de arquivos de media no SDCARD
     if(loadSdCardMedias()) loadI2S(); //Configura e inicia o SPI para conexão com o cartão SD
+
+    //Ajusta os pinos de conexão I2S para saída de áudio
+    audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+
+    //Ajusta o volume de saída.
+    audio.setVolume(DEFAULT_VOLUME); // 0...21
+  
     rede=true;
     //connecting to a mqtt broker
     client.setServer(MQTT_BROKER, MQTT_PORT);
