@@ -70,7 +70,7 @@ jobs:
         arduino-cli lib install "Adafruit SleepyDog Library"
         arduino-cli lib install "Adafruit Unified Sensor"
         arduino-cli lib install "ArduinoJson"
-        arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncWebServer.git
+        arduino-cli lib install "ESP_Async_WebServer"
         arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
         arduino-cli lib install --git-url https://github.com/schreibfaul1/ESP32-audioI2S.git
         arduino-cli lib install "DHT sensor library"
