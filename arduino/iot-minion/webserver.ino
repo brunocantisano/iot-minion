@@ -83,7 +83,7 @@ void handle_Swagger(){
     String json = getContent(filename);
     if(json.length() > 0) {
       json.replace("0.0.0",version);
-      json.replace("HOST_MINION",String(HOST)+".local");
+      json.replace("HOST_MINION",String(HOST));
     } else {
       json = HTML_MISSING_DATA_UPLOAD;  
     }
@@ -96,7 +96,7 @@ void handle_SwaggerUI(){
     char filename[] = "/swaggerUI.html";
     String html = getContent(filename);    
     if(html.length() > 0) {
-      html.replace("HOST_MINION",String(HOST)+".local");
+      html.replace("HOST_MINION",String(HOST));
     } else {
       html = HTML_MISSING_DATA_UPLOAD;
     }
@@ -210,7 +210,7 @@ void handle_Lists(){
 }
 
 void handle_TemperatureAndHumidity(){
-  //http://minion.local/climate?type=celsius
+  //http://minion/climate?type=celsius
   server.on("/climate", HTTP_GET, [](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       int paramsNr = request->params();
@@ -908,9 +908,7 @@ void handle_WifiInfo(){
       }
     }
     preferences.end();
-    
-    request->send(HTTP_OK, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local");    
-    delay(3000);
+    request->send(HTTP_OK, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST));    
     ESP.restart();
   });
 }

@@ -461,7 +461,6 @@ bool initWiFi() {
 
   WiFi.begin(ssid.c_str(), pass.c_str());
   while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
     Serial.println("Conectando ao WiFi...");
   }
   ip = String(IpAddress2String(WiFi.localIP()));
@@ -551,11 +550,10 @@ void setup()
     Serial.println("mDNS configurado e inicializado;");    
     if (!MDNS.begin(HOST)) 
     { 
-        //http://minion.local
+        //http://minion
         #ifdef DEBUG
           Serial.println("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s...");
         #endif
-        delay(1000);
         ESP.restart();        
     }
     // carrega lista de arquivos de media no SDCARD
@@ -662,7 +660,7 @@ void reconnect() {
   // Loop até que esteja reconectado
   while (!client.connected()) {
     Serial.println("Tentando conexão com o servidor MQTT...");
-    String client_id = String(HOST)+".local-"+String(WiFi.macAddress());
+    String client_id = String(HOST)+"-"+String(WiFi.macAddress());
     #ifdef DEBUG
       Serial.printf("O cliente %s conecta ao mqtt broker publico\n", client_id.c_str());
     #endif      
@@ -684,13 +682,13 @@ void reconnect() {
       #ifdef DEBUG
         Serial.printf("Falhou com o estado %d\nNao foi possivel conectar com o broker mqtt.\nPor favor, verifique as credenciais e instale uma nova versão de firmware.\nTentando novamente em 5 segundos.", client.state());
       #endif
-      delay(5000);
     }
   }
 }
 
 void loop() 
 {  
+  unsigned long currentMillis = millis();
   if (!client.connected()) {
     // tento conectar no MQTT somente se já tiver rede
     if(rede) reconnect();
@@ -700,15 +698,12 @@ void loop()
   audio.loop(); 
 
   // Report every 1 minuto.
-  if(timeSinceLastRead > 60000) {
+  if (currentMillis - previousMillis >= 60000) {
+    previousMillis = currentMillis;
     // Reading temperature or humidity takes about 250 milliseconds!
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
     if(rede) getTemperatureHumidity();
-    timeSinceLastRead = 0;
   }
-  // Lidar com eventos assíncronos, se necessário
-  delay(10); // Adicionando um pequeno atraso para evitar o bloqueio prolongado
-  timeSinceLastRead += 10;
 }
 
 #ifdef __cplusplus
