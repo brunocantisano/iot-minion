@@ -341,6 +341,7 @@ npm run dev
 - [Write binary file to LittleFS](https://iotespresso.com/esp32-captive-portal-fetching-html-using-littlefs/)
 - [LittleFS esp32 issues](https://wellys.com/posts/esp32_issues/)
 - [ESP32 HTTPS web server](https://techtutorialsx.com/2019/04/07/esp32-https-web-server/)
+- [SDcard](https://www.electronicwings.com/esp32/microsd-card-interfacing-with-esp32)
 - [I2S MP3 Player](https://www.fernandok.com/2020/02/mp3-player-com-esp32-e-i2s.html)
 - [Google Actions](https://codelabs.developers.google.com/codelabs/actions-1/#0)
 

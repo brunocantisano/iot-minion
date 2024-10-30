@@ -611,12 +611,17 @@ void handle_DeleteFile(){
         const AsyncWebParameter* p = request->getParam(static_cast<size_t>(paramsNr-1));
         const char * midia = doc["midia"];
         String filename = String(midia);
+        bool ret = false;
         if(p->value() == "storage") {          
-          LittleFS.remove("/"+filename);
-          Serial.println("apagando arquivos do storage do ESP32:"+filename);
+          if(LittleFS.remove("/"+filename))
+            Serial.println("arquivo removido do storage do ESP32: "+filename);
+          else
+            Serial.println("Não foi possível remover o arquivo: "+filename+" do storage do ESP32!");
         } else if(p->value() == "sdcard"){
-          SD.remove(filename);
-          Serial.println("apagando arquivos do sdcard:"+filename);
+          if(SD.remove(filename))
+            Serial.println("arquivo removido do sdcard: "+filename);
+          else
+            Serial.println("Não foi possível remover o arquivo: "+filename+" do sdcard!");
         }
         doc.clear();
         request->send(HTTP_OK, getContentType(".txt"), REMOVED_FILE);
