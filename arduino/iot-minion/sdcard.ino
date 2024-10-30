@@ -54,7 +54,7 @@ bool loadSdCardMedias() {
     #ifdef DEBUG
       Serial.println(F("Listando arquivos armazenados no cartão SD"));
     #endif
-    File dir =  SD.open("/");
+    File dir =  SD.open("/", FILE_WRITE);
     listFilesSD(dir, 0);
     dir.close();
     return true;
@@ -127,7 +127,7 @@ String listFilesSD(File dir, int numTabs) {
         String filename = String(entry.name());
         int tam = filename.length();
         String ext =  filename.substring(tam-3, tam);
-        if (ext == "wav" || ext == "mp3") {
+        if (ext == "wav" || ext == "mp3") {       
           returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><img src='get-file?name="+ext+".webp' height='32' width='32'/></td><td align='center'><a onclick=deleteFile('sdcard','"+filename+"','"+API_MINION_TOKEN+"')><img src='get-file?name=delete.webp' height='32' width='32'/></a></td></tr>"; 
         }
         else  {

@@ -450,10 +450,9 @@ void handle_Volume(){
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
         String feedName="volume";
-        setVolumeAudio(doc["intensidade"]);
-        char buffer [MAX_PATH];
-        snprintf ( buffer, MAX_PATH, "%d", getVolumeAudio() );   
-        
+        int intensidade = doc["intensidade"];
+        setVolumeAudio(intensidade);
+        char buffer [MAX_PATH];              
         // publish
         client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
         snprintf ( buffer, MAX_PATH, "Intensidade do volume foi alterada para: %d", getVolumeAudio());  
@@ -721,7 +720,7 @@ void handle_ListSdcard() {
     String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
-      File entry =  SD.open("/");
+      File entry =  SD.open("/", FILE_WRITE);
       html.replace("API_MINION_TOKEN",API_MINION_TOKEN);
       html.replace("FILELIST",listFilesSD(entry, 0));
       html.replace("MESSAGE", "Mídias no cartão SD");
@@ -755,12 +754,12 @@ void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t 
         logmessage = "Upload Iniciado: " + String(filename);
         if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
           // open the file on first call and store the file handle in the request object
-          request->_tempFile = SD.open("/" + filename, "w");        
+          request->_tempFile = SD.open("/" + filename, FILE_WRITE);        
         } else {
           // check if folder photos exists, if not create the folder
           if(!SD.exists("/photos")) SD.mkdir("/photos");
           // open the file on first call and store the file handle in the request object
-          request->_tempFile = SD.open("/photos/" + filename, "w");          
+          request->_tempFile = SD.open("/photos/" + filename, FILE_WRITE);          
         }
         #ifdef DEBUG
           Serial.println(logmessage);

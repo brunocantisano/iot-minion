@@ -61,7 +61,6 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 * AsyncTCP
 * ESP32-audioI2S
 * DHT sensor library
-* ChatGPTuino
 
 #### Instalar as bibliotecas .zip (fazer download do código e importar no arduino IDE)
 

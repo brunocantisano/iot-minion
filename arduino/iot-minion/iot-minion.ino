@@ -26,7 +26,7 @@ const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 //Rest API
 #define HTTP_REST_PORT               80
 //Volume
-#define DEFAULT_VOLUME               70
+#define DEFAULT_VOLUME               20
 #define RelayHat                     13
 #define RelayEyes                    14
 #define RelayBlink                   15
@@ -408,7 +408,7 @@ bool playSpeech(const char * mensagem, AudioType tipo=AudioType::GOOGLE)
       break;   
     case AudioType::OPENAI:
       // Open IA Speech
-      audio.openai_speech(OPEN_IA_KEY, "tts-1", mensagem, "fable", "mp3", "55");
+      audio.openai_speech(OPEN_IA_KEY, "tts-1", mensagem, "fable", "mp3", "3"); //speed vai de 1.0 a 4.0
       break;
     default:
       Serial.println("Não encontrei o tipo de audio a ser executado!");
