@@ -74,11 +74,10 @@ void setMetric(String *p, String metric, String value) {
 }
 
 int getVolumeAudio() {
-  return preferences.getInt("volume");
+  return audio.getVolume();
 }
 
 void setVolumeAudio(int volume) { 
-  preferences.putInt("volume", volume);
   //Ajusta o volume de saída
   audio.setVolume(volume);
 }

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import axios from 'axios';
 import './styles.scss';
 
@@ -10,36 +10,33 @@ interface VolumeSliderMinionProps {
 }
 
 const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL + '/volume';
   const [volume, setVolume] = useState(50);
   const [muted, setMuted] = useState(false);
-  
-  async function callApi() {
-    const newMinionSpeechVolume: MinionSpeechVolume = {...props.minionSpeechVolume};
-    props.callbackFromParent(newMinionSpeechVolume);
-    console.log('👉 Resultado:', props.minionSpeechVolume.volume);
-    props.minionSpeechVolume.volume = volume;    
-    try {
-      const response = await axios.put(rota,
-        {
-          "intensidade": muted ? 0 : volume
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-        console.log('👉 Returned data:', response);
+  async function callVolumeApi() {
+    try {      
+      let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/volume':'';
+      if(rota !== ''){
+          const newMinionSpeechVolume: MinionSpeechVolume = {...props.minionSpeechVolume};
+          props.callbackFromParent(newMinionSpeechVolume);
+          // console.log('👉 Resultado:', props.minionSpeechVolume.volume);
+          props.minionSpeechVolume.volume = volume;    
+          const response = await axios.put(rota,
+          {
+            "intensidade": muted ? 0 : volume
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+          console.log('👉 Returned data:', response);
+        }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }
   }
-
-  useEffect(() => {
-    callApi();
-  },);
-
   return (
     <main>
       <section>
@@ -49,12 +46,17 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
           max={100}
           step={10}
           value={volume}
-          onChange={(event) => {
-            setVolume(event.target.valueAsNumber);
+          onChangeCapture={(event) => {
+            const target = event.target as HTMLInputElement;            
+            setVolume(parseInt(target.value));
+          }}
+          onChange={() => {                        
+            callVolumeApi();
           }}
         />
         <button onClick={(event) => {
-          setMuted((m) => !m);          
+          setMuted((m) => !m);
+          callVolumeApi();
         }}>
           {muted ? "mutar" : "desmutar"}
         </button>

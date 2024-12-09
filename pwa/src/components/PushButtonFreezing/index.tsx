@@ -10,15 +10,16 @@ interface SwitchButtonMinionProps {
 }
 
 const PushButtonFreezing: React.FC<SwitchButtonMinionProps> = (props: SwitchButtonMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL + '/sensor?type=shake';
+  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/sensor?type=shake':'';
 
   async function handleClick() {
-    props.minionBehavior.freezing = !props.minionBehavior.freezing;
-    const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
-    props.callbackFromParent(newMinionBehavior);
-    console.log('👉 Resultado:', props.minionBehavior.freezing);
     try {
-      const response = await axios.put(rota,
+      if(rota !== '') {
+        props.minionBehavior.freezing = !props.minionBehavior.freezing;
+        const newMinionBehavior: MinionBehavior = {...props.minionBehavior};
+        props.callbackFromParent(newMinionBehavior);
+        console.log('👉 Resultado:', props.minionBehavior.freezing);
+        const response = await axios.put(rota,
         {
           "status": props.minionBehavior.freezing ? 1 : 0
         },
@@ -28,7 +29,8 @@ const PushButtonFreezing: React.FC<SwitchButtonMinionProps> = (props: SwitchButt
             'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
           }
         });
-      console.log('👉 Returned data:', response);
+        console.log('👉 Returned data:', response);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }
