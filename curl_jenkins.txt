@@ -1,4 +1,4 @@
-curl --location --request POST 'minion/list' \
+curl --location --request POST 'minion.local/list' \
 --header 'Content-Type: application/json' \
 -d '{
     "name": "garagem-auth",

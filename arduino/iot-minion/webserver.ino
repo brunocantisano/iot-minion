@@ -83,7 +83,7 @@ void handle_Swagger(){
     String json = getContent(filename);
     if(json.length() > 0) {
       json.replace("0.0.0",version);
-      json.replace("HOST_MINION",String(HOST));
+      json.replace("HOST_MINION",String(HOST)+".local");
     } else {
       json = HTML_MISSING_DATA_UPLOAD;  
     }
@@ -96,7 +96,7 @@ void handle_SwaggerUI(){
     char filename[] = "/swaggerUI.html";
     String html = getContent(filename);    
     if(html.length() > 0) {
-      html.replace("HOST_MINION",String(HOST));
+      html.replace("HOST_MINION",String(HOST)+".local");
     } else {
       html = HTML_MISSING_DATA_UPLOAD;
     }
@@ -210,7 +210,7 @@ void handle_Lists(){
 }
 
 void handle_TemperatureAndHumidity(){
-  //http://minion/climate?type=celsius
+  //http://minion.local/climate?type=celsius
   server.on("/climate", HTTP_GET, [](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       int paramsNr = request->params();
@@ -798,6 +798,34 @@ void handle_UploadSdCard() {
       }, handleUploadSdcard);
 }
 
+void handle_InsertJigSaw(){
+  server.on("/jigsaw", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+    if(check_authorization_header(request)) {
+      int headers = request->headers();
+      String host = "Host não encontrado";
+      for(int i=0;i<headers;i++){
+        const AsyncWebHeader* h = request->getHeader(i);
+        if(h->name() == "Host") host = h->value();
+          #ifdef DEBUG
+            Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+          #endif
+      }
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);
+      String JSONmessageBody = getData(data, len);
+      DeserializationError error = deserializeJson(doc, JSONmessageBody);
+      if(error) {
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
+      } else {
+        const char * mensagem = doc["mensagem"];          
+        request->send(HTTP_OK, getContentType(".txt"), "Métodonão implementado");
+      }
+    } else {
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
+    }
+  });
+}
+
 void startWebServer() {
   /* Webserver para se comunicar via browser com ESP32  */
   Serial.println(WEB_SERVER_CONFIG);
@@ -839,6 +867,7 @@ void startWebServer() {
   handle_UploadStorage();
   handle_ListSdcard();
   handle_UploadSdCard();
+  handle_InsertJigSaw();
   // ------------------------------------ //
   // se não se enquadrar em nenhuma das rotas
   handle_OnError();
@@ -912,7 +941,7 @@ void handle_WifiInfo(){
       }
     }
     preferences.end();
-    request->send(HTTP_OK, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST));    
+    request->send(HTTP_OK, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local"); 
     ESP.restart();
   });
 }

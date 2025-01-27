@@ -550,7 +550,7 @@ void setup()
     Serial.println("mDNS configurado e inicializado;");    
     if (!MDNS.begin(HOST)) 
     { 
-        //http://minion
+        //http://minion.local
         #ifdef DEBUG
           Serial.println("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s...");
         #endif
@@ -660,7 +660,7 @@ void reconnect() {
   // Loop até que esteja reconectado
   while (!client.connected()) {
     Serial.println("Tentando conexão com o servidor MQTT...");
-    String client_id = String(HOST)+"-"+String(WiFi.macAddress());
+    String client_id = String(HOST)+".local-"+String(WiFi.macAddress());
     #ifdef DEBUG
       Serial.printf("O cliente %s conecta ao mqtt broker publico\n", client_id.c_str());
     #endif      

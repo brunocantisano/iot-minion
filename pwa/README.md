@@ -28,7 +28,7 @@ git secrets --register-gcp
 3. Environment Variables
 
 ```
-export REACT_APP_URL="http://minion"
+export REACT_APP_URL="http://minion.local"
 ```
 
 ```

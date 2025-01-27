@@ -51,16 +51,13 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 * Adafruit SleepyDog Library
 * Adafruit Unified Sensor
 * ArduinoJson
-* AsyncElegantOTA
 * DHT sensor library
 * PubSubClient
-* WiFi101
 * LittleFS_esp32
 * Preferences
 * ESPAsyncWebServer
 * AsyncTCP
 * ESP32-audioI2S
-* DHT sensor library
 
 #### Instalar as bibliotecas .zip (fazer download do código e importar no arduino IDE)
 
@@ -172,7 +169,7 @@ sudo apt install python-is-python3
 [Procedimento](https://www.ibm.com/docs/pt-br/api-connect/5.0.x?topic=profiles-generating-self-signed-certificate-using-openssl)
 Para gerar um certificado SSL autoassinado usando o OpenSSL, conclua as etapas a seguir:
 
-1) Anote o Nome comum (CN) do Certificado SSL. O CN é o nome completo do sistema que usa o certificado. Se você estiver usando DNS dinâmico, seu CN deverá ter um curinga, por exemplo: *.api.com. Caso contrário, use o nome do host ou o endereço IP configurado no Cluster de gateway (por exemplo: `minion`).
+1) Anote o Nome comum (CN) do Certificado SSL. O CN é o nome completo do sistema que usa o certificado. Se você estiver usando DNS dinâmico, seu CN deverá ter um curinga, por exemplo: *.api.com. Caso contrário, use o nome do host ou o endereço IP configurado no Cluster de gateway (por exemplo: `minion.local`).
 
 2) Execute o comando OpenSSL a seguir para gerar sua chave privada e seu certificado público. Responda às perguntas e insira o Nome comum quando solicitado.
 
@@ -183,7 +180,7 @@ openssl genrsa -out key.pem 1024
 3) Revise o certificado criado:
 
 ```sh
-openssl req -x509 -out cert.pem -key key.pem -new -sha256 -subj /CN=minion/O=acme/C=BR/emailAddress=bruno.cantisano@gmail.com -addext "keyUsage=digitalSignature,keyEncipherment" -addext extendedKeyUsage=serverAuth
+openssl req -x509 -out cert.pem -key key.pem -new -sha256 -subj /CN=minion.local/O=acme/C=BR/emailAddress=bruno.cantisano@gmail.com -addext "keyUsage=digitalSignature,keyEncipherment" -addext extendedKeyUsage=serverAuth
 ```
 
 4) Combine sua chave e o certificado em um pacote configurável PKCS#12 (P12):
@@ -232,9 +229,9 @@ npm run dev
 
 ### Web Server
 
- * [Web Server](http://minion)
- * [Swagger](http://minion/swaggerUI)
- * [Swagger API](http://minion/swagger.json)
+ * [Web Server](http://minion.local)
+ * [Swagger](http://minion.local/swaggerUI)
+ * [Swagger API](http://minion.local/swagger.json)
  
 <a href="https://brunocantisano.github.io/minion/index.html#page/22#" target="_blank"><img src="../others/imgs/webserver.png" /></a>
 
