@@ -3,22 +3,21 @@
 #include "ListaEncadeada.h"
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
-#include <WiFi.h>
 #include <WiFiClient.h>
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <SPI.h>
 #include <SD.h>
 #include <Audio.h>
+#include <HTTPClient.h>
 
 #define FILESYSTEM "LittleFS"
 #define CONFIG_LITTLEFS_FOR_IDF_3_2
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
-#include <LITTLEFS.h> 
+#include <LittleFS.h>
 
 const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 
@@ -27,7 +26,7 @@ const char LITTLEFS_ERROR[] PROGMEM = "Erro ocorreu ao tentar montar LittleFS";
 //Rest API
 #define HTTP_REST_PORT               80
 //Volume
-#define DEFAULT_VOLUME               70
+#define DEFAULT_VOLUME               20
 #define RelayHat                     13
 #define RelayEyes                    14
 #define RelayBlink                   15
@@ -73,6 +72,12 @@ String strHeatIndexCelsius;
 /* versão do firmware */
 const char version[] PROGMEM = API_VERSION;
 
+enum AudioType {
+  GOOGLE, // 0
+  MARYTTS, // 1
+  OPENAI,
+};
+
 // Lista de sensores
 ListaEncadeada<ArduinoSensorPort*> sensorListaEncadeada = ListaEncadeada<ArduinoSensorPort*>();
 
@@ -84,29 +89,28 @@ ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-
+// variavel para checar se já conectou na rede
+bool rede = false;
 // Inicia sensor DHT
 DHT dht(TemperatureHumidity, DHT11);
 
 AsyncWebServer server(HTTP_REST_PORT);               // initialise webserver
 
 IPAddress localIP;
-//IPAddress localIP(192, 168, 1, 200); // hardcoded
-
 // Set your Gateway IP address
 IPAddress localGateway;
-//IPAddress localGateway(192, 168, 1, 1); //hardcoded
 IPAddress subnet(255, 255, 0, 0);
 
 // Timer variables
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
+const char *chatGPTUrl = "https://api.openai.com/v1/chat/completions";
 
 String getContent(const char* filename) {
   String payload="";  
-  bool exists = LITTLEFS.exists(filename);
+  bool exists = LittleFS.exists(filename);
   if(exists){
-    File file = LITTLEFS.open(filename, "r"); 
+    File file = LittleFS.open(filename, "r"); 
     String mensagem = "Falhou para abrir para leitura";
     if(!file){    
       #ifdef DEBUG
@@ -135,9 +139,15 @@ String getContentType(String filename) { // convert the file extension to the MI
   return "text/plain";
 }
 
-bool writeContent(String filename, String content){
-  File file = LITTLEFS.open(filename, "w");
-  return writeContent(&file, content);
+bool getAllowedStorageFiles(String filename) {  
+  if (filename.endsWith(".crt")) return true;
+  return false;
+}
+
+bool getAllowedSdCardFiles(String filename) {  
+  if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".bmp") || filename.endsWith(".gif")) return true;
+  else if (filename.endsWith(".wav") || filename.endsWith(".mp3")) return true;
+  return false;
 }
 
 bool writeContent(File * file, String content){
@@ -160,6 +170,13 @@ bool writeContent(File * file, String content){
   return true; 
 }
 
+bool writeContentFile(String filename, String content){
+  File file = LittleFS.open(filename, "w");
+  return writeContent(&file, content);
+}
+
+
+
 char* substr(char* arr, int begin, int len)
 {
     char* res = new char[len + 1];
@@ -168,6 +185,7 @@ char* substr(char* arr, int begin, int len)
     res[len] = 0;
     return res;
 }
+
 String IpAddress2String(const IPAddress& ipAddress)
 {
     return (String(ipAddress[0]) + String(".") +
@@ -178,17 +196,6 @@ String IpAddress2String(const IPAddress& ipAddress)
 
 void setClock() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-}
-
-// match - search for regular expression anywhere in text
-int match(char* regexp, char* text) {
-  if(regexp[0] == '^') {
-    return matchHere(++regexp, text);
-  }
-  do{
-    if(matchHere(regexp, text)) {return 1;}
-  }while(*text++ != '\0');
-    return 0;
 }
 
 // matchHere - search for regex at beginning of text
@@ -206,6 +213,17 @@ int matchHere(char* regexp, char* text) {
   return 0;
 }
 
+// match - search for regular expression anywhere in text
+int match(char* regexp, char* text) {
+  if(regexp[0] == '^') {
+    return matchHere(++regexp, text);
+  }
+  do{
+    if(matchHere(regexp, text)) {return 1;}
+  }while(*text++ != '\0');
+    return 0;
+}
+
 // matchStar - search for c*regexp at beginning of text
 int matchStar(int c, char* regexp, char* text) {
   do {
@@ -221,21 +239,6 @@ String humanReadableSize(const size_t bytes) {
   else if (bytes < (1024 * 1024)) return String(bytes / 1024.0) + " KB";
   else if (bytes < (1024 * 1024 * 1024)) return String(bytes / 1024.0 / 1024.0) + " MB";
   else return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
-}
-
-String getDataHora() {
-    // Busca tempo no NTP. Padrao de data: ISO-8601
-    time_t nowSecs = time(nullptr);
-    struct tm timeinfo;
-    char buffer[80];
-    while (nowSecs < 8 * 3600 * 2) {
-      delay(500);
-      nowSecs = time(nullptr);
-    }
-    gmtime_r(&nowSecs, &timeinfo);
-    // ISO 8601: 2021-10-04T14:12:26+00:00
-    strftime (buffer,80,"%FT%T%z",&timeinfo);
-    return String(buffer);
 }
 
 int searchList(String name, String language) {
@@ -256,17 +259,18 @@ String getData(uint8_t *data, size_t len) {
     //Serial.write(data[i]);
     raw[i] = data[i];
   }
+  raw[len]=0x00;
   return String(raw);
 }
 
-bool addSensor(byte id, byte gpio, byte status, char* name) {
+bool addSensor(int id, int gpio, int status, String name) {
   ArduinoSensorPort *arduinoSensorPort = new ArduinoSensorPort(); 
+  pinMode(gpio, OUTPUT);
+  
   arduinoSensorPort->id = id;
   arduinoSensorPort->gpio = gpio;
   arduinoSensorPort->status = status;
-  arduinoSensorPort->name = name;
-  pinMode(gpio, OUTPUT);
-
+  arduinoSensorPort->name = name;  
   // Adiciona sensor na lista
   sensorListaEncadeada.add(arduinoSensorPort);
   return true;
@@ -287,7 +291,7 @@ bool loadSensorList()
   if(!ret) return false;
 }
 
-bool readBodySensorData(byte status, byte gpio) {
+bool readBodySensorData(uint8_t status, uint8_t gpio) {
   #ifdef DEBUG
     Serial.println(status);
   #endif
@@ -299,7 +303,7 @@ bool readBodySensorData(byte status, byte gpio) {
   return false;
 }
 
-ArduinoSensorPort * searchListSensor(byte gpio) {
+ArduinoSensorPort * searchListSensor(uint8_t gpio) {
   ArduinoSensorPort *arduinoSensorPort;
   for(int i = 0; i < sensorListaEncadeada.size(); i++){
     // Obtem a aplicação da lista
@@ -311,7 +315,7 @@ ArduinoSensorPort * searchListSensor(byte gpio) {
   return NULL;
 }
 
-String readSensor(byte gpio){
+String readSensor(uint8_t gpio){
   String data="";
   ArduinoSensorPort *arduinoSensorPort = searchListSensor(gpio);  
   if(arduinoSensorPort != NULL) {
@@ -321,18 +325,19 @@ String readSensor(byte gpio){
   return data;
 }
 
-String readSensorStatus(byte gpio){
+String readSensorStatus(uint8_t gpio){
   return String(digitalRead(gpio));
 }
 
 void addApplication(String name, String language, String description) {
-  Application *app = new Application();
-  app->name = name;
-  app->language = language;
-  app->description = description;
-
-  // Adiciona a aplicação na lista
-  applicationListaEncadeada.add(app);
+  if(searchList(name, language)== -1) {
+    Application *app = new Application();
+    app->name = name;
+    app->language = language;
+    app->description = description;
+    // Adiciona a aplicação na lista
+    applicationListaEncadeada.add(app);
+  }
 }
 
 void addMedia(String name, int size, String lastModified) {
@@ -345,7 +350,7 @@ void addMedia(String name, int size, String lastModified) {
   mediaListaEncadeada.add(media);
 }
 
-void saveApplicationList() {
+String saveApplicationList() {
   Application *app;
   String JSONmessage;
   for(int i = 0; i < applicationListaEncadeada.size(); i++){
@@ -355,9 +360,8 @@ void saveApplicationList() {
   }
   JSONmessage = '['+JSONmessage.substring(0, JSONmessage.length()-1)+']';
   // Grava no storage
-  writeContent("/lista.json",JSONmessage); 
-  // Grava no adafruit
-  client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+  writeContentFile("/lista.json",JSONmessage); 
+  return JSONmessage;
 }
 
 int loadApplicationList() {
@@ -387,24 +391,33 @@ void loadI2S() {
   SPI.begin(SCK, MISO, MOSI);
   SPI.setFrequency(1000000);
   SD.begin(SD_CS);
-
-  //Ajusta os pinos de conexão I2S
-  audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-
-  //Ajusta o volume de saída.
-  audio.setVolume(DEFAULT_VOLUME); // 0...21
 }
 
-void playSpeech(const char * mensagem)
+bool playSpeech(const char * mensagem, AudioType tipo=AudioType::GOOGLE)
 {
-  //Para executar uma síntese de voz
-  audio.connecttospeech(mensagem, "pt");
-  // voice speed: 74%
-  // pitch: 52%
-  // audio.connecttomarytts(mensagem, "it", "istc-lucia-hsmm");
+  switch(tipo) {
+    case AudioType::GOOGLE:
+      //Para executar uma síntese de voz
+      audio.connecttospeech(mensagem, "pt");
+      break;
+    case AudioType::MARYTTS:
+      // voice speed: 74%
+      // pitch: 52%
+      //audio.connecttomarytts(mensagem, "it", "istc-lucia-hsmm");
+      Serial.println("Foi removido o uso da Marytts no código recente");
+      break;   
+    case AudioType::OPENAI:
+      // Open IA Speech
+      audio.openai_speech(OPEN_IA_KEY, "tts-1", mensagem, "fable", "mp3", "3"); //speed vai de 1.0 a 4.0
+      break;
+    default:
+      Serial.println("Não encontrei o tipo de audio a ser executado!");
+      return false;
+  }
+  return true;
 }
 
-void playMidia(const char * midia)
+bool playMidia(const char * midia)
 {
   char filenameMidia[strlen(midia)+1];
   filenameMidia[0]='/';
@@ -414,7 +427,12 @@ void playMidia(const char * midia)
     Serial.printf("Arquivo a tocar: %s\n",filenameMidia);
   #endif  
   // exemplo: "/1.mp3"
-  audio.connecttoSD(filenameMidia);
+  bool exists = SD.exists(filenameMidia);
+  if(exists){
+    audio.connecttoFS(SD, filenameMidia);
+    return true;
+  }
+  return false;
 }
 
 void playRemoteMidia(const char * url)
@@ -432,7 +450,7 @@ bool initWiFi() {
   String gateway = preferences.getString("gateway");
 
   Serial.println(ssid);
-  Serial.println(pass);
+  /*Serial.println(pass);*/
   Serial.println(ip);
   Serial.println(gateway);
   
@@ -441,17 +459,19 @@ bool initWiFi() {
     return false;
   }
 
-  WiFi.mode(WIFI_STA);
-  localIP.fromString(ip.c_str());
-  localGateway.fromString(gateway.c_str());
-
-  if (!WiFi.config(localIP, localGateway, subnet)){
-    Serial.println("STA Falhou para configurar");
-    return false;
-  }
   WiFi.begin(ssid.c_str(), pass.c_str());
-  Serial.println("Conectando ao WiFi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Conectando ao WiFi...");
+  }
+  ip = String(IpAddress2String(WiFi.localIP()));
+  Serial.println("Conectado ao WiFi");  
+  Serial.println(ip);
 
+  preferences.putString("ssid", ssid.c_str());
+  preferences.putString("pass", pass.c_str());
+  preferences.putString("ip", ip.c_str());
+  preferences.putString("gateway", gateway.c_str());
+ 
   unsigned long currentMillis = millis();
   previousMillis = currentMillis;
 
@@ -461,34 +481,27 @@ bool initWiFi() {
       Serial.println("Falhou para conectar.");
       return false;
     }
-  }
-  Serial.println(WiFi.localIP());
+  }  
   return true;
 }
 
-void setup(void)
+void setup()
 {
   Serial.begin(SERIAL_PORT);
-
+  
+  preferences.begin("store",false);
+   
   // métricas para prometheus
   setupStorage();
   incrementBootCounter();
   //
-  
+
   #ifdef DEBUG
     Serial.println(F("modo debug"));
   #else
     Serial.println(F("modo produção"));
   #endif
 
-  // carrega sensores
-  bool load = loadSensorList();
-  if(!load) {
-    #ifdef DEBUG
-      Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
-    #endif
-  }
-        
   // DH11 inicia temperatura
   dht.begin();
 
@@ -502,10 +515,18 @@ void setup(void)
     Serial.println("Versão: "+String(version));
   #endif
 
-  if(!LITTLEFS.begin(true)){
+  if(!LittleFS.begin(true)){
     #ifdef DEBUG
       Serial.println(LITTLEFS_ERROR);
     #endif      
+  }
+
+  // carrega sensores  
+  bool load = loadSensorList();
+  if(!load) {
+    #ifdef DEBUG
+      Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
+    #endif
   }
 
   if(initWiFi()) {
@@ -524,26 +545,30 @@ void setup(void)
       Serial.print("        DNS 3: "); Serial.println(WiFi.dnsIP(2));   
     #endif
     startWebServer();
-    // exibindo rota /update para atualização de firmware e filesystem
-    AsyncElegantOTA.begin(&server, USER_FIRMWARE, PASS_FIRMWARE);
     setClock();
     /* Usa MDNS para resolver o DNS */
     Serial.println("mDNS configurado e inicializado;");    
     if (!MDNS.begin(HOST)) 
     { 
-        //http://temperatura.local        
+        //http://minion.local
         #ifdef DEBUG
           Serial.println("Erro ao configurar mDNS. O ESP32 vai reiniciar em 1s...");
         #endif
-        delay(1000);
         ESP.restart();        
     }
     // carrega lista de arquivos de media no SDCARD
     if(loadSdCardMedias()) loadI2S(); //Configura e inicia o SPI para conexão com o cartão SD
-        
+
+    //Ajusta os pinos de conexão I2S para saída de áudio
+    audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+
+    //Ajusta o volume de saída.
+    audio.setVolume(DEFAULT_VOLUME); // 0...21
+  
+    rede=true;
     //connecting to a mqtt broker
     client.setServer(MQTT_BROKER, MQTT_PORT);
-    client.setCallback(callback);
+    client.setCallback(callback);  
     Serial.println(F("Minion funcionando!"));
   }
   else {
@@ -556,10 +581,11 @@ void setup(void)
     Serial.println(IP);     
     startWifiManagerServer();    
   }
+  preferences.end();
 }
 
-void callback(char *topic, byte *payload, unsigned int length) {
-  byte gpio;
+void callback(char *topic, uint8_t *payload, unsigned int length) {
+  uint8_t gpio;
   String message;
   
   #ifdef DEBUG
@@ -589,7 +615,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/list")).c_str()) {
     DynamicJsonDocument doc(MAX_STRING_LENGTH);
     // ler do feed list no adafruit
-    if(message == "") {    
+ if(message == "") {    
       #ifdef DEBUG
         Serial.println(F("Lista de aplicações vazia"));
       #endif
@@ -607,12 +633,14 @@ void callback(char *topic, byte *payload, unsigned int length) {
       }
     }
   }
+  /*
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/play")).c_str()) {
     playMidia(message.c_str()); 
   }
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/talk")).c_str()) {
     playSpeech(message.c_str());
   }
+  */
   if(String(topic) == (String(MQTT_USERNAME)+String("/feeds/volume")).c_str()) {
     setVolumeAudio(atoi(message.c_str()));
   }
@@ -620,7 +648,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
     String(topic) == (String(MQTT_USERNAME)+String("/feeds/humidity")).c_str()) {
     #ifdef DEBUG
       // busca temperatura e umidade
-    Serial.println("busca temperatura e umidade")
+    Serial.println("busca temperatura e umidade");
     #endif
   }
   #ifdef DEBUG
@@ -654,29 +682,28 @@ void reconnect() {
       #ifdef DEBUG
         Serial.printf("Falhou com o estado %d\nNao foi possivel conectar com o broker mqtt.\nPor favor, verifique as credenciais e instale uma nova versão de firmware.\nTentando novamente em 5 segundos.", client.state());
       #endif
-      delay(5000);
     }
   }
 }
 
-void loop()
-{ 
+void loop() 
+{  
+  unsigned long currentMillis = millis();
   if (!client.connected()) {
-    reconnect();
+    // tento conectar no MQTT somente se já tiver rede
+    if(rede) reconnect();
   }
   client.loop();
   //Executa o loop interno da biblioteca audio
   audio.loop(); 
 
   // Report every 1 minuto.
-  if(timeSinceLastRead > 60000) {
+  if (currentMillis - previousMillis >= 60000) {
+    previousMillis = currentMillis;
     // Reading temperature or humidity takes about 250 milliseconds!
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-    getTemperatureHumidity();
-    timeSinceLastRead = 0;
+    if(rede) getTemperatureHumidity();
   }
-  delay(100);
-  timeSinceLastRead += 100;  
 }
 
 #ifdef __cplusplus

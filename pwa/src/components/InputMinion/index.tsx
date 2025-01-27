@@ -12,25 +12,27 @@ interface InputButtonMinionProps {
 }
 
 const InputMinion: React.FC<InputButtonMinionProps> = (props: InputButtonMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL + '/talk';
+  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/talk':'';
   
   async function handleClick() {
-    const newMinionTalk: MinionTalk = {...props.minionTalk};
-    props.callbackFromParent(newMinionTalk);
-    console.log('👉 Resultado:', props.minionTalk.message);
     try {
-      const response = await axios.post(rota,
-        {
-          "mensagem": props.minionTalk.message
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      console.log('👉 Returned data:', response);
+      if(rota !== '') {
+        const newMinionTalk: MinionTalk = {...props.minionTalk};
+        props.callbackFromParent(newMinionTalk);
+        console.log('👉 Resultado:', props.minionTalk.message);
+        const response = await axios.post(rota ,
+          {
+            "mensagem": props.minionTalk.message
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+          console.log('👉 Returned data:', response);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }
@@ -42,7 +44,7 @@ const InputMinion: React.FC<InputButtonMinionProps> = (props: InputButtonMinionP
   return (
     <div id="input-minion">
       <form noValidate autoComplete="off">
-        <TextField onChange={updateInputValue} className="phrase" id="standard-basic" label="Insira a sua frase" />
+        <TextField onChange={updateInputValue} className="phrase" id="standard-basic" label="Insira uma mensagem para o minion falar" />
         <IconButton onClick={handleClick} aria-label="send">
           <SendIcon></SendIcon>
         </IconButton>

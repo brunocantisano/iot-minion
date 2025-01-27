@@ -22,9 +22,8 @@ jobs:
         - arduino/iot-minion
     env:
       ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: true
+      CALLER_ORIGIN: ${{secrets.CALLER_ORIGIN}}
       API_MINION_TOKEN: ${{secrets.API_MINION_TOKEN}}
-      USER_FIRMWARE: ${{secrets.USER_FIRMWARE}}
-      PASS_FIRMWARE: ${{secrets.PASS_FIRMWARE}}
       AIO_USERNAME: ${{secrets.AIO_USERNAME}}
       AIO_KEY: ${{secrets.AIO_KEY}}
       App_Packages_Archive: iot-minion
@@ -60,7 +59,7 @@ jobs:
         pip install pyserial       
 
     - name: Install Arduino platforms and libraries
-      run: |   
+      run: |
         arduino-cli core update-index
         arduino-cli core update-index --additional-urls "https://dl.espressif.com/dl/package_esp32_index.json"
         arduino-cli core install "esp32:esp32" --additional-urls "https://dl.espressif.com/dl/package_esp32_index.json" 
@@ -71,31 +70,15 @@ jobs:
         arduino-cli lib install "Adafruit SleepyDog Library"
         arduino-cli lib install "Adafruit Unified Sensor"
         arduino-cli lib install "ArduinoJson"
-        arduino-cli lib install "AsyncElegantOTA"
-        arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncWebServer.git
+        arduino-cli lib install "ESP_Async_WebServer"
         arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
         arduino-cli lib install --git-url https://github.com/schreibfaul1/ESP32-audioI2S.git
         arduino-cli lib install "DHT sensor library"
-        arduino-cli lib install "NTPClient"
         arduino-cli lib install "PubSubClient"
         arduino-cli lib install "WiFi101"
         arduino-cli lib install "LittleFS_esp32"
         arduino-cli lib install "Preferences"        
         arduino-cli config dump
-
-    - name: Change Firmware Username
-      uses: jacobtomlinson/gha-find-replace@master
-      with:
-        find: <USER_FIRMWARE>
-        replace: ${{ env.USER_FIRMWARE }}
-        include: "${{ env.App_Packages_Archive }}/Credentials.h"
-
-    - name: Change Firmware Password
-      uses: jacobtomlinson/gha-find-replace@master
-      with:
-        find: <PASS_FIRMWARE>
-        replace: ${{ env.PASS_FIRMWARE }}
-        include: "${{ env.App_Packages_Archive }}/Credentials.h"
 
     - name: Change Adafruit Username
       uses: jacobtomlinson/gha-find-replace@master
@@ -116,6 +99,13 @@ jobs:
       with:
         find: <API_MINION_TOKEN>
         replace: ${{ env.API_MINION_TOKEN }}
+        include: "${{ env.App_Packages_Archive }}/Credentials.h"
+
+    - name: Change caller Origin allowed
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: <CALLER_ORIGIN>
+        replace: ${{ env.CALLER_ORIGIN }}
         include: "${{ env.App_Packages_Archive }}/Credentials.h"
 
     - name: Change firmware version

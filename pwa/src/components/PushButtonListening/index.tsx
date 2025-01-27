@@ -9,7 +9,7 @@ interface SwitchButtonMinionProps {
 }
 
 const PushButtonListening: React.FC<SwitchButtonMinionProps> = (props: SwitchButtonMinionProps) => {
-  let rota: string = process.env.REACT_APP_URL + '/playRemote';
+  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/playRemote':'';
   const [midias] = useState([
     "http://mp3.ffh.de/radioffh/hqlivestream.mp3",
     "http://stream.friskyradio.com:9000/frisky_mp3_h",
@@ -30,21 +30,23 @@ const PushButtonListening: React.FC<SwitchButtonMinionProps> = (props: SwitchBut
 
   async function handleClick() {
     try {
-      props.minionBehavior.listening = !props.minionBehavior.listening;
-      // escolhendo um audio aleatoriamente
-      let random = Math.floor(Math.random() * midias.length);
-      const response = await axios.post(rota,
-        {
-          "url": midias[random]
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      console.log('👉 Returned data:', response);
+      if(rota !== ''){
+        props.minionBehavior.listening = !props.minionBehavior.listening;
+        // escolhendo um audio aleatoriamente
+        let random = Math.floor(Math.random() * midias.length);
+        const response = await axios.post(rota,
+          {
+            "url": midias[random]
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+        console.log('👉 Returned data:', response);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }

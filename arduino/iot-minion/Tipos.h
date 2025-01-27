@@ -18,9 +18,9 @@ class Media {
 /******************* lista de sensores ****************/
 class ArduinoSensorPort {
   public:
-    char* name;
-    byte id;
-    byte gpio;
-    byte status; // 1-TRUE / 0-FALSE
+    String name;
+    int id;
+    int gpio;
+    int status; // 1-TRUE / 0-FALSE
 };
 /******************************************************/

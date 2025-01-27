@@ -1,9 +1,14 @@
 const char WRONG_CLIMATE[] PROGMEM = "Erro desconhecido ao buscar temperatura e umidade";
 const char WRONG_AUTHORIZATION[] PROGMEM = "Authorization token errado";
+const char NOT_AUTHORIZED_EXTENTIONS[] PROGMEM = "Extensão de arquivo inválida para upload";
+const char SDCARD_PHOTO_WRITTEN[] PROGMEM = "Imagem salva no cartão SD com sucesso";
 const char WRONG_STATUS[] PROGMEM = "Erro ao atualizar o status";
 const char PLAYED[] PROGMEM = "Arquivo foi colocado para tocar.";
+const char NOT_PLAYED[] PROGMEM = "Não foi possível tocar o áudio.";
 const char EXISTING_ITEM[] PROGMEM = "Item já existente na lista";
 const char REMOVED_ITEM[] PROGMEM = "Item removido da lista";
+const char REMOVED_FILE[] PROGMEM = "Arquivo removido";
+const char UPLOADED_FILE[] PROGMEM = "Arquivo criado com sucesso";
 const char NOT_FOUND_ITEM[] PROGMEM = "Item não encontrado na lista";
 const char NOT_FOUND_ROUTE[] PROGMEM = "Rota nao encontrada";
 const char PARSER_ERROR[] PROGMEM = "{\"message\": \"Erro ao fazer parser do json\"}";
@@ -23,37 +28,21 @@ void handle_OnError(){
     if(request->method() == HTTP_OPTIONS) {
       request->send(HTTP_NO_CONTENT);
     }
-      char filename[] = "/error.html";
-      request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
+    char filename[] = "/error.html";
+    request->send(HTTP_NOT_FOUND, getContentType(filename), getContent(filename)); // otherwise, respond with a 404 (Not Found) error
   });
 }
 
-void handle_MinionLogo(){
-  server.on("/minion-logo", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    char filename[] = "/minion-logo.png";
-    request->send(LITTLEFS, filename, getContentType(filename));
-  });
-}
-
-void handle_MinionList(){
-  server.on("/minion-list", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    char filename[] = "/minion-list.png";
-    request->send(LITTLEFS, filename, getContentType(filename));
-  });
-}
-  
-  
-void handle_MinionIco(){
-  server.on("/minion-ico", HTTP_GET, [](AsyncWebServerRequest *request) {
-    char filename[] = "/minion-ico.ico";
-    request->send(LITTLEFS, filename, getContentType(filename));
-  });
-}
-
-void handle_Style(){
-  server.on("/style", HTTP_GET, [](AsyncWebServerRequest *request) {    
-    char filename[] = "/style.css";
-    request->send(LITTLEFS, filename, getContentType(filename));
+void handle_GetFile(){
+  server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request) {
+    //"/get-file?name=delete.png"
+    int paramsNr = request->params();
+    const AsyncWebParameter* p = request->getParam(paramsNr-1);    
+    char filename[MAX_PATH];
+    memset(filename, 0x00, MAX_PATH);
+    strcat(filename, "/");
+    strcat(filename, p->value().c_str());
+    request->send(LittleFS, filename, getContentType(filename));
   });
 }
 
@@ -117,8 +106,19 @@ void handle_SwaggerUI(){
 
 void handle_Health(){
   server.on("/health", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String mqttConnected = client.connected()?"true":"false";
-    String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"date\": \""+String(getDataHora())+"\",\"url\": \"/health\",\"mqtt\": \""+mqttConnected+"\",\"version\": \""+version+"\",\"ip\": \""+String(IpAddress2String(WiFi.localIP()))+"\"}";
+    String mqttConnected = "false";
+    if(client.connected()) mqttConnected = "true";
+    String ip = String(IpAddress2String(WiFi.localIP()));
+    // Retorna o número de milissegundos passados desde que a placa Arduino começou a executar o programa atual. 
+    // Esse número irá sofrer overflow (chegar ao maior número possível e então voltar pra zero), após aproximadamente 50 dias.
+    time_t nowSecs = millis()/1000;
+    struct tm timeinfo;
+    char time_converted[80];
+    gmtime_r(&nowSecs, &timeinfo);
+    // HH:MM:SS
+    strftime (time_converted,80,"%H:%M:%S",&timeinfo);
+    String time_working = time_converted;
+    String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"time_working\": \""+time_working+"\",\"url\": \"/health\",\"mqtt\": \""+mqttConnected+"\",\"version\": \""+version+"\",\"ip\": \""+ip+"\"}";
     request->send(HTTP_OK, getContentType(".json"), JSONmessage);
   });
 }
@@ -174,7 +174,7 @@ void handle_Sensors() {
       int relayPin = RelayEyes;
       int paramsNr = request->params();
       for(int i=0;i<paramsNr;i++){
-        AsyncWebParameter* p = request->getParam(i);
+        const AsyncWebParameter* p = request->getParam(i);
         if (strcmp("hat", p->value().c_str())==0){
           relayPin = RelayHat;
         }
@@ -215,7 +215,7 @@ void handle_TemperatureAndHumidity(){
     if(check_authorization_header(request)) {
       int paramsNr = request->params();
       for(int i=0;i<paramsNr;i++){
-        AsyncWebParameter* p = request->getParam(i);
+        const AsyncWebParameter* p = request->getParam(i);
         if(strcmp("celsius", p->value().c_str())==0){
           request->send(HTTP_OK, getContentType(".json"), treatTemperatureAndHumidity("celsius", strCelsius));
         } else if (strcmp("fahrenheit", p->value().c_str())==0){
@@ -244,7 +244,16 @@ String treatTemperatureAndHumidity(String field, String value)
 void handle_InsertTalk(){
   server.on("/talk", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if(check_authorization_header(request)) {      
+    if(check_authorization_header(request)) {
+      int headers = request->headers();
+      String host = "Host não encontrado";
+      for(int i=0;i<headers;i++){
+        const AsyncWebHeader* h = request->getHeader(i);
+        if(h->name() == "Host") host = h->value();
+          #ifdef DEBUG
+            Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+          #endif
+      }
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
@@ -254,14 +263,104 @@ void handle_InsertTalk(){
           const char * mensagem = doc["mensagem"];
           #ifdef DEBUG
             Serial.printf("Mensagem: %s\n",mensagem);
-          #endif        
+          #endif
           String feedName="talk";
+          host +="->"+String(mensagem);
+          
           // publish
-          client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), mensagem);        
-          // toca o audio
-          playSpeech(mensagem);
+          client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), host.c_str());
           doc.clear();
-          request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+          // toca o audio
+          if(playSpeech(mensagem)) {
+            request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+          } else {
+            request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_PLAYED);
+          }
+      }
+    } else {
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
+    }
+  });
+}
+
+String enviarMensagemParaChatGPT(String mensagem) {
+  String resposta = "";
+  HTTPClient http;
+  http.begin(chatGPTUrl);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", "Bearer " + String(OPEN_IA_KEY));
+
+  String payload = "{\"model\": \"gpt-3.5-turbo\",\"messages\": [{\"role\": \"user\", \"content\": \""+mensagem+"\"}],\"temperature\": 0.7,\"max_tokens\": 100, \"top_p\": 0.9,\"frequency_penalty\": 0.5,\"presence_penalty\": 0.9}";
+  int httpCode = http.POST(payload);
+
+  if (httpCode > 0) {
+    Serial.printf("[HTTP] POST para o ChatGPT retornou código: %d\n", httpCode);
+
+    if (httpCode == HTTP_CODE_OK) {
+      resposta = http.getString();
+      //Serial.println("Resposta do ChatGPT: " + resposta);
+
+      // Parse da resposta JSON
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);  // Ajuste o tamanho conforme necessário
+      DeserializationError error = deserializeJson(doc, resposta);
+      if (error) {
+        Serial.println("Erro ao analisar a resposta JSON do ChatGPT");
+      } else {          
+        DynamicJsonDocument doc_choices(MAX_STRING_LENGTH);  // Ajuste o tamanho conforme necessário
+        DeserializationError error = deserializeJson(doc_choices, doc["choices"][0].as<String>());
+        if (error) {
+          Serial.println("Erro ao analisar o parser do array choices do ChatGPT");
+        } else {
+          const char * mensagem = doc_choices["message"]["content"];
+          resposta = String(mensagem);
+          Serial.println("Resposta final: " + resposta);
+        }
+      }
+    }
+  } else {
+    Serial.printf("[HTTP] Falha na conexão ao ChatGPT\n");
+  }
+  http.end();
+  return resposta;
+}
+
+void handle_InsertAsk(){
+  server.on("/ask", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+    if(check_authorization_header(request)) {
+      int headers = request->headers();
+      String host = "Host não encontrado";
+      for(int i=0;i<headers;i++){
+        const AsyncWebHeader* h = request->getHeader(i);
+        if(h->name() == "Host") host = h->value();
+          #ifdef DEBUG
+            Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+          #endif
+      }      
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);
+      String JSONmessageBody = getData(data, len);
+      DeserializationError error = deserializeJson(doc, JSONmessageBody);
+      if(error) {
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
+      } else {
+          const char * mensagem = doc["mensagem"];
+          Serial.printf("%s->Mensagem: %s\n",host, mensagem);
+          // Fazer uma pergunta ao ChatGPT
+          String retorno = enviarMensagemParaChatGPT(mensagem);
+          if(retorno.length() > 0) {
+            // Responder ao cliente com uma mensagem padrão
+            request->send(HTTP_OK, "text/plain", retorno.c_str());
+          } else {
+            // Responder ao cliente com uma mensagem padrão
+            request->send(HTTP_BAD_REQUEST, "text/plain", "Erro ao conversar com o chato gepeto.");
+          }
+          doc.clear();
+          // toca o audio
+          if(playSpeech(retorno.c_str())) {
+            request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+          } else {
+            request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_PLAYED);
+          }
       }
     } else {
       request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
@@ -273,6 +372,15 @@ void handle_InsertPlay(){
   server.on("/play", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
+      int headers = request->headers();
+      String host = "Host não encontrado";
+      for(int i=0;i<headers;i++){
+        const AsyncWebHeader* h = request->getHeader(i);
+        if(h->name() == "Host") host = h->value();
+          #ifdef DEBUG
+            Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+          #endif
+      }      
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
@@ -284,12 +392,17 @@ void handle_InsertPlay(){
           Serial.printf("Arquivo: %s\n",midia);
         #endif        
         String feedName="play";
+        host +="->"+String(midia);
+
         // publish
-        client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), midia);        
-        // toca o audio
-        playMidia(midia);
+        client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), host.c_str());
         doc.clear();
-        request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+        // toca o audio
+        if(playMidia(midia)) {
+          request->send(HTTP_OK, getContentType(".txt"), PLAYED);
+        } else {
+          request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_PLAYED);
+        }
       }
     } else {
       request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
@@ -301,7 +414,7 @@ void handle_InsertPlayRemote(){
   server.on("/playRemote", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
-            DynamicJsonDocument doc(MAX_STRING_LENGTH);
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
@@ -337,10 +450,9 @@ void handle_Volume(){
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
       } else {
         String feedName="volume";
-        setVolumeAudio(doc["intensidade"]);
-        char buffer [MAX_PATH];
-        snprintf ( buffer, MAX_PATH, "%d", getVolumeAudio() );   
-        
+        int intensidade = doc["intensidade"];
+        setVolumeAudio(intensidade);
+        char buffer [MAX_PATH];              
         // publish
         client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), buffer);
         snprintf ( buffer, MAX_PATH, "Intensidade do volume foi alterada para: %d", getVolumeAudio());  
@@ -361,29 +473,30 @@ void handle_UpdateSensors(){
   server.on("/sensor", HTTP_PUT, [](AsyncWebServerRequest * request){}, NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
-      int sensor = RelayEyes;
-      String feedName = "eye";
-      int paramsNr = request->params();
-      for(int i=0;i<paramsNr;i++){
-        AsyncWebParameter* p = request->getParam(i);
-        feedName = p->value();
-        if(strcmp("hat", p->value().c_str())==0){
-          sensor = RelayHat;
-        } else if (strcmp("blink", p->value().c_str())==0){
-          sensor = RelayBlink;
-        }
-        else if (strcmp("shake", p->value().c_str())==0){
-          sensor = RelayShake;
-        }
-      }
       DynamicJsonDocument doc(MAX_STRING_LENGTH);
       String JSONmessageBody = getData(data, len);
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
-      } else {
-        String JSONmessage;
+      } else {        
+        int sensor = RelayEyes;
+        String feedName = "eye";
+        int paramsNr = request->params();
+        for(int i=0;i<paramsNr;i++){
+          const AsyncWebParameter* p = request->getParam(i);
+          feedName = p->value();
+          Serial.println("feedName: "+feedName);
+          if(strcmp("hat",feedName.c_str())==0){
+            sensor = RelayHat;
+          } else if (strcmp("blink", feedName.c_str())==0){
+            sensor = RelayBlink;
+          }
+          else if (strcmp("shake", feedName.c_str())==0){
+            sensor = RelayShake;
+          }
+        }
         if(readBodySensorData(doc["status"], sensor)) {
+          String JSONmessage;
           ArduinoSensorPort *arduinoSensorPort = searchListSensor(sensor);
           if(arduinoSensorPort != NULL) {
             JSONmessage="{\"id\":\""+String(arduinoSensorPort->id)+"\",\"name\":\""+String(arduinoSensorPort->name)+"\",\"gpio\":\""+String(arduinoSensorPort->gpio)+"\",\"status\":\""+String(arduinoSensorPort->status)+"\"}";
@@ -422,24 +535,15 @@ void handle_InsertItemList(){
           addApplication(doc["name"], doc["language"], doc["description"]);  
 
           // Grava no Storage
-          saveApplicationList();
+          JSONmessage = saveApplicationList();
         
-          Application *app;
-          for(int i = 0; i < applicationListaEncadeada.size(); i++){
-            // Obtem a aplicação da lista
-            app = applicationListaEncadeada.get(i);
-            JSONmessage="{\"name\": \""+String(app->name)+"\",\"language\": \""+String(app->language)+"\",\"description\": \""+String(app->description)+"\"}";
-            if((i < applicationListaEncadeada.size()) && (i < applicationListaEncadeada.size()-1)) {
-              JSONmessage+=',';
-            }
-          }
-          JSONmessage='[' + JSONmessage +']';
           #ifdef DEBUG
             Serial.println("handle_InsertItemList:"+JSONmessage);
           #endif
           // Grava no adafruit
           // publish
           client.publish((String(MQTT_USERNAME)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+          
           doc.clear();
           request->send(HTTP_OK, getContentType(".json"), JSONmessage);
         } else {
@@ -468,20 +572,10 @@ void handle_DeleteItemList(){
         String JSONmessage;
         //removo
         applicationListaEncadeada.remove(index);
-        
+
         // Grava no Storage
-        saveApplicationList();
-        
-        Application *app;
-        for(int i = 0; i < applicationListaEncadeada.size(); i++){
-          // Obtem a aplicação da lista
-          app = applicationListaEncadeada.get(i);
-          JSONmessage="{\"name\": \""+String(app->name)+"\",\"language\": \""+String(app->language)+"\",\"description\": \""+String(app->description)+"\"}";
-          if((i < applicationListaEncadeada.size()) && (i < applicationListaEncadeada.size()-1)) {
-            JSONmessage+=',';
-          }
-        }
-        JSONmessage='[' + JSONmessage +']';          
+        JSONmessage = saveApplicationList();
+
         #ifdef DEBUG
           Serial.println("handle_DeleteItemList:"+JSONmessage);
         #endif
@@ -495,52 +589,64 @@ void handle_DeleteItemList(){
       }
     }
    } else {
-    request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
-   }
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
+    }
   });
 }
 
-void handle_UploadStorage() {
+void handle_DeleteFile(){
+  server.on("/deleteFile", HTTP_DELETE, [](AsyncWebServerRequest * request){}, NULL,
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+    //"/deleteFile?type=storage"
+    //"/deleteFile?type=sdcard"
+    if(check_authorization_header(request)) {
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);
+      String JSONmessageBody = getData(data, len);
+      DeserializationError error = deserializeJson(doc, JSONmessageBody);     
+      if(error) {
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
+      } else {
+        int paramsNr = request->params();
+        const AsyncWebParameter* p = request->getParam(static_cast<size_t>(paramsNr-1));
+        const char * midia = doc["midia"];
+        String filename = String(midia);
+        bool ret = false;
+        if(p->value() == "storage") {          
+          if(LittleFS.remove("/"+filename))
+            Serial.println("arquivo removido do storage do ESP32: "+filename);
+          else
+            Serial.println("Não foi possível remover o arquivo: "+filename+" do storage do ESP32!");
+        } else if(p->value() == "sdcard"){
+          if(SD.remove(filename))
+            Serial.println("arquivo removido do sdcard: "+filename);
+          else
+            Serial.println("Não foi possível remover o arquivo: "+filename+" do sdcard!");
+        }
+        doc.clear();
+        request->send(HTTP_OK, getContentType(".txt"), REMOVED_FILE);
+      }
+    } else {
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
+    }
+  });
+}
+
+void handle_ListStorage() {
   server.on("/storage", HTTP_GET, [](AsyncWebServerRequest * request) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
-    char filename[] = "/uploadStorage.html";
+    char filename[] = "/storageAndSdcard.html";
     String html = String(getContent(filename));
     if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
     else {
+      html.replace("API_MINION_TOKEN",API_MINION_TOKEN);
       html.replace("FILELIST",listFiles(true));
-      html.replace("FREESTORAGE",humanReadableSize((LITTLEFS.totalBytes() - LITTLEFS.usedBytes())));
-      html.replace("USEDSTORAGE",humanReadableSize(LITTLEFS.usedBytes()));
-      html.replace("TOTALSTORAGE",humanReadableSize(LITTLEFS.totalBytes()));
-    }
-    request->send(HTTP_OK, getContentType(filename), html);
-  });
-
-  // run handleUpload function when any file is uploaded
-  server.on("/uploadStorage", HTTP_POST, [](AsyncWebServerRequest *request) {
-        request->send(HTTP_OK);
-      }, handleUploadStorage);
-}
-
-
-void handle_ListSdcard() {
-  server.on("/sdcard", HTTP_GET, [](AsyncWebServerRequest * request) {
-    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-    char filename[] = "/listSdcard.html";
-    String html = String(getContent(filename));
-    if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
-    else {
-      File entry =  SD.open("/");
-      html.replace("FILELIST",listFilesSD(entry, 0));
-      html.replace("FREESDCARD",humanReadableSize((SD.totalBytes() - SD.usedBytes())));
-      html.replace("USEDSDCARD",humanReadableSize(SD.usedBytes()));
-      html.replace("TOTALSDCARD",humanReadableSize(SD.totalBytes()));
-      entry.close();
+      html.replace("MESSAGE", "Upload de arquivos para o storage interno do ESP32");
+      html.replace("FREE",humanReadableSize((LittleFS.totalBytes() - LittleFS.usedBytes())));
+      html.replace("USED",humanReadableSize(LittleFS.usedBytes()));
+      html.replace("TOTAL",humanReadableSize(LittleFS.totalBytes()));
     }
     request->send(HTTP_OK, getContentType(filename), html);
   });
@@ -548,37 +654,176 @@ void handle_ListSdcard() {
 
 // handles uploads to storage
 void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;  
-  #ifdef DEBUG
-    Serial.println(logmessage);
-  #endif
-  if (!index) {
-    logmessage = "Upload Iniciado: " + String(filename);
-    // open the file on first call and store the file handle in the request object
-    request->_tempFile = LITTLEFS.open("/" + filename, "w");
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
+  if(check_authorization_header(request)) {
+    if(!getAllowedStorageFiles(filename)) {
+      request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
+    } else {
+      String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;      
+      int headers = request->headers();
+      int i;
+      for(i=0;i<headers;i++){
+        const AsyncWebHeader* h = request->getHeader(i);        
+        #ifdef DEBUG
+          Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+        #endif
+      }
+      #ifdef DEBUG
+        Serial.println(logmessage);
+      #endif
+      if (!index) {
+        logmessage = "Upload Iniciado: " + String(filename);
+        // open the file on first call and store the file handle in the request object
+        request->_tempFile = LittleFS.open("/" + filename, "w");
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+      }
+    
+      if (len) {
+        // stream the incoming chunk to the opened file
+        request->_tempFile.write(data, len);
+        logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+      }
+    
+      if (final) {
+        logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
+        // close the file handle as the upload is now done
+        request->_tempFile.close();
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+        request->send(HTTP_OK, getContentType(".txt"), UPLOADED_FILE);
+      }
+    }      
+  } else {
+    request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
   }
+}
 
-  if (len) {
-    // stream the incoming chunk to the opened file
-    request->_tempFile.write(data, len);
-    logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-    #ifdef DEBUG
-      Serial.println(logmessage);
-    #endif
-  }
+void handle_UploadStorage() {
+  // run handleUpload function when any file is uploaded
+  server.on("/uploadStorage", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(HTTP_OK);
+      }, handleUploadStorage);
+}
 
-  if (final) {
-    logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
-    // close the file handle as the upload is now done
-    request->_tempFile.close();
+void handle_ListSdcard() {
+  server.on("/sdcard", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     #ifdef DEBUG
       Serial.println(logmessage);
     #endif
-    request->redirect("/");
+    char filename[] = "/storageAndSdcard.html";
+    String html = String(getContent(filename));
+    if(html.length() == 0) html=HTML_MISSING_DATA_UPLOAD;
+    else {
+      File entry =  SD.open("/", FILE_WRITE);
+      html.replace("API_MINION_TOKEN",API_MINION_TOKEN);
+      html.replace("FILELIST",listFilesSD(entry, 0));
+      html.replace("MESSAGE", "Mídias no cartão SD");
+      html.replace("FREE",humanReadableSize((SD.totalBytes() - SD.usedBytes())));
+      html.replace("USED",humanReadableSize(SD.usedBytes()));
+      html.replace("TOTAL",humanReadableSize(SD.totalBytes()));
+      entry.close();
+    }
+    request->send(HTTP_OK, getContentType(filename), html);
+  });
+}
+
+void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  if(check_authorization_header(request)) {
+    if(!getAllowedSdCardFiles(filename)) {
+      request->send(HTTP_BAD_REQUEST, getContentType(".txt"), NOT_AUTHORIZED_EXTENTIONS);
+    } else {
+      String logmessage = "Cliente:" + request->client()->remoteIP().toString() + "-" + request->url() + "-" + filename;      
+      int headers = request->headers();
+      int i;
+      for(i=0;i<headers;i++){
+        const AsyncWebHeader* h = request->getHeader(i);        
+        #ifdef DEBUG
+          Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+        #endif
+      }
+      #ifdef DEBUG
+        Serial.println(logmessage);
+      #endif
+      if (!index) {
+        logmessage = "Upload Iniciado: " + String(filename);
+        if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
+          // open the file on first call and store the file handle in the request object
+          request->_tempFile = SD.open("/" + filename, FILE_WRITE);        
+        } else {
+          // check if folder photos exists, if not create the folder
+          if(!SD.exists("/photos")) SD.mkdir("/photos");
+          // open the file on first call and store the file handle in the request object
+          request->_tempFile = SD.open("/photos/" + filename, FILE_WRITE);          
+        }
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+      }
+    
+      if (len) {
+        // stream the incoming chunk to the opened file
+        request->_tempFile.write(data, len);
+        logmessage = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+      }
+    
+      if (final) {
+        logmessage = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
+        // close the file handle as the upload is now done
+        request->_tempFile.close();
+        #ifdef DEBUG
+          Serial.println(logmessage);
+        #endif
+        request->send(HTTP_OK, getContentType(".txt"), SDCARD_PHOTO_WRITTEN);
+      }    
+    }      
+  } else {
+    request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
   }
+}
+
+// handles uploads to sd card
+void handle_UploadSdCard() {
+  // run handleUpload function when any file is uploaded
+  server.on("/uploadSdcard", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(HTTP_OK);
+      }, handleUploadSdcard);
+}
+
+void handle_InsertJigSaw(){
+  server.on("/jigsaw", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL,
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+    if(check_authorization_header(request)) {
+      int headers = request->headers();
+      String host = "Host não encontrado";
+      for(int i=0;i<headers;i++){
+        const AsyncWebHeader* h = request->getHeader(i);
+        if(h->name() == "Host") host = h->value();
+          #ifdef DEBUG
+            Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+          #endif
+      }
+      DynamicJsonDocument doc(MAX_STRING_LENGTH);
+      String JSONmessageBody = getData(data, len);
+      DeserializationError error = deserializeJson(doc, JSONmessageBody);
+      if(error) {
+        request->send(HTTP_BAD_REQUEST, getContentType(".json"), PARSER_ERROR);
+      } else {
+        const char * mensagem = doc["mensagem"];          
+        request->send(HTTP_OK, getContentType(".txt"), "Métodonão implementado");
+      }
+    } else {
+      request->send(HTTP_UNAUTHORIZED, getContentType(".txt"), WRONG_AUTHORIZATION);
+    }
+  });
 }
 
 void startWebServer() {
@@ -589,12 +834,11 @@ void startWebServer() {
    *  Configura as páginas de login e upload 
    *  de firmware OTA 
    */
-  // Rotas das imagens a serem usadas na página home e o Health (não estão com basic auth)
-  handle_MinionLogo();
-  handle_MinionList();
-  handle_MinionIco();
-  handle_Style();
+  // Rotas das imagens a serem usadas na página (não tem basic auth)
+  handle_GetFile();
+  //não tem basic auth)
   handle_Health();
+  //não tem basic auth
   handle_Metrics();
 
   handle_Home();
@@ -612,13 +856,18 @@ void startWebServer() {
   handle_Lists();
   handle_TemperatureAndHumidity();
   handle_InsertTalk();
+  handle_InsertAsk();
   handle_InsertPlay();
   handle_InsertPlayRemote();
   handle_UpdateSensors();
   handle_InsertItemList();
   handle_DeleteItemList();
+  handle_DeleteFile();
+  handle_ListStorage();
   handle_UploadStorage();
   handle_ListSdcard();
+  handle_UploadSdCard();
+  handle_InsertJigSaw();
   // ------------------------------------ //
   // se não se enquadrar em nenhuma das rotas
   handle_OnError();
@@ -626,8 +875,8 @@ void startWebServer() {
   // permitindo todas as origens. O ideal é trocar o '*' pela url do frontend poder utilizar a api com maior segurança
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Credentials", "true");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT,DELETE");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", CALLER_ORIGIN);
 
   // startup web server
   server.begin();
@@ -640,25 +889,25 @@ void startWebServer() {
 void startWifiManagerServer() {
   Serial.println("\nConfigurando o gerenciador de Wifi ...");
   
-  handle_Style();
   handle_WifiManager();
   handle_WifiInfo();
-  server.serveStatic("/", LITTLEFS, "/");
+  server.serveStatic("/", LittleFS, "/");
   
   server.begin();
 }
 
 void handle_WifiManager(){
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LITTLEFS, "/wifimanager.html", getContentType("/wifimanager.html"));
+    request->send(LittleFS, "/wifimanager.html", getContentType("/wifimanager.html"));
   });
 }
 
 void handle_WifiInfo(){
   server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
+    preferences.begin("store",false);
     int params = request->params();
     for(int i=0;i<params;i++){
-      AsyncWebParameter* p = request->getParam(i);
+      const AsyncWebParameter* p = request->getParam(i);
       if(p->isPost()){
         // HTTP POST ssid value
         if (p->name() == "ssid") {
@@ -691,8 +940,8 @@ void handle_WifiInfo(){
         //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
       }
     }
-    request->send(200, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local");
-    delay(3000);
+    preferences.end();
+    request->send(HTTP_OK, "text/plain", "Concluido. O ESP vai reiniciar, entao conecte-se em seu roteador e va para o endereco: http://" + String(HOST) + ".local"); 
     ESP.restart();
   });
 }
@@ -701,7 +950,7 @@ bool check_authorization_header(AsyncWebServerRequest * request){
   int headers = request->headers();
   int i;
   for(i=0;i<headers;i++){
-    AsyncWebHeader* h = request->getHeader(i);
+    const AsyncWebHeader* h = request->getHeader(i);
     //Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
     if(h->name()=="Authorization" && h->value()=="Basic "+String(API_MINION_TOKEN)){
       return true;

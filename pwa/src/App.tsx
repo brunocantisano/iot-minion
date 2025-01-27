@@ -20,6 +20,8 @@ import './assets/styles/global.css';
 import packageInfo from '../package.json';
 import VolumeSlider from './components/VolumeSlider';
 import PushButtonListening from './components/PushButtonListening';
+import SpeechMinion from './components/SpeechMinion';
+import { useTimer } from 'use-timer';
 
 function App() {
   const [minionBehavior, setMinionBehavior] = useState<MinionBehavior>({ freezing: false, hungry: false, stress: false, wakeUp: false, listening: false });
@@ -29,50 +31,65 @@ function App() {
   const [celsius, setCelsius] = useState(25);
   //const [fahrenheit, setFahrenheit] = useState(75);
   const [humidity, setHumidity] = useState(80);
-
+  // const { time, start } = useTimer({
+  const { start } = useTimer({
+    endTime: 120, // a cada 2 minutos eu checo a temperatura e umidade
+    onTimeOver: async () => {
+      // alert('chamo');
+      await getTemperatureCelsius();
+      await getHumidity();
+      start();
+    },
+    initialTime: 1,
+    autostart: true
+  });
   async function getTemperatureCelsius() {
     try {
-      let rota: string = process.env.REACT_APP_URL + '/climate?type=celsius';
-      let dados: any = await axios.get(rota,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      let data:Climate = dados.data;
-      setCelsius(data.celsius);
-      //console.log('celsius: '+ celsius);
+      let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/climate?type=celsius':'';
+      if(rota !== '') {
+        let dados: any = await axios.get(rota,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+        let data:Climate = dados.data;
+        setCelsius(data.celsius);
+        console.log('celsius: '+ celsius);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }
   }
   async function getHumidity() {
     try {
-      let rota: string = process.env.REACT_APP_URL + '/climate?type=humidity';
-      let dados: any = await axios.get(rota,      
-        {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      let data:Climate = dados.data; 
-      setHumidity(data.humidity);
-      //console.log('humidity: '+ humidity);
+      let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/climate?type=humidity':'';
+      if(rota !== '') {
+        let dados: any = await axios.get(rota,      
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+        let data:Climate = dados.data; 
+        setHumidity(data.humidity);
+        console.log('humidity: '+ humidity);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }
   }
+ 
   useEffect(() => {
     setCelsius(celsius);
     setHumidity(humidity);
-  }, [celsius, humidity]);
-
-  useEffect(() => {
     console.log("Iniciando componente");
     setMinionBehavior({ freezing: false, hungry: false, stress: false, wakeUp: false , listening: false});
-  }, []);
+  }, [celsius, humidity]);
 
   const changeBehavior = (newMinionBehavior: MinionBehavior) => {
     setMinionBehavior(newMinionBehavior);
@@ -83,12 +100,9 @@ function App() {
   const changeSpeechVolume = (newMinionSpeechVolume: MinionSpeechVolume) => {
     setMinionSpeechVolume(newMinionSpeechVolume);
   }
-  async function handleLoad() {
-    await getTemperatureCelsius();
-    await getHumidity();
-  }
   return (
-    <div id="page-body" onLoad={handleLoad} >
+    <div id="page-body">
+      {/* <p>tempo: {time}</p> */}
       <div className="hat-minion-container">
         <div className="grid-container">
           <div className="item1"><HatMinion stressed={minionBehavior.stress} /></div>
@@ -114,6 +128,7 @@ function App() {
         <div className="grid-container">
           <div className="item1">
             <InputMinion minionTalk={minionTalk} callbackFromParent={changeTalk}/>
+            <SpeechMinion/>            
             <VolumeSlider minionSpeechVolume={minionSpeechVolume} callbackFromParent={changeSpeechVolume}/>
           </div>
           <div className="item2"><SwitchButtonMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} /></div>

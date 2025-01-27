@@ -18,21 +18,116 @@ A aplicação consiste em três desenvolvimentos:
 - Frontend feito com a metodologia de desenvolvimento de software chamada de [PWA](https://garagem.ipiranga.io/nativo-hibrido-ou-pwa), usando a linguagem `React`. Seu código-fonte encontra-se na pasta raíz do projeto.
 - Interfaces de Conversação feita na linguagem `javascript` para ser utilizada no [Dialog Flow](https://en.wikipedia.org/wiki/Dialogflow) da Google. Encontra-se dentro da pasta `arduino/dialogFlow`
 
+## Visão geral do projeto
+
+<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="../others/imgs/book.png" /></a>
+
 ## Pre-requisitos
 
-- [Plugin para gravar no filesystem do Esp32](https://github.com/me-no-dev/arduino-esp32fs-plugin)
-- [Usando o plugin para escrever no filesystem do Esp32](https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/)
-- [Informações de uso do plugin](https://techtutorialsx.com/2018/08/24/esp32-arduino-spiffs-file-upload-ide-plugin/)
-- [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
+### Instalar placas que serão usadas
+
+Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abaixo, **separadas por vírgulas**:
+
+* http://arduino.esp8266.com/stable/package_esp8266com_index.json
+* https://dl.espressif.com/dl/package_esp32_index.json
+
+
+![Preferências](../others/imgs/preferencias.png)
+
+#### Instalar as placas
+
+![ESP8266](../others/imgs/placa-esp8266.png)
+![ESP32](../others/imgs/placa-esp32.png)
+
+#### Referências
 - [Preparando o ambiente com arduino IDE para ESP32](https://blog.eletrogate.com/conhecendo-o-esp32-usando-arduino-ide-2/)
+- [Preparando o ambiente com arduino IDE para ESP8266](https://blog.smartkits.com.br/esp8266-como-programar-o-nodemcu-atraves-da-arduino-ide/)
+
+#### Instalar as bibliotecas
+
+* ArduinoWebsockets
+* Adafruit FONA Library
+* Adafruit MQTT Library
+* Adafruit SleepyDog Library
+* Adafruit Unified Sensor
+* ArduinoJson
+* DHT sensor library
+* PubSubClient
+* LittleFS_esp32
+* Preferences
+* ESPAsyncWebServer
+* AsyncTCP
+* ESP32-audioI2S
+
+#### Instalar as bibliotecas .zip (fazer download do código e importar no arduino IDE)
+
+* https://github.com/me-no-dev/ESPAsyncWebServer.git
+* https://github.com/me-no-dev/AsyncTCP.git
+* https://github.com/schreibfaul1/ESP32-audioI2S.git
+
+### Plugins (Pre-requisito do ESP8266/ESP32 para decodificar Exception Stack Trace e para gravar arquivos do webserver na pasta `data` - LittleFS filesystem uploader)
+
 - [Arduino ESP32 LittleFS filesystem uploader](https://github.com/lorol/arduino-esp32littlefs-plugin)
 
-* Instalando pre-requisito do arduino IDE: 
+> **O código está usando o LittleFS para ler e escrever no storage, que serve para utilizar o filesystem com melhor performance e aproveitamento do espaço físico.**
+ 
+- [Arduino ESP8266/ESP32 Exception Stack Trace Decoder](https://github.com/me-no-dev/EspExceptionDecoder)
+ 
+* Pre-requisito do arduino IDE: 
 
-```python
-sudo apt-get install python3-serial -y
 ```
-<a href="https://brunocantisano.github.io/minion/index.html" target="_blank"><img src="../others/imgs/book.png" /></a>
+sudo apt install python3-serial -y
+```
+
+* Criar diretório se não existir
+
+```
+mkdir -p ~/Arduino/tools/
+```
+
+*  Mover o arquivo jar para dentro da pasta
+
+```
+mv ~/Downloads/EspExceptionDecoder-*.zip ~/Arduino/tools
+```
+
+* Descompactar
+
+```
+unzip EspExceptionDecoder-*.zip
+```
+
+* Remover arquivo
+
+```
+rm -rf EspExceptionDecoder-*.zip
+```
+
+* Instalar dependências
+
+```
+sudo apt install libncurses5 libpython2.7 -y
+```
+
+#### Referência para o LittleFS filesystem uploader
+
+* Criar diretório se não existir
+
+```
+mkdir -p ~/Arduino/tools/ESP32LittleFS/tool/
+```
+
+*  Mover o arquivo jar para dentro da pasta
+
+```
+mv ~/Downloads/esp32littlefs.jar ~/Arduino/tools/ESP32LittleFS/tool/esp32littlefs.jar
+```
+
+### Compilação
+
+1. No menu `Ferramentas`, escolha a opção `Upload Speed: "115200"`
+
+2. No menu `Ferramentas`, escolha a opção `Partition Scheme: "Minimal SPIFFS (1.9MB APP With OTA/190KB SPIFFS)"` (**o código supera o tamanho padrão de 1.2MB para o APP**)
 
 - **Não se esqueça de alterar as variáveis abaixo, que aparecem nos códigos do arduino (`credentials.h`) e dialogflow, para as suas chaves:**
 
@@ -42,9 +137,15 @@ sudo apt-get install python3-serial -y
 | <AIO_KEY>                      | Adafruit                       |
 | <FIREBASE_API_KEY>             | Firebase API Key               |
 | <API_MINION_TOKEN>             | Base64 Basic Auth              |
-| <USER_FIRMWARE>                | Upload Firmware User           |
-| <PASS_FIRMWARE>                | Upload Firmware Senha          |
 | <API_VERSION>                  | Versão da API                  |
+
+3. Clique no botão de compilação ![compilar](../others/imgs/compilar.png)
+
+> Se por acaso a compilação do arduino aparecer a mensagem: `"exec: "python": executable file not found in $PATH`, faça essa instalação abaixo:
+
+```
+sudo apt install python-is-python3
+```
 
 ## Extras
 
@@ -184,17 +285,17 @@ npm run dev
 
 <table>
     <tr>
-        <td align="center"><a href="https://free3d.com/3d-model/two-minions-ready-for-rigging-8605.html"><img src="https://freepikpsd.com/file/2020/01/Single-Minion-Free-PNG-Image.png" width="100px;" alt="" /><br /><sub><b>Minion</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/two-minions-ready-for-rigging-8605.html"><img src="https://preview.free3d.com/img/2014/10/1714721518392444385/sc9p1dne.jpg" width="100px;" alt="" /><br /><sub><b>Minion</b></sub></a><br />
         </td>
         <td align="center"><a href="https://sketchfab.com/3d-models/dr-nefario-dab-dance-af530ffc10e94117a78363f7a3b204f6"><img src="https://static.wikia.nocookie.net/villains/images/f/fb/DrNefario.png/revision/latest/scale-to-width-down/206?cb=20210303191340" width="100px;" alt="" /><br /><sub><b>Dr Nefário</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://free3d.com/3d-model/ricken-backer-4003---bass-888215.html"><img src="https://free3d.com/imgd/l96/5ac7fb2326be8b18328b4567/2893-ricken-backer-4003---bass.png" width="100px;" alt="" /><br /><sub><b>Ricken Backer Bass</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/ricken-backer-4003---bass-888215.html"><img src="https://images.free3d.com/imgd/l96/5ac7fb2326be8b18328b4567/2893-ricken-backer-4003---bass.png" width="100px;" alt="" /><br /><sub><b>Ricken Backer Bass</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://free3d.com/3d-model/classic-flying-v-54812.html"><img src="https://free3d.com/imgd/l65871-classic-flying-v-54812.jpg" width="100px;" alt="" /><br /><sub><b>Classic Flying V</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/classic-flying-v-54812.html"><img src="https://images.free3d.com/imgd/l65871-classic-flying-v-54812.jpg" width="100px;" alt="" /><br /><sub><b>Classic Flying V</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://free3d.com/3d-model/drum-set-99664.html"><img src="https://free3d.com/imgd/l52925-drum-set-99664.jpg" width="100px;" alt="" /><br /><sub><b>Drum Set</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/drum-set-99664.html"><img src="https://images.free3d.com/imgd/l52925-drum-set-99664.jpg" width="100px;" alt="" /><br /><sub><b>Drum Set</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://free3d.com/3d-model/iphonex-113534.html"><img src="https://free3d.com/imgd/l45/5a8085c926be8b954b8b4567/8356-iphonex.png" width="100px;" alt="" /><br /><sub><b>Iphonex</b></sub></a><br />
+        <td align="center"><a href="https://free3d.com/3d-model/iphonex-113534.html"><img src="https://images.free3d.com/imgd/l45/5a8085c926be8b954b8b4567/8356-iphonex.png" width="100px;" alt="" /><br /><sub><b>Iphonex</b></sub></a><br />
         </td>
     </tr>
 </table>
@@ -229,7 +330,6 @@ npm run dev
 - [Load Wav File](https://www.xtronical.com/i2s-ep3/)
 - [Converte binário para hexadecimal](http://tomeko.net/online_tools/file_to_hex.php?lang=en)
 - [Audio para Google Assistente](https://github.com/pschatzmann/ESP32-A2DP)
-- [Escaneamento 3D](https://www.youtube.com/watch?v=zj_Fow9lvc0)
 - [Criando threads no ESP32](https://techtutorialsx.com/2017/05/06/esp32-arduino-creating-a-task/)
 - [Visualizar imagens como livro](http://www.turnjs.com/)
 - [ESP32 com métricas para prometheus](https://github.com/douglaszuqueto/esp32-prometheus)
@@ -237,13 +337,15 @@ npm run dev
 - [Write binary file to LittleFS](https://iotespresso.com/esp32-captive-portal-fetching-html-using-littlefs/)
 - [LittleFS esp32 issues](https://wellys.com/posts/esp32_issues/)
 - [ESP32 HTTPS web server](https://techtutorialsx.com/2019/04/07/esp32-https-web-server/)
+- [SDcard](https://www.electronicwings.com/esp32/microsd-card-interfacing-with-esp32)
 - [I2S MP3 Player](https://www.fernandok.com/2020/02/mp3-player-com-esp32-e-i2s.html)
+- [Google Actions](https://codelabs.developers.google.com/codelabs/actions-1/#0)
 
 ## Vídeos de referência 🎥
 
-* [Site DC motor](https://techtutorialsx.com/2019/03/31/esp32-arduino-controlling-a-dc-motor-remotely-using-http)
-* [Google Actions](https://codelabs.developers.google.com/codelabs/actions-1/#0)
-* [Utilizando Obsidian para fazer apresentações como código](https://www.youtube.com/watch?v=LtBK_iNcVEQ)
+[![Site DC motor](https://i3.ytimg.com/vi/ml366LJiwnk/maxresdefault.jpg)](https://www.youtube.com/watch?v=ml366LJiwnk&feature=emb_imp_woyt "Site DC motor")
+
+[![Utilizando Obsidian para fazer apresentações como código](https://i3.ytimg.com/vi/LtBK_iNcVEQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=LtBK_iNcVEQ "Utilizando Obsidian para fazer apresentações como código")
 
 ## Peças
 
@@ -283,8 +385,8 @@ npm run dev
         </td>
         <td align="center"><a href="https://www.filipeflop.com/produto/modulo-cartao-micro-sd/"><img src="https://www.filipeflop.com/wp-content/uploads/2017/07/SKU122168a.jpg" width="100px;" alt="" /><br /><sub><b>1-Módulo Cartão Micro SD</b></sub></a><br />
         </td>
-        <td align="center"><a href="https://shopee.com.br/sou%E2%98%AC-CJMCU-1334-DAC-Module-UDA1334A-Stereo-Decoder-Board-I2S-Output-Interface-Sound-Frequency-Decoding-Module-for-3.3V-to-5V-i.290382738.11917876698"><img src="https://www.baudaeletronica.com.br/media/catalog/product/cache/1/image/578x/9df78eab33525d08d6e5fb8d27136e95/u/d/uda1334a.jpg" width="100px;" alt="" /><br /><sub><b>1-UDA1334A</b></sub></a><br />
-        </td>                
+        <td align="center"><a href="https://shopee.com.br/sou%E2%98%AC-CJMCU-1334-DAC-Module-UDA1334A-Stereo-Decoder-Board-I2S-Output-Interface-Sound-Frequency-Decoding-Module-for-3.3V-to-5V-i.290382738.11917876698"><img src="https://tse2.mm.bing.net/th?id=OIP.3tM_B4FqtTu4CucxvSPF9QHaHa&pid=Api&P=0&h=180" width="100px;" alt="" /><br /><sub><b>1-UDA1334A</b></sub></a><br />
+        </td>
     </tr>
 </table>
 

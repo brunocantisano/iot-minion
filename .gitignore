@@ -6,3 +6,4 @@ pwa/.env
 .firebase
 *.pem
 *.crt
+package-lock.json

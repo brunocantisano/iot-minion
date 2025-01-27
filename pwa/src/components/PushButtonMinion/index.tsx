@@ -3,7 +3,7 @@ import axios from 'axios';
 import './styles.scss'
 
 const PushButtonMinion: React.FC = () => {
-  let rota: string = process.env.REACT_APP_URL + '/play';
+  let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/play':'';
   const [midias] = useState([
     "Ahahaha.mp3",
     "Bababa_Banana.mp3",
@@ -23,20 +23,22 @@ const PushButtonMinion: React.FC = () => {
 
   async function handleClick() {
     try {
-      // escolhendo um audio aleatoriamente
-      let random = Math.floor(Math.random() * midias.length);
-      const response = await axios.post(rota,
-        {
-          "midia": midias[random]
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
-          }
-        });
-      console.log('👉 Returned data:', response);
+      if(rota !== ''){
+        // escolhendo um audio aleatoriamente
+        let random = Math.floor(Math.random() * midias.length);
+        const response = await axios.post(rota,
+          {
+            "midia": midias[random]
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
+            }
+          });
+        console.log('👉 Returned data:', response);
+      }
     } catch (e) {
       console.log(`😱 Axios request failed: ${e}`);
     }

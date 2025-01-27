@@ -54,7 +54,7 @@ bool loadSdCardMedias() {
     #ifdef DEBUG
       Serial.println(F("Listando arquivos armazenados no cartão SD"));
     #endif
-    File dir =  SD.open("/");
+    File dir =  SD.open("/", FILE_WRITE);
     listFilesSD(dir, 0);
     dir.close();
     return true;
@@ -64,20 +64,24 @@ bool loadSdCardMedias() {
 // list all of the files, if ishtml=true, return html rather than simple text
 String listFiles(bool ishtml) {
   String returnText = "";
+  String filename = "";
   Serial.println(F("Listando arquivos armazenados no storage"));
-  File root = LITTLEFS.open("/", "r");
+  File root = LittleFS.open("/", "r");
   File foundfile = root.openNextFile();
   if (ishtml) {
-    returnText += "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th></tr>";
+    returnText += "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th><th align='center'>Remover</th></tr>";
   }
   while (foundfile) {
     if (ishtml) {
-      int tam = strlen(foundfile.name());
-      char temp[tam];
-      strncpy(temp,foundfile.name(),tam);
-      returnText += "<tr align='left'><td>" + String(foundfile.name()) + "</td><td>" + humanReadableSize(foundfile.size()) + "</td></tr>";
+      filename = String(foundfile.name());
+      if (filename.endsWith(".crt")) {        
+        returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(foundfile.size()) + "</td><td align='center'><a onclick=deleteFile('storage','"+filename+"','"+API_MINION_TOKEN+"')><img src='get-file?name=delete.webp' height='32' width='32'/></a></td></tr>";
+      } else {
+        returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(foundfile.size()) + "</td><td align='center'><img src='get-file?name=na.webp' height='32' width='32'/></td></tr>";
+      }
+      
     } else {
-      returnText += "Arquivo: " + String(foundfile.name()) + "\n";
+      returnText += "Arquivo: " + filename + "\n";
     }
     foundfile = root.openNextFile();
   }
@@ -91,7 +95,7 @@ String listFiles(bool ishtml) {
 
 // list all of the files, if ishtml=true, return html rather than simple text
 String listFilesSD(File dir, int numTabs) {
-  String returnText = "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th><th align='left'>Modificação</th></tr>";
+  String returnText = "<table><tr><th align='left'>Nome</th><th align='left'>Tamanho</th><th align='left'>Modificação</th><th align='center'></th><th align='center'>Remover</th></tr>";
   String lastModified;
   while (true) {
     File entry =  dir.openNextFile();
@@ -106,9 +110,29 @@ String listFilesSD(File dir, int numTabs) {
         // files have sizes, directories do not
         time_t lw = entry.getLastWrite();
         struct tm * tmstruct = localtime(&lw);
-        lastModified = String((tmstruct->tm_year) + 1900,2)+"-"+String((tmstruct->tm_mon) + 1,2)+"-"+String(tmstruct->tm_mday,2)+" "+String(tmstruct->tm_hour,2)+":"+String(tmstruct->tm_min,2)+":"+String(tmstruct->tm_sec,2);
-        addMedia(String(entry.name()), entry.size(), lastModified);
-        returnText += "<tr align='left'><td>" + String(entry.name()) + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td></tr>";
+        char lastModified[20];  // Buffer para armazenar a string formatada
+
+        // Usando sprintf para formatar a data com zeros à esquerda
+        sprintf(lastModified, "%04d-%02d-%02d %02d:%02d:%02d",
+          tmstruct->tm_year + 1900,
+          tmstruct->tm_mon + 1,
+          tmstruct->tm_mday,
+          tmstruct->tm_hour,
+          tmstruct->tm_min,
+          tmstruct->tm_sec);
+
+        // Chama a função com a string formatada
+        addMedia(String(entry.name()), entry.size(), String(lastModified));
+
+        String filename = String(entry.name());
+        int tam = filename.length();
+        String ext =  filename.substring(tam-3, tam);
+        if (ext == "wav" || ext == "mp3") {       
+          returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><img src='get-file?name="+ext+".webp' height='32' width='32'/></td><td align='center'><a onclick=deleteFile('sdcard','"+filename+"','"+API_MINION_TOKEN+"')><img src='get-file?name=delete.webp' height='32' width='32'/></a></td></tr>"; 
+        }
+        else  {
+          returnText += "<tr align='left'><td>" + filename + "</td><td>" + humanReadableSize(entry.size()) + "</td><td>" + lastModified + "</td><td align='center'><img src='get-file?name="+filename+"' height='192' width='108'/></td><td align='center'><a onclick=deleteFile('sdcard','"+filename+"','"+API_MINION_TOKEN+"')><img src='get-file?name=delete.webp' height='32' width='32'/></a></td></tr>";  
+        }
       }
     }    
     entry.close();
