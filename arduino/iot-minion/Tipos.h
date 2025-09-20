@@ -1,26 +1,29 @@
+// Tipos.h
+#ifndef TIPOS_H_INCLUDED
+#define TIPOS_H_INCLUDED
+// ou: #pragma once
 
-/************* lista de aplicacoes jenkins *************/
 class Application {
-  public:
-    String name;
-    String language;
-    String description;
+public:
+  String name;
+  String language;
+  String description;
 };
-/******************************************************/
-/************** lista de mídias no sdcard *************/
+
 class Media {
-  public:
-    String name;
-    int size;    
-    String lastModified;
+public:
+  String name;
+  String path;
+  int size;
+  String lastModified;
 };
-/******************************************************/
-/******************* lista de sensores ****************/
+
 class ArduinoSensorPort {
-  public:
-    String name;
-    int id;
-    int gpio;
-    int status; // 1-TRUE / 0-FALSE
+public:
+  int id;
+  int gpio;
+  String name;
+  bool status;
 };
-/******************************************************/
+
+#endif // TIPOS_H_INCLUDED

@@ -1,0 +1,28 @@
+const char WRONG_CLIMATE[] PROGMEM = "Erro desconhecido ao buscar temperatura e umidade";
+const char PLAYED[] PROGMEM = "Arquivo foi colocado para tocar.";
+const char NOT_PLAYED[] PROGMEM = "Não foi possível tocar o áudio.";
+const char WRONG_AUTHORIZATION[] PROGMEM = "Authorization token errado";
+const char NOT_AUTHORIZED_EXTENTIONS[] PROGMEM = "Extensão de arquivo inválida para upload";
+const char SDCARD_PHOTO_WRITTEN[] PROGMEM = "Imagem salva no cartão SD com sucesso";
+const char WRONG_STATUS[] PROGMEM = "Erro ao atualizar o status";
+const char EXISTING_ITEM[] PROGMEM = "Item já existente na lista";
+const char REMOVED_ITEM[] PROGMEM = "Item removido da lista";
+const char REMOVED_FILE[] PROGMEM = "Arquivo removido";
+const char UPLOADED_FILE[] PROGMEM = "Arquivo criado com sucesso";
+const char NOT_FOUND_ITEM[] PROGMEM = "Item não encontrado na lista";
+const char NOT_FOUND_ROUTE[] PROGMEM = "Rota nao encontrada";
+const char PARSER_ERROR[] PROGMEM = "{\"message\": \"Erro ao fazer parser do json\"}";
+const char WEB_SERVER_CONFIG[] PROGMEM = "\nConfiguring Webserver ...";
+const char WEB_SERVER_STARTED[] PROGMEM = "Webserver started";
+const char HTML_MISSING_DATA_UPLOAD[] PROGMEM = "<!DOCTYPE html><html lang=\"en\"><head><title>Minion ESP32</title>" 
+                "<meta charset=\"utf-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">" 
+                "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"></head>"
+                "<body><center><img src=\"http://www.imagenspng.com.br/wp-content/uploads/2015/07/minions-52-roxo.png\" width=\"128\"/> </center>"
+                "<div class=\"container\">Lembre-se que para rodar a aplicação será necessário, previamente, instalar o plugin: "
+                "<b><a src=\"https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/\">Install ESP32 Filesystem Uploader in Arduino IDE\"</a></b>"
+                " e utilizar o menu no Arduino IDE: <b>Ferramentas->ESP32 Sketch Data Upload</b>"
+                " para gravar o conteúdo do web server (pasta: <b>/data</b>) no <b>Storage</b>.</div></body></html>";
+
+
+
+
