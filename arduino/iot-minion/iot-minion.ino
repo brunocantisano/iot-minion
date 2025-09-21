@@ -3,6 +3,8 @@
 #include "OtaHandler.h"
 #include "WebServerHandler.h"
 
+#define SERIAL_PORT       115200
+
 // ====== Objetos do seu projeto ======
 CredentialsHandler * credhdl;
 CryptoHandler * crypto;

@@ -80,9 +80,6 @@ String SdCardHandler::listFilesSD(File dir, int numTabs, String token) {
           tmstruct->tm_min,
           tmstruct->tm_sec);
 
-        // Chama a função com a string formatada
-        utilshdl.addMedia(String(entry.name()), entry.size(), String(lastModified));
-
         String filename = String(entry.name());
         int tam = filename.length();
         String ext =  filename.substring(tam-3, tam);

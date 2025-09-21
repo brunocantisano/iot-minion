@@ -44,6 +44,14 @@
 #define HTTP_REST_PORT             80
 #define MAX_PAYLOAD_SIZE           2000
 
+//Volume
+#define DEFAULT_VOLUME               20
+#define RelayHat                     13
+#define RelayEyes                    14
+#define RelayBlink                   15
+#define RelayShake                   22
+#define TemperatureHumidity          33
+
 class WebServerHandler {
 private:
     AsyncWebServer * server;
@@ -69,7 +77,9 @@ private:
     uint64_t sdcard_used;
     String savedSsid;
     String savedPass;
- 
+    ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();                              // Lista de media no sdcard
+    ListaEncadeada<ArduinoSensorPort*> sensorListaEncadeada = ListaEncadeada<ArduinoSensorPort*>();     // Lista de sensores
+    ListaEncadeada<Application*> applicationListaEncadeada = ListaEncadeada<Application*>();            // Lista de aplicacoes do jenkins
     String obtemEstadoSensor(int pin);
     String obtemMetricas();
     void atribuiMetrica(String *p, String metric, String value);
@@ -113,6 +123,18 @@ private:
     void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
     //void notifySensors(const String& id, bool s25, bool s50, bool s75, bool s100);
     //void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len);
+
+    void addApplication(String name, String language, String description);
+    void removeApplication(int index);
+    void addMedia(String name, int size, String lastModified);
+    String listApplicationJson();
+    String listMediaJson();
+    String listSensorJson();
+    String saveApplicationList();
+    bool addSensor(int id, int gpio, String name);
+    ArduinoSensorPort * searchListSensor(int gpio);
+    int searchList(String name, String language);
+    bool readSensorStable(int pin, uint8_t samples = 7, uint16_t gap_ms = 3);
 public:
     WebServerHandler(
         const String& token, 
@@ -128,6 +150,7 @@ public:
 
     void startWebServer(void);
     bool connectSTA(const String& hostForMDNS);
+    bool loadSensorList();
     void startWebServerWifiManager(const String& apName);
     void loop();
     AsyncWebServer * getWebServer();

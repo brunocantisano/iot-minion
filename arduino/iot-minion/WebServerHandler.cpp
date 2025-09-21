@@ -87,7 +87,7 @@ String WebServerHandler::obtemMetricas() {
 }
 
 String WebServerHandler::obtemEstadoSensor(int pin) {
-  return utilshdl->readSensorStable(pin) ? "1" : "0";
+  return readSensorStable(pin) ? "1" : "0";
 }
 
 /**
@@ -219,7 +219,7 @@ void WebServerHandler::handleMetrics(){
 void WebServerHandler::handlePorts(){
   server->on("/ports", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
-      String JSONmessage = utilshdl->listSensorJson();
+      String JSONmessage = listSensorJson();
       request->send(HTTP_OK, utilshdl->getMimeType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
       request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
@@ -230,7 +230,7 @@ void WebServerHandler::handlePorts(){
 void WebServerHandler::handleAudios(){
   server->on("/audios", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
-      String JSONmessage = utilshdl->listMediaJson();
+      String JSONmessage = listMediaJson();
       request->send(HTTP_OK, utilshdl->getMimeType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
       request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
@@ -250,8 +250,8 @@ void WebServerHandler::handleSensors() {
 
     int sensor = pSensor->value().toInt();  // 1..4
     int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : -1;
-    bool on = utilshdl->readSensorStable(pin);
-    if (auto s = utilshdl->searchListSensor(pin)) s->status = on;
+    bool on = readSensorStable(pin);
+    if (auto s = searchListSensor(pin)) s->status = on;
     String resp = on ? "ativado" : "desativado";
     request->send(HTTP_OK, utilshdl->getMimeType(".txt"), resp);
   });  
@@ -298,7 +298,7 @@ void WebServerHandler::handleUpdateSensors() {
     // Atualiza o pino
     pinMode(pin, OUTPUT);
     digitalWrite(pin, newValue ? HIGH : LOW);
-    if (auto s = utilshdl->searchListSensor(pin)) s->status = (newValue == 1);
+    if (auto s = searchListSensor(pin)) s->status = (newValue == 1);
 
     String resp = (newValue == 1) ? "ativado" : "desativado";
     request->send(HTTP_OK, utilshdl->getMimeType(".txt"), resp);
@@ -308,7 +308,7 @@ void WebServerHandler::handleUpdateSensors() {
 void WebServerHandler::handleLists(){
   server->on("/lists", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
-      String JSONmessage = utilshdl->listApplicationJson();
+      String JSONmessage = listApplicationJson();
       request->send(HTTP_OK, utilshdl->getMimeType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
       request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
@@ -521,15 +521,15 @@ void WebServerHandler::handleInsertItemList(){
         request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
       } else {
         //busco para checar se aplicacao já existe
-        int index = utilshdl->searchList(doc["name"],doc["language"]);
+        int index = searchList(doc["name"],doc["language"]);
         if(index == -1) {
           String JSONmessage;
           // não existe, então posso inserir
           // adiciona item na lista de aplicações jenkins 
-          utilshdl->addApplication(doc["name"], doc["language"], doc["description"]);  
+          addApplication(doc["name"], doc["language"], doc["description"]);  
 
           // Grava no Storage
-          JSONmessage = utilshdl->saveApplicationList();
+          JSONmessage = saveApplicationList();
           // Grava no storage
           strhdl->writeFile(LittleFS,"/lista.json",JSONmessage.c_str()); 
           #ifdef DEBUG
@@ -562,14 +562,14 @@ void WebServerHandler::handleDeleteItemList(){
         request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
       } else {
       //busco pela aplicacao a ser removida
-      int index = utilshdl->searchList(doc["name"],doc["language"]);
+      int index = searchList(doc["name"],doc["language"]);
       if(index != -1) {
         String JSONmessage;
         //removo
-        utilshdl->removeApplication(index);
+        removeApplication(index);
         
         // Grava no Storage
-        JSONmessage = utilshdl->saveApplicationList();
+        JSONmessage = saveApplicationList();
         // Grava no storage
         strhdl->writeFile(LittleFS,"/lista.json",JSONmessage.c_str()); 
         #ifdef DEBUG
@@ -793,7 +793,7 @@ void WebServerHandler::startWebServer() {
                      savedPass);
 
   // carrega sensores  
-  bool load = utilshdl->loadSensorList();
+  bool load = loadSensorList();
   if(!load) {
     #ifdef DEBUG
       Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
@@ -1115,4 +1115,130 @@ bool WebServerHandler::connectSTA(const String& hostForMDNS) {
   Serial.print(F("Conectado! IP: "));
   Serial.println(WiFi.localIP());
   return true;
+}
+
+bool WebServerHandler::loadSensorList(){
+  // 1 → RelayEyes | 2 → RelayHat | 3 → RelayBlink | 4 → RelayShake | 5 → TemperatureHumidity
+  if(!addSensor(1, RelayEyes, "Eyes")) return false;
+  if(!addSensor(2, RelayHat, "Hat")) return false;
+  if(!addSensor(3, RelayBlink, "Blink")) return false;
+  if(!addSensor(4, RelayShake, "Shake")) return false; 
+  if(!addSensor(5, TemperatureHumidity, "TemperatureHumidity")) return false;
+  return true;  
+}
+
+void WebServerHandler::addApplication(String name, String language, String description) {
+  if(searchList(name, language)== -1) {
+    Application *app = new Application();
+    app->name = name;
+    app->language = language;
+    app->description = description;
+    // Adiciona a aplicação na lista
+    applicationListaEncadeada.add(app);
+  }
+}
+
+void WebServerHandler::removeApplication(int index) {
+  applicationListaEncadeada.remove(index);
+}
+
+void WebServerHandler::addMedia(String name, int size, String lastModified) {
+  Media *media = new Media();
+  media->name = name;
+  media->size = size;
+  media->lastModified=lastModified;
+
+  // Adiciona a aplicação na lista
+  mediaListaEncadeada.add(media);
+}
+
+String WebServerHandler::listApplicationJson() {
+  String JSONmessage;
+  Application *app;
+  for(int i = 0; i < applicationListaEncadeada.size(); i++){
+    // Obtem a aplicação da lista
+    app = applicationListaEncadeada.get(i);
+    JSONmessage += "{\"id\": "+String(i+1)+",\"name\": \""+app->name+"\",\"language\": \""+app->language+"\",\"description\": \""+app->description+"\"}"+',';
+  }
+  return JSONmessage;
+}
+
+String WebServerHandler::listMediaJson() {
+  String JSONmessage;
+  Media *media;    
+  for(int i = 0; i < mediaListaEncadeada.size(); i++){
+    // Obtem a midia da lista de midias
+    media = mediaListaEncadeada.get(i);
+    JSONmessage += "{\"name\": \""+String(media->name)+"\",\"size\": \""+String(media->size)+"\",\"lastModified\": \""+String(media->lastModified)+"\"},";
+  }
+  return JSONmessage;
+}
+
+String WebServerHandler::listSensorJson(){
+  String JSONmessage;
+  ArduinoSensorPort *arduinoSensorPort;    
+  for(int i = 0; i < sensorListaEncadeada.size(); i++){
+    // Obtem a aplicação da lista
+    arduinoSensorPort = sensorListaEncadeada.get(i);
+    JSONmessage += "{\"id\": \""+String(arduinoSensorPort->id)+"\",\"gpio\": \""+String(arduinoSensorPort->gpio)+"\",\"name\": \""+arduinoSensorPort->name+"\",\"status\": \""+String(arduinoSensorPort->status)+"\"},";
+  }
+  return JSONmessage;
+}
+
+String WebServerHandler::saveApplicationList() {
+  Application *app;
+  String JSONmessage;
+  for(int i = 0; i < applicationListaEncadeada.size(); i++){
+    // Obtem a aplicação da lista
+    app = applicationListaEncadeada.get(i);
+    JSONmessage += "{\"name\": \""+String(app->name)+"\",\"language\": \""+String(app->language)+"\",\"description\": \""+String(app->description)+"\"}"+',';
+  }
+  JSONmessage = '['+JSONmessage.substring(0, JSONmessage.length()-1)+']';
+
+  return JSONmessage;
+}
+
+bool WebServerHandler::addSensor(int id, int gpio, String name) {
+  ArduinoSensorPort *p = new ArduinoSensorPort();
+  pinMode(gpio, INPUT_PULLUP);
+  delay(10); // estabiliza após configurar o pino
+
+  p->id = id;
+  p->gpio = gpio;
+  p->name = name;
+  p->status = readSensorStable(gpio); // estado inicial sem “fantasma”
+  sensorListaEncadeada.add(p);
+  return true;
+}
+
+ArduinoSensorPort * WebServerHandler::searchListSensor(int gpio) {
+  for(int i = 0; i < sensorListaEncadeada.size(); i++){
+    ArduinoSensorPort *p = sensorListaEncadeada.get(i);
+    if (gpio == p->gpio) return p;
+  }
+  return nullptr;
+}
+
+int WebServerHandler::searchList(String name, String language) {
+  Application *app;
+  for(int i = 0; i < applicationListaEncadeada.size(); i++){
+    // Obtem a aplicação da lista
+    app = applicationListaEncadeada.get(i);
+    if (name == app->name && language==app->language) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// Lê várias vezes e decide por maioria: robusto contra ruído/boot
+bool WebServerHandler::readSensorStable(int pin, uint8_t samples, uint16_t gap_ms) {
+  uint8_t trues = 0;
+  for (uint8_t i = 0; i < samples; i++) {
+    int v = digitalRead(pin);
+    bool on = (v == LOW);
+    if (on) trues++;
+    delay(gap_ms);
+  }
+  return (trues > samples/2);
 }
