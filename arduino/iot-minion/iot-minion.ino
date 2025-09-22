@@ -1,16 +1,13 @@
-#include "CryptoHandler.h"
-#include "CredentialsHandler.h"
-#include "OtaHandler.h"
+
 #include "WebServerHandler.h"
+#include <ArduinoUtilsCds.h>
 
 #define SERIAL_PORT       115200
 
 // ====== Objetos do seu projeto ======
-CredentialsHandler * credhdl;
-CryptoHandler * crypto;
-OtaHandler ota;
+ArduinoUtilsCds utilscds;
+AsyncWebServer server(HTTP_REST_PORT);
 WebServerHandler * websrvhdl = nullptr;
-
 Credentials creds;
 String decrypted_userFirmware, decrypted_passFirmware, decrypted_apiToken, decrypted_userMqtt, decrypted_passMqtt, decrypted_openIA_Key;
 bool isWiFiConnected = false;
@@ -22,6 +19,9 @@ bool isWiFiConnected = false;
   Serial.begin(SERIAL_PORT);
   Serial.println("\nBoot...");
 
+  utilscds.iniciaStorage();
+  utilscds.exibeMensagem("Inicializando o storage");
+
   // === Carrega credenciais de firmware/host etc. (credentials.txt) === 
   static const char* required[] = {
     "MQTT_BROKER", "MQTT_USERNAME", "MQTT_USERNAME_LENGTH", "MQTT_PASSORD", "MQTT_PASSORD_LENGTH", "MQTT_PORT",
@@ -29,17 +29,14 @@ bool isWiFiConnected = false;
     "HOST", "API_TOKEN", "API_TOKEN_LENGTH", "OPEN_IA_KEY", "OPEN_IA_KEY_LENGTH", "API_VERSION", "CALLER_ORIGIN"
   };
   const size_t requiredSize = sizeof(required) / sizeof(required[0]);
-  credhdl = new CredentialsHandler();
-  creds = credhdl->parseAndValidateCredentials(required, requiredSize);
-  delete credhdl;
-  if (creds.valid) {    
-    crypto = new CryptoHandler();
-    decrypted_userMqtt = crypto->decrypt(creds.mqttUsername, creds.mqttUsernameLength);
-    decrypted_passMqtt = crypto->decrypt(creds.mqttPassord, creds.mqttPassordLength);
-    decrypted_userFirmware = crypto->decrypt(creds.userFirmware, creds.userFirmwareLength);
-    decrypted_passFirmware = crypto->decrypt(creds.passFirmware, creds.passFirmwareLength);
-    decrypted_apiToken     = crypto->decrypt(creds.apiToken, creds.apiTokenLength);
-    decrypted_openIA_Key   = crypto->decrypt(creds.openIA_Key, creds.openIA_KeyLength);
+  creds = utilscds.quebraValidaCredenciais(required, requiredSize);
+  if (creds.valid) {
+    decrypted_userMqtt = utilscds.decrypta(creds.mqttUsername, creds.mqttUsernameLength);
+    decrypted_passMqtt = utilscds.decrypta(creds.mqttPassord, creds.mqttPassordLength);
+    decrypted_userFirmware = utilscds.decrypta(creds.userFirmware, creds.userFirmwareLength);
+    decrypted_passFirmware = utilscds.decrypta(creds.passFirmware, creds.passFirmwareLength);
+    decrypted_apiToken     = utilscds.decrypta(creds.apiToken, creds.apiTokenLength);
+    decrypted_openIA_Key   = utilscds.decrypta(creds.openIA_Key, creds.openIA_KeyLength);
 
     Serial.println("decrypted_userMqtt: "+decrypted_userMqtt);
     Serial.println("decrypted_passMqtt: "+decrypted_passMqtt);
@@ -68,7 +65,9 @@ bool isWiFiConnected = false;
       websrvhdl->startWebServerWifiManager(apName);
       Serial.println("WiFi não configurado!");
       Serial.println("Por favor, conecte-se em: " + apName + " e entre em: http://" + hostName + ".local para configuração do WiFi.");
-    } else {                         
+    } else {
+      utilscds.salvaCredenciaisWiFi(WiFi.SSID().c_str(), WiFi.psk().c_str());
+
       pinMode(RelayEyes, OUTPUT);
       pinMode(RelayHat, OUTPUT);
       pinMode(RelayBlink, OUTPUT);
@@ -76,15 +75,17 @@ bool isWiFiConnected = false;
       pinMode(TemperatureHumidity, OUTPUT);
       
       websrvhdl->startWebServer();   // registra rotas no 'server' e chama server->begin() lá dentro
-      ota.begin(websrvhdl->getWebServer(), decrypted_userFirmware, decrypted_passFirmware);
-      Serial.println("OTA inicializado");
+      utilscds.logInfo("Web Server inicializado");
+      utilscds.iniciaOta(&server, decrypted_userFirmware, decrypted_passFirmware);
+      utilscds.logInfo("OTA inicializado");
 
       const char * hostname = hostName.c_str();
       MDNS.end();
+      // Atribuindo clock para conseguir usar datetime nos arquivos de log
+      utilscds.atribuiRelogio();
       if(!MDNS.begin(hostname)){
         Serial.println("mDNS falhou");
         delay(1000);
-        delete crypto;
         delete websrvhdl;
         ESP.restart();
       }
@@ -104,7 +105,7 @@ bool isWiFiConnected = false;
 void loop() {
   if (isWiFiConnected) {
     //MDNS.update();
-    ota.loop(); // se o seu OtaHandler exigir
+    utilscds.loopOta();    // se o seu OtaHandler exigir
     websrvhdl->loop();
   }
 }
