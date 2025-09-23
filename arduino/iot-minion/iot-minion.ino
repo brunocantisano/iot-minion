@@ -9,7 +9,12 @@ ArduinoUtilsCds utilscds;
 AsyncWebServer server(HTTP_REST_PORT);
 WebServerHandler * websrvhdl = nullptr;
 Credentials creds;
-String decrypted_userFirmware, decrypted_passFirmware, decrypted_apiToken, decrypted_userMqtt, decrypted_passMqtt, decrypted_openIA_Key;
+String decrypted_userFirmware;
+String decrypted_passFirmware;
+String decrypted_apiToken;
+String decrypted_userMqtt;
+String decrypted_passMqtt;
+String decrypted_openIA_Key;
 bool isWiFiConnected = false;
 //---------------------------------//
 /**********************************************
