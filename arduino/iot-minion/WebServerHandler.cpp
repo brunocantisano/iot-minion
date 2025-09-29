@@ -930,9 +930,9 @@ String WebServerHandler::treatTemperatureAndHumidity(String field, String value)
 String WebServerHandler::enviarMensagemParaChatGPT(String mensagem) {
   String resposta = "";
   HTTPClient http;
-  http.begin(chatGPTUrl);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization", "Bearer " + apiChatGptToken);
+  http.begin(chatGPTUrl);
 
   String payload = "{\"model\": \"gpt-3.5-turbo\",\"messages\": [{\"role\": \"user\", \"content\": \""+mensagem+"\"}],\"temperature\": 0.7,\"max_tokens\": 100, \"top_p\": 0.9,\"frequency_penalty\": 0.5,\"presence_penalty\": 0.9}";
   int httpCode = http.POST(payload);
@@ -940,7 +940,12 @@ String WebServerHandler::enviarMensagemParaChatGPT(String mensagem) {
   if (httpCode > 0) {
     Serial.printf("[HTTP] POST para o ChatGPT retornou código: %d\n", httpCode);
 
+  // Usar HTTP_CODE_OK se existir, senão usar 200
+  #ifdef ESP8266
     if (httpCode == HTTP_CODE_OK) {
+  #else
+    if (httpCode == 200) {  // ESP32 não define HTTP_CODE_OK
+  #endif
       resposta = http.getString();
       //Serial.println("Resposta do ChatGPT: " + resposta);
       // Parse da resposta JSON

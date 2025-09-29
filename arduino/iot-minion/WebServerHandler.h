@@ -12,6 +12,7 @@
  *******************************/
 #if defined(ESP32)
   #include <WiFi.h>               // em vez de ESP8266WiFi.h
+  #include <HTTPClient.h>
   #include <AsyncTCP.h>           // em vez de ESPAsyncTCP.h
   #include <ESPAsyncWebServer.h>  // igual
   #include <ESPAsyncDNSServer.h>  // ou <DNSServer.h> se preferir síncrono
@@ -20,6 +21,7 @@
  *  Build para ESP8266
  *******************************/
   #include <ESP8266WiFi.h>
+  #include <ESP8266HTTPClient.h>
   #include <ESPAsyncTCP.h>
   #include <ESPAsyncWebServer.h>
   #include <ESPAsyncDNSServer.h>
