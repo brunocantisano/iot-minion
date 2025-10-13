@@ -185,7 +185,7 @@ void WebServerHandler::handleSwagger(){
       html=String(MSG_ARQUIVO_NAO_ENCONTRADO);  
     } else {
       html.replace("0.0.0",apiVersion);
-      html.replace("HOST_MINION",host+".local");         
+      html.replace("HOST_MINION",host);
     }
     request->send(HTTP_OK, utilshdl->getMimeType(".json"), html);
   });
@@ -197,7 +197,7 @@ void WebServerHandler::handleSwaggerUI(){
     if(!strhdl->readFile(LittleFS, "/swaggerUI.html", html)) {
       html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
     } else {
-      html.replace("HOST_MINION",host+".local");  
+      html.replace("HOST_MINION",host);  
     }
     request->send(HTTP_OK, utilshdl->getMimeType(".html"), html);
   });  
