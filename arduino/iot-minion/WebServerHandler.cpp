@@ -2,49 +2,27 @@
 #include "WebServerHandler.h"
 
 static const char* MSG_ARQUIVO_NAO_ENCONTRADO = "Provavelmente voce nao carregou os arquivos da pasta \"data\" (LittleFS) para o servidor!";
-// Ajuste aqui conforme sua fiação:
-// true  -> boia fecha em GND (INPUT_PULLUP; ativo=LOW)
-// false -> boia vai a VCC (ativo=HIGH)
 WebServerHandler::WebServerHandler(
     const String& token, 
     const String& version, 
     const String& hostServer, 
-    const String& chatGptToken,
-    const String& mqttUsername,
-    const String& mqttPassword,
-    const String& mqttBrokerHost,
-    const String& caller):
+    const String& caller,
+    ArduinoUtilsCds * cds):
                       apiToken(token),
                       apiVersion(version),
                       host(hostServer),
-                      apiChatGptToken(chatGptToken),
                       chatGPTUrl("https://api.openai.com/v1/chat/completions"),
-                      mqttUser(mqttUsername),
-                      mqttPass(mqttPassword),
-                      mqttBroker(mqttBrokerHost),
-                      callerOrigin(caller)
+                      callerOrigin(caller),
+                      utilscds(cds)
 {
   server = new AsyncWebServer(HTTP_REST_PORT);
-  ws = new AsyncWebSocket("/ws");
-  strhdl = new StorageHandler();
-  audiohdl = new AudioHandler();
-  sdcardhdl = new SdCardHandler();
-  temphdl = new TemperatureHandler();
-  utilshdl = new UtilsHandler();
-  prefshdl = new PreferencesHandler();
-
-  strhdl->begin();
+  ws = new AsyncWebSocket("/ws");  
 }
 
 WebServerHandler::~WebServerHandler() {
     delete server;  // Free the allocated memory
     delete ws;
-    delete strhdl;
-    delete audiohdl;
-    delete sdcardhdl;
-    delete temphdl;
-    delete utilshdl;
-    delete prefshdl;
+    delete utilscds;
 }
 
 String WebServerHandler::obtemMetricas() {
@@ -71,18 +49,18 @@ String WebServerHandler::obtemMetricas() {
   atribuiMetrica(&p, boardName+"_free_psram_size", String(free_psram_size));
   atribuiMetrica(&p, boardName+"_temperature", String(temperature));
   atribuiMetrica(&p, boardName+"_boot_counter", String(obtemContagemBoots()));
-  atribuiMetrica(&p, boardName+"_celsius", String(temphdl->getCelsius()));
-  atribuiMetrica(&p, boardName+"_fahrenheit", String(temphdl->getFahrenheit()));
-  atribuiMetrica(&p, boardName+"_humidity", String(temphdl->getHumidity()));
-  atribuiMetrica(&p, boardName+"_heat_celsius", String(temphdl->getHeatIndexCelsius()));
-  atribuiMetrica(&p, boardName+"_heat_fahrenheit", String(temphdl->getHeatIndexFahrenheit()));  
+  atribuiMetrica(&p, boardName+"_celsius", String(utilscds->obtemCelsius()));
+  atribuiMetrica(&p, boardName+"_fahrenheit", String(utilscds->obtemFahrenheit()));
+  atribuiMetrica(&p, boardName+"_humidity", String(utilscds->obtemUmidade()));
+  atribuiMetrica(&p, boardName+"_heat_celsius", String(utilscds->obtemIndiceAquecimentoCelsius()));
+  atribuiMetrica(&p, boardName+"_heat_fahrenheit", String(utilscds->obtemIndiceAquecimentoFahrenheit()));  
   atribuiMetrica(&p, boardName+"_eyes", obtemEstadoSensor(RelayEyes));
   atribuiMetrica(&p, boardName+"_hat", obtemEstadoSensor(RelayHat));
   atribuiMetrica(&p, boardName+"_blink", obtemEstadoSensor(RelayBlink));
   atribuiMetrica(&p, boardName+"_shake", obtemEstadoSensor(RelayShake));
-  atribuiMetrica(&p, boardName+"_volume", String(audiohdl->getVolumeAudio()));
-  atribuiMetrica(&p, boardName+"_sdcard_total", utilshdl->uint64ToText(sdcard_total));
-  atribuiMetrica(&p, boardName+"_sdcard_used", utilshdl->uint64ToText(sdcard_used));
+  atribuiMetrica(&p, boardName+"_volume", String(utilscds->obtemVolumeAudio()));
+  atribuiMetrica(&p, boardName+"_sdcard_total", utilscds->converteUint64ParaTexto(sdcard_total));
+  atribuiMetrica(&p, boardName+"_sdcard_used", utilscds->converteUint64ParaTexto(sdcard_used));
   return p;
 }
 
@@ -107,7 +85,7 @@ void WebServerHandler::atribuiMetrica(String *p, String metric, String value) {
 }
 
 int WebServerHandler::obtemContagemBoots() {
-  String boot = prefshdl->loadDataPreferentials("storage", "boot", "0");
+  String boot = utilscds->salvaDado("storage", "boot", "0");
   return boot.toInt();
 }
 
@@ -116,7 +94,7 @@ void WebServerHandler::incrementaContagemBoots() {
   char buffer[10];
   sprintf(buffer, "%d", boot);
   const char* texto = buffer;
-  prefshdl->saveDataPreferentials("storage", "boot", texto);
+  utilscds->salvaDado("storage", "boot", texto);
 }
 
 bool WebServerHandler::check_authorization_header(AsyncWebServerRequest * request){
@@ -140,11 +118,11 @@ void WebServerHandler::handleFileServing(void){
 
     if (request->hasParam("name")) {
       String file = request->getParam("name")->value();
-      String safeFile = "/" + utilshdl->sanitizeFilename(file);
+      String safeFile = "/" + utilscds->sanitizaNomeArquivo(file);
       strlcpy(filename, safeFile.c_str(), MAX_PATH);
-      request->send(LittleFS, filename, utilshdl->getMimeType(filename));
+      request->send(LittleFS, filename, utilscds->obtemTipoMime(filename));
     } else {
-      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "Parametro 'name' ausente");
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Parametro 'name' ausente");
     }
   });
 }
@@ -152,67 +130,67 @@ void WebServerHandler::handleFileServing(void){
 void WebServerHandler::handleHome(){
   server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {    
     String html = "";
-    if(!strhdl->readFile(LittleFS, "/home.html", html)) {
+    if(!utilscds->lerArquivo(LittleFS, "/home.html", html)) {
       html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
     } else {
       // versao do firmware: https://semver.org/
       html.replace("0.0.0",apiVersion);
-      html.replace("MQTT_USERNAME",mqttUser);
+      html.replace("MQTT_USERNAME",utilscds->obtemMqttUser());
       html.replace("HOST_MINION",host);
     }
-    request->send(HTTP_OK, utilshdl->getMimeType(".html"), html);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".html"), html);
   });
 }
 
 void WebServerHandler::handleCiCd() {
   server->on("/cicd", HTTP_GET, [this](AsyncWebServerRequest *request) {
     String html;
-    if (strhdl->readFile(LittleFS, "/cicd.html", html)) {
-      html.replace("MQTT_BROKER", mqttBroker);
-      html.replace("MQTT_USERNAME", mqttUser);
-      html.replace("MQTT_PASSWORD", mqttPass);
+    if (utilscds->lerArquivo(LittleFS, "/cicd.html", html)) {
+      html.replace("MQTT_BROKER", utilscds->obtemMqttBroker());
+      html.replace("MQTT_USERNAME", utilscds->obtemMqttUser());
+      html.replace("MQTT_PASSWORD", utilscds->obtemMqttPass());
     } else {
       html = HTML_MISSING_DATA_UPLOAD;
     }
-    request->send(HTTP_OK, utilshdl->getMimeType(".html"), html);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".html"), html);
   });
 }
 
 void WebServerHandler::handleSwagger(){
   server->on("/swagger.json", HTTP_GET, [this](AsyncWebServerRequest *request) {
     String html = "";
-    if(!strhdl->readFile(LittleFS, "/swagger.json", html)) {      
+    if(!utilscds->lerArquivo(LittleFS, "/swagger.json", html)) {      
       html=String(MSG_ARQUIVO_NAO_ENCONTRADO);  
     } else {
       html.replace("0.0.0",apiVersion);
       html.replace("HOST_MINION",host);
     }
-    request->send(HTTP_OK, utilshdl->getMimeType(".json"), html);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), html);
   });
 }
 
 void WebServerHandler::handleSwaggerUI(){
   server->on("/swaggerUI", HTTP_GET, [this](AsyncWebServerRequest *request) {
     String html = "";
-    if(!strhdl->readFile(LittleFS, "/swaggerUI.html", html)) {
+    if(!utilscds->lerArquivo(LittleFS, "/swaggerUI.html", html)) {
       html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
     } else {
       html.replace("HOST_MINION",host);  
     }
-    request->send(HTTP_OK, utilshdl->getMimeType(".html"), html);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".html"), html);
   });  
 }
 
 void WebServerHandler::handleHealth(){
   server->on("/health", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"date\": \""+utilshdl->getDataHora()+"\",\"url\": \"/health\",\"version\": \""+apiVersion+"\",\"ip\": \""+utilshdl->IpAddress2String(WiFi.localIP())+"\"}";
-    request->send(HTTP_OK, utilshdl->getMimeType(".json"), JSONmessage);
+    String JSONmessage = "{\"greeting\": \"Bem vindo ao Minion ESP32 REST Web Server\",\"date\": \""+utilscds->obtemDataHora()+"\",\"url\": \"/health\",\"version\": \""+apiVersion+"\",\"ip\": \""+utilscds->enderecoIpTexto(WiFi.localIP())+"\"}";
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), JSONmessage);
   });
 }
 
 void WebServerHandler::handleMetrics(){
   server->on("/metrics", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    request->send(HTTP_OK, utilshdl->getMimeType(".txt"), obtemMetricas());
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), obtemMetricas());
   });
 }
 
@@ -220,9 +198,9 @@ void WebServerHandler::handlePorts(){
   server->on("/ports", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       String JSONmessage = listSensorJson();
-      request->send(HTTP_OK, utilshdl->getMimeType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });  
 }
@@ -231,9 +209,9 @@ void WebServerHandler::handleAudios(){
   server->on("/audios", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       String JSONmessage = listMediaJson();
-      request->send(HTTP_OK, utilshdl->getMimeType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });  
 }
@@ -241,46 +219,46 @@ void WebServerHandler::handleAudios(){
 void WebServerHandler::handleSensors() {
   server->on("/sensors", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!check_authorization_header(request)) {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
       return;
     }
 
     const AsyncWebParameter* pSensor = request->getParam("sensor");
-    if (!pSensor) { request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing sensor"); return; }
+    if (!pSensor) { request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing sensor"); return; }
 
     int sensor = pSensor->value().toInt();  // 1..4
     int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : -1;
     bool on = readSensorStable(pin);
     if (auto s = searchListSensor(pin)) s->status = on;
     String resp = on ? "ativado" : "desativado";
-    request->send(HTTP_OK, utilshdl->getMimeType(".txt"), resp);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), resp);
   });  
 }
 
 void WebServerHandler::handleUpdateSensors() {
   server->on("/sensors", HTTP_PUT, [this](AsyncWebServerRequest *request) {
     if (!check_authorization_header(request)) {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
       return;
     }
 
     // Parâmetro sensor obrigatório na query
     const AsyncWebParameter* pSensor = request->getParam("sensor");
     if (!pSensor) { 
-      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing sensor"); 
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing sensor"); 
       return; 
     }
     int sensor = pSensor->value().toInt();
     int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : -1;
     if (pin < 0) {
-      request->send(HTTP_NOT_FOUND, utilshdl->getMimeType(".txt"), "sensor not found");
+      request->send(HTTP_NOT_FOUND, utilscds->obtemTipoMime(".txt"), "sensor not found");
       return;
     }
 
     // Ler corpo JSON (value = 0/1)
     String body = request->arg("plain");
     if (body.length() == 0) {
-      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing body");
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing body");
       return;
     }
 
@@ -291,7 +269,7 @@ void WebServerHandler::handleUpdateSensors() {
       newValue = doc["value"].as<int>();
     }
     if (newValue != 0 && newValue != 1) {
-      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "invalid value");
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "invalid value");
       return;
     }
 
@@ -301,7 +279,7 @@ void WebServerHandler::handleUpdateSensors() {
     if (auto s = searchListSensor(pin)) s->status = (newValue == 1);
 
     String resp = (newValue == 1) ? "ativado" : "desativado";
-    request->send(HTTP_OK, utilshdl->getMimeType(".txt"), resp);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), resp);
   });
 }
 
@@ -309,9 +287,9 @@ void WebServerHandler::handleLists(){
   server->on("/lists", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
       String JSONmessage = listApplicationJson();
-      request->send(HTTP_OK, utilshdl->getMimeType(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -319,24 +297,24 @@ void WebServerHandler::handleLists(){
 void WebServerHandler::handleTemperatureAndHumidity(){
   server->on("/climate", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!check_authorization_header(request)) {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
       return;
     }
 
     if (!request->hasParam("type")) {
-      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), WRONG_CLIMATE);
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), WRONG_CLIMATE);
       return;
     }
 
     String type = request->getParam("type")->value();
     if (type == "celsius") {
-      request->send(HTTP_OK, utilshdl->getMimeType(".json"), String(temphdl->getCelsius()));
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), String(utilscds->obtemCelsius()));
     } else if (type == "fahrenheit") {
-      request->send(HTTP_OK, utilshdl->getMimeType(".json"), String(temphdl->getFahrenheit()));
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), String(utilscds->obtemFahrenheit()));
     } else if (type == "humidity") {
-      request->send(HTTP_OK, utilshdl->getMimeType(".json"), String(temphdl->getHumidity()));
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), String(utilscds->obtemUmidade()));
     } else {
-      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), WRONG_CLIMATE);
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), WRONG_CLIMATE);
     }
   });
 }
@@ -358,7 +336,7 @@ void WebServerHandler::handleInsertTalk(){
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
           const char * mensagem = doc["mensagem"];
           #ifdef DEBUG
@@ -369,16 +347,16 @@ void WebServerHandler::handleInsertTalk(){
           
           // publish
           //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), host.c_str());
-          doc.clear();
+          doc.clear();          
           // toca o audio
-          if(audiohdl->playSpeech(mensagem)) {
-            request->send(HTTP_OK, utilshdl->getMimeType(".txt"), PLAYED);
+          if(utilscds->tocaFala(mensagem)) {
+            request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), PLAYED);
           } else {
-            request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), NOT_PLAYED);
-          }
+            request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), NOT_PLAYED);
+          }          
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -387,14 +365,14 @@ void WebServerHandler::handleInsertAsk() {
   server->on("/ask", HTTP_POST, [this](AsyncWebServerRequest * request){}, NULL,
     [this](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
       if (!check_authorization_header(request)) {
-        request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+        request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
         return;
       }
 
       JsonDocument doc;  // v7: alocação dinâmica
       String JSONmessageBody;
       if (deserializeJson(doc, JSONmessageBody)) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
         return;
       }
 
@@ -407,7 +385,7 @@ void WebServerHandler::handleInsertAsk() {
       }
 
       // toca o áudio em background, sem quebrar a resposta
-      audiohdl->playSpeech(retorno.c_str());
+      utilscds->tocaFala(retorno.c_str());
 
       request->send(HTTP_OK, "text/plain", retorno);
   });
@@ -430,7 +408,7 @@ void WebServerHandler::handleInsertPlay(){
       String JSONmessageBody;
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
         const char * midia = doc["midia"];
         #ifdef DEBUG
@@ -443,14 +421,14 @@ void WebServerHandler::handleInsertPlay(){
         //client.publish((mqttUser+String("/feeds/")+feedName).c_str(), host.c_str());
         doc.clear();
         // toca o audio
-        if(audiohdl->playMidia(midia)) {
-          request->send(HTTP_OK, utilshdl->getMimeType(".txt"), PLAYED);
+        if(utilscds->tocaMidia(midia)) {
+          request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), PLAYED);
         } else {
-          request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), NOT_PLAYED);
+          request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), NOT_PLAYED);
         }
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -463,7 +441,7 @@ void WebServerHandler::handleInsertPlayRemote(){
       String JSONmessageBody;
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
         const char * url = doc["url"];        
         #ifdef DEBUG
@@ -473,12 +451,12 @@ void WebServerHandler::handleInsertPlayRemote(){
         // exemplos:
         // 1- http://mp3.ffh.de/radioffh/hqlivestream.mp3
         // 2- http://stream.friskyradio.com:9000/frisky_mp3_h
-        audiohdl->playRemoteMidia(url);
+        utilscds->tocaMidiaRemota(url);
         doc.clear();
-        request->send(HTTP_OK, utilshdl->getMimeType(".txt"), PLAYED);
+        request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), PLAYED);
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -492,20 +470,20 @@ void WebServerHandler::handleVolume(){
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
         String feedName="volume";
         int intensidade = doc["intensidade"];
-        audiohdl->setVolumeAudio(intensidade);
+        utilscds->atribuiVolumeAudio(intensidade);
         char buffer [MAX_PATH];              
         // publish
         //client.publish((mqttUser+String("/feeds/")+feedName).c_str(), buffer);
-        snprintf ( buffer, MAX_PATH, "Intensidade do volume foi alterada para: %d", audiohdl->getVolumeAudio());  
+        snprintf ( buffer, MAX_PATH, "Intensidade do volume foi alterada para: %d", utilscds->obtemVolumeAudio());  
         doc.clear();      
-        request->send(HTTP_OK, utilshdl->getMimeType(".txt"), buffer);
+        request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), buffer);
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -518,7 +496,7 @@ void WebServerHandler::handleInsertItemList(){
       String JSONmessageBody;
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
         //busco para checar se aplicacao já existe
         int index = searchList(doc["name"],doc["language"]);
@@ -531,7 +509,7 @@ void WebServerHandler::handleInsertItemList(){
           // Grava no Storage
           JSONmessage = saveApplicationList();
           // Grava no storage
-          strhdl->writeFile(LittleFS,"/lista.json",JSONmessage.c_str()); 
+          utilscds->escreveArquivo(LittleFS,"/lista.json",JSONmessage.c_str()); 
           #ifdef DEBUG
             Serial.println("handleInsertItemList:"+JSONmessage);
           #endif
@@ -540,13 +518,13 @@ void WebServerHandler::handleInsertItemList(){
           //client.publish((mqttUser+String("/feeds/list")).c_str(), JSONmessage.c_str());
           
           doc.clear();
-          request->send(HTTP_OK, utilshdl->getMimeType(".json"), JSONmessage);
+          request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), JSONmessage);
         } else {
-          request->send(HTTP_CONFLICT, utilshdl->getMimeType(".txt"), EXISTING_ITEM);
+          request->send(HTTP_CONFLICT, utilscds->obtemTipoMime(".txt"), EXISTING_ITEM);
         }
       }
    } else {
-    request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+    request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
    }
   });
 }
@@ -559,7 +537,7 @@ void WebServerHandler::handleDeleteItemList(){
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
       //busco pela aplicacao a ser removida
       int index = searchList(doc["name"],doc["language"]);
@@ -571,7 +549,7 @@ void WebServerHandler::handleDeleteItemList(){
         // Grava no Storage
         JSONmessage = saveApplicationList();
         // Grava no storage
-        strhdl->writeFile(LittleFS,"/lista.json",JSONmessage.c_str()); 
+        utilscds->escreveArquivo(LittleFS,"/lista.json",JSONmessage.c_str()); 
         #ifdef DEBUG
           Serial.println("handleDeleteItemList:"+JSONmessage);
         #endif
@@ -579,13 +557,13 @@ void WebServerHandler::handleDeleteItemList(){
         // publish
         //client.publish((String(mqttUser)+String("/feeds/list")).c_str(), JSONmessage.c_str());
         doc.clear();
-        request->send(HTTP_OK, utilshdl->getMimeType(".txt"), REMOVED_ITEM);
+        request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), REMOVED_ITEM);
       } else {
-        request->send(HTTP_NOT_FOUND, utilshdl->getMimeType(".txt"), NOT_FOUND_ITEM);
+        request->send(HTTP_NOT_FOUND, utilscds->obtemTipoMime(".txt"), NOT_FOUND_ITEM);
       }
     }
    } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -600,7 +578,7 @@ void WebServerHandler::handleDeleteFile(){
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
         int paramsNr = request->params();
         const AsyncWebParameter* p = request->getParam(static_cast<size_t>(paramsNr-1));
@@ -618,10 +596,10 @@ void WebServerHandler::handleDeleteFile(){
             Serial.println("Não foi possível remover o arquivo: "+filename+" do sdcard!");
         }
         doc.clear();
-        request->send(HTTP_OK, utilshdl->getMimeType(".txt"), REMOVED_FILE);
+        request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), REMOVED_FILE);
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
   });
 }
@@ -634,17 +612,17 @@ void WebServerHandler::handleListStorage() {
     #endif
     char filename[] = "/storageAndSdcard.html";
     String html;
-    if (!strhdl->readFile(LittleFS, filename, html)) {
+    if (!utilscds->lerArquivo(LittleFS, filename, html)) {
       html = HTML_MISSING_DATA_UPLOAD;
     } else {
       html.replace("API_MINION_TOKEN",apiToken);
-      html.replace("FILELIST",strhdl->listFiles());
+      html.replace("FILELIST",utilscds->listaArquivos());
       html.replace("MESSAGE", "Upload de arquivos para o storage interno do ESP32");
-      html.replace("FREE",utilshdl->humanReadableSize((LittleFS.totalBytes() - LittleFS.usedBytes())));
-      html.replace("USED",utilshdl->humanReadableSize(LittleFS.usedBytes()));
-      html.replace("TOTAL",utilshdl->humanReadableSize(LittleFS.totalBytes()));
+      html.replace("FREE",utilscds->obtemTamanhoLegivel((LittleFS.totalBytes() - LittleFS.usedBytes())));
+      html.replace("USED",utilscds->obtemTamanhoLegivel(LittleFS.usedBytes()));
+      html.replace("TOTAL",utilscds->obtemTamanhoLegivel(LittleFS.totalBytes()));
     }
-    request->send(HTTP_OK, utilshdl->getMimeType(filename), html);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(filename), html);
   });
 }
 
@@ -667,19 +645,19 @@ void WebServerHandler::handleListSdcard() {
     #endif
     char filename[] = "/storageAndSdcard.html";
     String html;
-    if(!strhdl->readFile(LittleFS, filename, html)){
+    if(!utilscds->lerArquivo(LittleFS, filename, html)){
       html=HTML_MISSING_DATA_UPLOAD;
     } else {
       File entry =  SD.open("/", FILE_WRITE);
       html.replace("API_MINION_TOKEN",apiToken);
-      html.replace("FILELIST",sdcardhdl->listFilesSD(entry, 0, apiToken));
+      html.replace("FILELIST",utilscds->listaArquivosSD(entry, 0, apiToken));
       html.replace("MESSAGE", "Mídias no cartão SD");
-      html.replace("FREE",utilshdl->humanReadableSize((SD.totalBytes() - SD.usedBytes())));
-      html.replace("USED",utilshdl->humanReadableSize(SD.usedBytes()));
-      html.replace("TOTAL",utilshdl->humanReadableSize(SD.totalBytes()));
+      html.replace("FREE",utilscds->obtemTamanhoLegivel((SD.totalBytes() - SD.usedBytes())));
+      html.replace("USED",utilscds->obtemTamanhoLegivel(SD.usedBytes()));
+      html.replace("TOTAL",utilscds->obtemTamanhoLegivel(SD.totalBytes()));
       entry.close();
     }
-    request->send(HTTP_OK, utilshdl->getMimeType(filename), html);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(filename), html);
   });
 }
 
@@ -712,14 +690,45 @@ void WebServerHandler::handleInsertJigSaw(){
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
-        request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".json"), PARSER_ERROR);
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
         const char * mensagem = doc["mensagem"];          
-        request->send(HTTP_OK, utilshdl->getMimeType(".txt"), mensagem);
+        request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), mensagem);
       }
     } else {
-      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
     }
+  });
+}
+
+void WebServerHandler::handleWiFiManager(void){
+  // Página principal
+  server->on("/", HTTP_GET, [this](AsyncWebServerRequest* request){
+    Serial.println("[HTTP] GET /");
+    String html = "";
+    if(!utilscds->lerArquivo(LittleFS, "/wifimanager.html", html)) {
+      Serial.println("handleWiFiManager");
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".html"), MSG_ARQUIVO_NAO_ENCONTRADO);
+    }
+    else {
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".html"), html);
+    }
+  });
+}
+
+void WebServerHandler::handleSaveCredentials(void){
+  // Salvar credenciais (usa PreferencesHandler do projeto)
+  server->on("/save", HTTP_POST, [this](AsyncWebServerRequest* request){
+    Serial.println("[HTTP] POST /");
+    String ssid = request->arg("ssid");
+    String pass = request->arg("pass");
+    if (ssid.isEmpty()) { request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "SSID vazio"); return; }
+
+    utilscds->salvaCredenciaisWiFi(ssid.c_str(), pass.c_str());
+  
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), "Credenciais salvas. Reiniciando...");
+    delay(300);
+    ESP.restart();
   });
 }
 
@@ -731,7 +740,7 @@ void WebServerHandler::handleOptions(){
 
 void WebServerHandler::handleOnError(){
   server->onNotFound([this](AsyncWebServerRequest *request) {
-    request->send(HTTP_NOT_FOUND, utilshdl->getMimeType(".txt"), "Rota não encontrada");
+    request->send(HTTP_NOT_FOUND, utilscds->obtemTipoMime(".txt"), "Rota não encontrada");
   });
 }
 
@@ -784,14 +793,6 @@ void WebServerHandler::notifySensors(const String& id, bool s25, bool s50, bool 
 */
 
 void WebServerHandler::startWebServer() {
-  utilshdl->setClock();
-
-  // inicio o mqtt
-  mtthdl = new MqttHandler(mqttUser,
-                     mqttPass,
-                     savedSsid,
-                     savedPass);
-
   // carrega sensores  
   bool load = loadSensorList();
   if(!load) {
@@ -799,15 +800,9 @@ void WebServerHandler::startWebServer() {
       Serial.println(F("Nao foi possivel carregar a lista de sensores!"));
     #endif
   }
-
-  // inicia audio
-  audiohdl->begin(apiChatGptToken);
-
-  // DH11 inicia temperatura
-  temphdl->begin();
   
   // carrega lista de arquivos de media no SDCARD
-  if(sdcardhdl->loadSdCardMedias(apiToken)) sdcardhdl->loadI2S(); //Configura e inicia o SPI para conexão com o cartão SD
+  if(utilscds->carregaMidiasSdCard(apiToken)) utilscds->iniciaSdCard(); //Configura e inicia o SPI para conexão com o cartão SD
   /* 
    *  Rotas sem bloqueios de token na API
    *  Configura as páginas de login e upload 
@@ -869,55 +864,17 @@ void WebServerHandler::startWebServer() {
   });
   server->addHandler(ws);
   */
-  server->begin();  
-}
-
-void WebServerHandler::loop() {
-  temphdl->getTemperatureData();
-  audiohdl->loop(); //Executa o loop interno da biblioteca audio
+  server->begin();
 }
 
 /**********************************************
  *  Rotas do portal (AP)
  **********************************************/
 void WebServerHandler::registerPortalRoutes() {
-  // Captive endpoints comuns dos SOs → manda para "/"
-  server->on("/generate_204", HTTP_ANY, [this](AsyncWebServerRequest* r){ r->redirect("/"); });
-  server->on("/hotspot-detect.html", HTTP_ANY, [this](AsyncWebServerRequest* r){ r->redirect("/"); });
-  server->on("/ncsi.txt", HTTP_ANY, [this](AsyncWebServerRequest* r){ r->redirect("/"); });
-
-  // Página principal
-  server->on("/", HTTP_GET, [this](AsyncWebServerRequest* request){
-    Serial.println("[HTTP] GET /");
-    String html = "";
-    if(!strhdl->readFile(LittleFS, "/wifimanager.html", html)) {
-      Serial.println("readFile->registerPortalRoutes");
-      request->send(HTTP_OK, utilshdl->getMimeType(".html"), MSG_ARQUIVO_NAO_ENCONTRADO);
-    }
-    else {
-      request->send(HTTP_OK, utilshdl->getMimeType(".html"), html);
-    }
-  });
-
-  // Salvar credenciais (usa PreferencesHandler do projeto)
-  server->on("/save", HTTP_POST, [this](AsyncWebServerRequest* request){
-    Serial.println("[HTTP] POST /save");
-    String ssid = request->arg("ssid");
-    String pass = request->arg("pass");
-    if (ssid.isEmpty()) { request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "SSID vazio"); return; }
-
-    prefshdl->saveDataPreferentials("wifi", "ssid", ssid.c_str());
-    prefshdl->saveDataPreferentials("wifi", "pass", pass.c_str());
-  
-    request->send(HTTP_OK, utilshdl->getMimeType(".txt"), "Credenciais salvas. Reiniciando...");
-    delay(300);
-    ESP.restart();
-  });
-
-  // Arquivos estáticos opcionais (CSS/JS/imagens) em /
-  server->serveStatic("/", LittleFS, "/")
-      .setDefaultFile("home.html")            // serve /home.html em "/"
-      .setCacheControl("max-age=31536000");   // opcional: cache
+  handleFileServing();
+  handleWiFiManager();
+  handleSaveCredentials();
+  server->begin();
 }
 
 String WebServerHandler::treatTemperatureAndHumidity(String field, String value)
@@ -931,7 +888,7 @@ String WebServerHandler::enviarMensagemParaChatGPT(String mensagem) {
   String resposta = "";
   HTTPClient http;
   http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization", "Bearer " + apiChatGptToken);
+  http.addHeader("Authorization", "Bearer " + utilscds->obtemTokenChatGpt());
   http.begin(chatGPTUrl);
 
   String payload = "{\"model\": \"gpt-3.5-turbo\",\"messages\": [{\"role\": \"user\", \"content\": \""+mensagem+"\"}],\"temperature\": 0.7,\"max_tokens\": 100, \"top_p\": 0.9,\"frequency_penalty\": 0.5,\"presence_penalty\": 0.9}";
@@ -969,7 +926,7 @@ String WebServerHandler::enviarMensagemParaChatGPT(String mensagem) {
 // handles uploads to storage
 void WebServerHandler::handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
   if(this->check_authorization_header(request)) {
-    if(!this->sdcardhdl->getAllowedStorageFiles(filename)) {
+    if(!this->utilscds->obtemArquivosStoragePermitidos(filename)) {
       request->send(HTTP_BAD_REQUEST, "text/plain", NOT_AUTHORIZED_EXTENTIONS);
       return;
     } else {
@@ -1018,7 +975,7 @@ void WebServerHandler::handleUploadStorage(AsyncWebServerRequest *request, Strin
 
 void WebServerHandler::handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
   if (this->check_authorization_header(request)) {
-    if (!this->sdcardhdl->getAllowedStorageFiles(filename)) {
+    if (!this->utilscds->obtemArquivosStoragePermitidos(filename)) {
       request->send(HTTP_BAD_REQUEST, "text/plain", NOT_AUTHORIZED_EXTENTIONS);
       return;
     } else {
@@ -1083,8 +1040,7 @@ void WebServerHandler::startWebServerWifiManager(const String& apName) {
 
   dns.start(53, "*", apIP);            // captive DNS
 
-  registerPortalRoutes();              // <<<<< REGISTRAR ANTES do begin()
-  server->begin();
+  registerPortalRoutes();
 }
 
 /**********************************************
@@ -1093,9 +1049,7 @@ void WebServerHandler::startWebServerWifiManager(const String& apName) {
 bool WebServerHandler::connectSTA(const String& hostForMDNS) {
   (void)hostForMDNS;
  
-  savedSsid = prefshdl->loadDataPreferentials("wifi", "ssid", "");
-  savedPass = prefshdl->loadDataPreferentials("wifi", "pass", "");
-  
+  utilscds->carregaCredenciaisWiFi(savedSsid, savedPass);
   if (savedSsid.isEmpty()) {
     Serial.println(F("Sem credenciais salvas."));
     return false;

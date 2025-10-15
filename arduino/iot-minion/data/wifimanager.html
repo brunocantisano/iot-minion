@@ -1,1 +1,46 @@
-<!DOCTYPE html><html><head> <title>ESP Wi-Fi Manager</title> <meta name="viewport" content="width=device-width, initial-scale=1"> <link rel="icon" href="data:,"> <link href="get-file?name=style.css" rel="stylesheet" type="text/css" media="screen"/></head><body> <div class="topnav"> <h1>ESP Wi-Fi Manager</h1> </div><div class="content"> <img src="/wifi-logo.png" width="200" alt="minion-wifi"> <img src="/minion-work.jpg" width="128" alt="minion-engenharia"> <div class="card-grid"> <div> <form action="/" method="POST"> <p> <table> <tr> <td> <label for="ssid">SSID</label> </td><td> <input type="text" id="ssid" name="ssid"> </td></tr><tr> <td> <label for="pass">Password</label> </td><td> <input type="text" id="pass" name="pass"><br></td></tr><tr> <td> <label for="ip">IP Address</label> </td><td> <input type="text" id="ip" name="ip" value="192.168.0.200"><br></td></tr><tr> <td> <label for="gateway">Gateway Address</label> </td><td> <input type="text" id="gateway" name="gateway" value="192.168.0.1"><br></td></tr></table> <center> <input type="submit" value="Submit"> </p></center> </form> </div></div></div></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ESP Wi-Fi Manager</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" href="data:,">
+	<link href="get-file?name=style.css" rel="stylesheet" type="text/css" media="screen"/>
+</head>
+<body>
+<div class="topnav">
+<h1>ESP Wi-Fi Manager</h1> 
+</div>
+<div class="content">
+	<img src="get-file?name=wifi-logo.png" width="96" alt="wifi-logo"/>
+	<img src="get-file?name=minion-work.jpg" width="128" alt="minion-engenharia">
+	<div class="card-grid">
+		<div> 
+			<form action="/save" method="POST">
+			  <table>
+				<tr>
+				  <td><label for="ssid">SSID</label></td>
+				  <td><input type="text" id="ssid" name="ssid" required></td>
+				</tr>
+				<tr>
+				  <td><label for="pass">Password</label></td>
+				  <td><input type="password" id="pass" name="pass"></td>
+				</tr>
+				<tr>
+				  <td><label for="ip">IP Address</label></td>
+				  <td><input type="text" id="ip" name="ip" value="192.168.0.200"></td>
+				</tr>
+				<tr>
+				  <td><label for="gateway">Gateway Address</label></td>
+				  <td><input type="text" id="gateway" name="gateway" value="192.168.0.1"></td>
+				</tr>
+			  </table>
+
+			  <center>
+				<button id="saveButton" type="submit">Salvar</button>
+			  </center>
+			</form>
+		</div>
+	</div>
+</div>
+</body>
+</html>

@@ -3,11 +3,7 @@
 #define CONFIG_H
 
 // ====== CONFIG BÁSICA ======
-#ifndef HTTP_REST_PORT
-  #define HTTP_REST_PORT  80
-#endif
-
-//
+#define SERIAL_PORT                115200
 #define MAX_STRING_LENGTH          20000
 #define MAX_BUFFER                 128
 #define MAX_PATH                   256

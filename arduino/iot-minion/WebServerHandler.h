@@ -29,22 +29,13 @@
   #error "Plataforma não suportada"
 #endif
 
-#include "Tipos.h"
 #include "WebMessages.h"
-#include "StorageHandler.h"
-#include "UtilsHandler.h"
-#include "PreferencesHandler.h"
-#include "HttpStatusCodes.h"
-#include "AudioHandler.h"
-#include "MqttHandler.h"
-#include "SdCardHandler.h"
-#include "TemperatureHandler.h"
+#include <ArduinoUtilsCds.h>
 #include <pgmspace.h>   // PROGMEM
 #include <ArduinoJson.h>
-#include <HTTPClient.h>
 
-#define HTTP_REST_PORT             80
-#define MAX_PAYLOAD_SIZE           2000
+#define HTTP_REST_PORT               80
+#define WEB_PAYLOAD_SIZE             2000
 
 //Volume
 #define DEFAULT_VOLUME               20
@@ -58,22 +49,12 @@ class WebServerHandler {
 private:
     AsyncWebServer * server;
     AsyncWebSocket * ws;      // rota do websocket
-    StorageHandler * strhdl;
-    UtilsHandler * utilshdl;
-    AudioHandler * audiohdl;
-    MqttHandler * mtthdl;
-    TemperatureHandler * temphdl;
-    SdCardHandler * sdcardhdl;
-    PreferencesHandler * prefshdl;
     AsyncDNSServer dns;
     String apiToken;
     String apiVersion;
     String host;
-    String apiChatGptToken;
+    ArduinoUtilsCds * utilscds;
     String chatGPTUrl;
-    String mqttUser;
-    String mqttPass;
-    String mqttBroker;
     String callerOrigin;
     uint64_t sdcard_total;
     uint64_t sdcard_used;
@@ -88,7 +69,7 @@ private:
     int obtemContagemBoots();
     void incrementaContagemBoots();
     bool check_authorization_header(AsyncWebServerRequest * request);
-    char payloadBuffer[MAX_PAYLOAD_SIZE];
+    char payloadBuffer[WEB_PAYLOAD_SIZE];
     void handleFileServing();
     void handleHomeRaw();
     void handleHome();
@@ -116,6 +97,8 @@ private:
     void handleListSdcard();
     void handleUploadSdCard();
     void handleInsertJigSaw();
+    void handleWiFiManager();
+    void handleSaveCredentials();
     void handleOptions();
     void handleOnError();    
     void registerPortalRoutes();
@@ -142,11 +125,8 @@ public:
         const String& token, 
         const String& version, 
         const String& hostServer, 
-        const String& chatGptToken,
-        const String& mqttUsername,
-        const String& mqttPassword,
-        const String& mqttBrokerHost,
-        const String& caller);
+        const String& caller,
+        ArduinoUtilsCds * cds);
     
     ~WebServerHandler();
 
@@ -154,7 +134,6 @@ public:
     bool connectSTA(const String& hostForMDNS);
     bool loadSensorList();
     void startWebServerWifiManager(const String& apName);
-    void loop();
     AsyncWebServer * getWebServer();
 };
 
