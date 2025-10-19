@@ -14,6 +14,7 @@ String decrypted_passMqtt;
 String decrypted_openIA_Key;
 String decrypted_passAuthor;
 bool isWiFiConnected = false;
+//unsigned long previousMillis;
 //---------------------------------//
 /**********************************************
  *  SETUP
@@ -65,7 +66,14 @@ bool isWiFiConnected = false;
       Serial.println("WiFi não configurado!");
       Serial.println("Por favor, conecte-se em: " + apName + " e entre em: http://" + hostName + ".local para configuração do WiFi.");
     } else {
-      utilscds.salvaCredenciaisWiFi(WiFi.SSID().c_str(), WiFi.psk().c_str());
+      char usuario[64];
+      char senha[64];
+      String ssid = WiFi.SSID();
+      String pass = WiFi.psk();
+      strncpy(usuario, ssid.c_str(), sizeof(usuario));
+      strncpy(senha, pass.c_str(), sizeof(senha));
+      utilscds.salvaCredenciaisWiFi(usuario, senha);
+
       // inicio storage
       utilscds.iniciaStorage();
       // inicio sdcard
@@ -75,7 +83,7 @@ bool isWiFiConnected = false;
       // inicio audio
       utilscds.iniciaSound(decrypted_openIA_Key);
       // inicio o mqtt
-      utilscds.iniciaMqtt(creds.mqttBroker, decrypted_userMqtt, decrypted_passMqtt, WiFi.SSID().c_str(), WiFi.psk().c_str()); 
+      utilscds.iniciaMqtt(creds.mqttBroker, decrypted_userMqtt, decrypted_passMqtt, usuario, senha); 
 
       pinMode(RelayEyes, OUTPUT);
       pinMode(RelayHat, OUTPUT);
@@ -112,10 +120,19 @@ bool isWiFiConnected = false;
  *  LOOP
  **********************************************/
 void loop() {
+  //unsigned long currentMillis = millis();  
   if (isWiFiConnected) {
     //MDNS.update();
     utilscds.loopOta();    // se o seu OtaHandler exigir
     utilscds.loopAudio();  //Executa o loop interno da biblioteca audio
-    utilscds.obtemDadosTemperatura();
+    /*
+    // Report every 1 minuto.
+    if (currentMillis - previousMillis >= 60000) {
+      previousMillis = currentMillis;
+      // Reading temperature or humidity takes about 250 milliseconds!
+      // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+      //utilscds.obtemDadosTemperatura();
+    }
+    */
   }
 }

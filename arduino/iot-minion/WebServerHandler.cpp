@@ -35,7 +35,6 @@ String WebServerHandler::obtemMetricas() {
   int psram_size = ESP.getPsramSize();
   int free_psram_size = ESP.getFreePsram();
   const String boardName = "esp32";
-  
   float temperature = ((temprature_sens_read() - 32) / 1.8);
    
   atribuiMetrica(&p, boardName+"_uptime", String(millis()));
@@ -59,8 +58,8 @@ String WebServerHandler::obtemMetricas() {
   atribuiMetrica(&p, boardName+"_blink", obtemEstadoSensor(RelayBlink));
   atribuiMetrica(&p, boardName+"_shake", obtemEstadoSensor(RelayShake));
   atribuiMetrica(&p, boardName+"_volume", String(utilscds->obtemVolumeAudio()));
-  atribuiMetrica(&p, boardName+"_sdcard_total", utilscds->converteUint64ParaTexto(sdcard_total));
-  atribuiMetrica(&p, boardName+"_sdcard_used", utilscds->converteUint64ParaTexto(sdcard_used));
+  atribuiMetrica(&p, boardName+"_sdcard_total", utilscds->obtemTotalSdcard());
+  atribuiMetrica(&p, boardName+"_sdcard_used", utilscds->obtemUsadosSdcard());
   return p;
 }
 
@@ -226,8 +225,8 @@ void WebServerHandler::handleSensors() {
     const AsyncWebParameter* pSensor = request->getParam("sensor");
     if (!pSensor) { request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing sensor"); return; }
 
-    int sensor = pSensor->value().toInt();  // 1..4
-    int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : -1;
+    int sensor = pSensor->value().toInt();  // 1..5
+    int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : (sensor==5)?TemperatureHumidity : -1;
     bool on = readSensorStable(pin);
     if (auto s = searchListSensor(pin)) s->status = on;
     String resp = on ? "ativado" : "desativado";
@@ -236,7 +235,9 @@ void WebServerHandler::handleSensors() {
 }
 
 void WebServerHandler::handleUpdateSensors() {
-  server->on("/sensors", HTTP_PUT, [this](AsyncWebServerRequest *request) {
+  server->on("/sensors", HTTP_PUT, [this](AsyncWebServerRequest *request) {}, NULL,
+    [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+
     if (!check_authorization_header(request)) {
       request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
       return;
@@ -248,31 +249,43 @@ void WebServerHandler::handleUpdateSensors() {
       request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing sensor"); 
       return; 
     }
+
     int sensor = pSensor->value().toInt();
-    int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : -1;
+    int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : (sensor==5)?TemperatureHumidity : -1;
     if (pin < 0) {
       request->send(HTTP_NOT_FOUND, utilscds->obtemTipoMime(".txt"), "sensor not found");
       return;
     }
 
-    // Ler corpo JSON (value = 0/1)
-    String body = request->arg("plain");
-    if (body.length() == 0) {
-      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing body");
-      return;
+    // Monta o corpo JSON (body)
+    String body;
+    for (size_t i = 0; i < len; i++) {
+      body += (char)data[i];
     }
 
-    int newValue = -1;
-    StaticJsonDocument<128> doc;   // payload bem pequeno: {"value":0|1}
+    // Faz parse do JSON
+    StaticJsonDocument<128> doc;
     DeserializationError err = deserializeJson(doc, body);
+    int newValue = 0;
     if (!err && doc["value"].is<int>()) {
       newValue = doc["value"].as<int>();
     }
+    if (err) {
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "invalid json");
+      return;
+    }
+    
+    if (!doc.containsKey("value") || !(doc["value"].is<int>())) {
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing or invalid 'value'");
+      return;
+    }
+
+    newValue = doc["value"].as<int>();
     if (newValue != 0 && newValue != 1) {
       request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "invalid value");
       return;
     }
-
+    
     // Atualiza o pino
     pinMode(pin, OUTPUT);
     digitalWrite(pin, newValue ? HIGH : LOW);
@@ -332,7 +345,11 @@ void WebServerHandler::handleInsertTalk(){
             Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
           #endif
       }
-      String JSONmessageBody; 
+      // monta corpo JSON
+      String JSONmessageBody;
+      for (size_t i = 0; i < len; i++) {
+        JSONmessageBody += (char)data[i];
+      }
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
@@ -344,9 +361,8 @@ void WebServerHandler::handleInsertTalk(){
           #endif
           String feedName="talk";
           host +="->"+String(mensagem);
-          
-          // publish
-          //client.publish((String(MQTT_USERNAME)+String("/feeds/")+feedName).c_str(), host.c_str());
+          // Grava no Adafruit
+          utilscds->atribuiFeed(feedName, host);
           doc.clear();          
           // toca o audio
           if(utilscds->tocaFala(mensagem)) {
@@ -369,8 +385,11 @@ void WebServerHandler::handleInsertAsk() {
         return;
       }
 
-      JsonDocument doc;  // v7: alocação dinâmica
       String JSONmessageBody;
+      for (size_t i = 0; i < len; i++) {
+        JSONmessageBody += (char)data[i];
+      }
+      JsonDocument doc;  // v7: alocação dinâmica
       if (deserializeJson(doc, JSONmessageBody)) {
         request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
         return;
@@ -404,8 +423,11 @@ void WebServerHandler::handleInsertPlay(){
             Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
           #endif
       }      
-      JsonDocument doc;  // v7: alocação dinâmica
       String JSONmessageBody;
+      for (size_t i = 0; i < len; i++) {
+        JSONmessageBody += (char)data[i];
+      }
+      JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
@@ -416,9 +438,8 @@ void WebServerHandler::handleInsertPlay(){
         #endif        
         String feedName="play";
         host +="->"+String(midia);
-
-        // publish
-        //client.publish((mqttUser+String("/feeds/")+feedName).c_str(), host.c_str());
+        // Grava no Adafruit
+        utilscds->atribuiFeed(feedName, host);
         doc.clear();
         // toca o audio
         if(utilscds->tocaMidia(midia)) {
@@ -437,8 +458,11 @@ void WebServerHandler::handleInsertPlayRemote(){
   server->on("/playRemote", HTTP_POST, [this](AsyncWebServerRequest * request){}, NULL,
     [this](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
-      JsonDocument doc;  // v7: alocação dinâmica
       String JSONmessageBody;
+      for (size_t i = 0; i < len; i++) {
+        JSONmessageBody += (char)data[i];
+      }
+      JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
@@ -467,6 +491,9 @@ void WebServerHandler::handleVolume(){
     [this](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
       String JSONmessageBody;
+      for (size_t i = 0; i < len; i++) {
+        JSONmessageBody += (char)data[i];
+      }
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
@@ -476,8 +503,8 @@ void WebServerHandler::handleVolume(){
         int intensidade = doc["intensidade"];
         utilscds->atribuiVolumeAudio(intensidade);
         char buffer [MAX_PATH];              
-        // publish
-        //client.publish((mqttUser+String("/feeds/")+feedName).c_str(), buffer);
+        // Grava no Adafruit
+        utilscds->atribuiFeed(feedName, buffer);
         snprintf ( buffer, MAX_PATH, "Intensidade do volume foi alterada para: %d", utilscds->obtemVolumeAudio());  
         doc.clear();      
         request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), buffer);
@@ -492,8 +519,11 @@ void WebServerHandler::handleInsertItemList(){
   server->on("/list", HTTP_POST, [this](AsyncWebServerRequest * request){}, NULL,
     [this](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
-      JsonDocument doc;  // v7: alocação dinâmica
       String JSONmessageBody;
+      for (size_t i = 0; i < len; i++) {
+        JSONmessageBody += (char)data[i];
+      }
+      JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
@@ -513,9 +543,9 @@ void WebServerHandler::handleInsertItemList(){
           #ifdef DEBUG
             Serial.println("handleInsertItemList:"+JSONmessage);
           #endif
+          String feedName="list";
           // Grava no adafruit
-          // publish
-          //client.publish((mqttUser+String("/feeds/list")).c_str(), JSONmessage.c_str());
+          utilscds->atribuiFeed(feedName, JSONmessage);
           
           doc.clear();
           request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), JSONmessage);
@@ -530,10 +560,13 @@ void WebServerHandler::handleInsertItemList(){
 }
 
 void WebServerHandler::handleDeleteItemList(){
-  server->on("/list/del", HTTP_DELETE, [this](AsyncWebServerRequest * request){}, NULL,
+  server->on("/list", HTTP_DELETE, [this](AsyncWebServerRequest * request){}, NULL,
     [this](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
     if(check_authorization_header(request)) {
       String JSONmessageBody;
+      for (size_t i = 0; i < len; i++) {
+        JSONmessageBody += (char)data[i];
+      }
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
@@ -553,9 +586,9 @@ void WebServerHandler::handleDeleteItemList(){
         #ifdef DEBUG
           Serial.println("handleDeleteItemList:"+JSONmessage);
         #endif
+        String feedName="list";
         // Grava no adafruit
-        // publish
-        //client.publish((String(mqttUser)+String("/feeds/list")).c_str(), JSONmessage.c_str());
+        utilscds->atribuiFeed(feedName, JSONmessage);
         doc.clear();
         request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), REMOVED_ITEM);
       } else {
@@ -571,35 +604,95 @@ void WebServerHandler::handleDeleteItemList(){
 void WebServerHandler::handleDeleteFile(){
   server->on("/deleteFile", HTTP_DELETE, [this](AsyncWebServerRequest * request){}, NULL,
     [this](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-    //"/deleteFile?type=storage"
-    //"/deleteFile?type=sdcard"
-    if(check_authorization_header(request)) {
-      String JSONmessageBody;
-      JsonDocument doc;  // v7: alocação dinâmica
-      DeserializationError error = deserializeJson(doc, JSONmessageBody);
-      if(error) {
-        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
-      } else {
-        int paramsNr = request->params();
-        const AsyncWebParameter* p = request->getParam(static_cast<size_t>(paramsNr-1));
-        const char * midia = doc["midia"];
-        String filename = String(midia);
-        if(p->value() == "storage") {          
-          if(LittleFS.remove("/"+filename))
-            Serial.println("arquivo removido do storage do ESP32: "+filename);
-          else
-            Serial.println("Não foi possível remover o arquivo: "+filename+" do storage do ESP32!");
-        } else if(p->value() == "sdcard"){
-          if(SD.remove(filename))
-            Serial.println("arquivo removido do sdcard: "+filename);
-          else
-            Serial.println("Não foi possível remover o arquivo: "+filename+" do sdcard!");
-        }
-        doc.clear();
-        request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), REMOVED_FILE);
-      }
-    } else {
+    // 1) Autenticação
+    if (!check_authorization_header(request)) {
       request->send(HTTP_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
+      return;
+    }
+
+    // 2) Ler e validar query param "type"
+    String type;
+    if (request->hasParam("type", true)) { // true = search only in GET params (query)
+      type = request->getParam("type", true)->value();
+    } else {
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Faltou o parametro 'type'");
+      return;
+    }
+
+    if (!(type == "storage" || type == "sdcard")) {
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Parametro 'type' invalido (use 'storage' ou 'sdcard')");
+      return;
+    }
+
+    // 3) Acumular o corpo JSON (pode vir em partes)
+    if (index == 0) {
+      // primeira parte do corpo
+      request->_tempObject = new String();
+    }
+    String *body = reinterpret_cast<String*>(request->_tempObject);
+    body->reserve(total);
+    body->concat((const char*)data, len);
+
+    // 4) Quando todo o corpo chegar, parsear e executar
+    if (index + len == total) {
+      // opcional: validar Content-Type
+      if (request->hasHeader("Content-Type")) {
+        const AsyncWebHeader* h = request->getHeader("Content-Type");
+        if (h && h->value().indexOf("application/json") < 0) {
+          delete body;
+          request->_tempObject = nullptr;
+          request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), 
+                        "Content-Type deve ser application/json");
+          return;
+        }
+      }
+
+      // 5) Parse JSON
+      JsonDocument doc; // ArduinoJson v7
+      DeserializationError err = deserializeJson(doc, *body);
+      if (err) {
+        delete body; request->_tempObject = nullptr;
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "JSON invalido");
+        return;
+      }
+
+      String filename = doc["filename"] | "";
+      filename.trim();
+      if (filename.isEmpty()) {
+        delete body; request->_tempObject = nullptr;
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Campo 'filename' obrigatorio");
+        return;
+      }
+
+      // 6) Remoção conforme 'type'
+      // use caminho absoluto por consistência
+      String path = "/" + filename;
+
+      bool removed = false;
+      if (type == "storage") {
+        removed = LittleFS.remove(path);
+        if (removed) {
+          Serial.println("Arquivo removido do storage: " + path);
+        } else {
+          Serial.println("Falha ao remover do storage: " + path);
+        }
+      } else { // sdcard
+        removed = SD.remove(path);
+        if (removed) {
+          Serial.println("Arquivo removido do sdcard: " + path);
+        } else {
+          Serial.println("Falha ao remover do sdcard: " + path);
+        }
+      }
+
+      delete body; request->_tempObject = nullptr;
+
+      if (removed) {
+        request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), REMOVED_FILE); // "REMOVED_FILE"
+      } else {
+        // Swagger não define 404; use 400 para sinalizar operação inválida/não executada
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Arquivo inexistente ou nao foi possivel remover");
+      }
     }
   });
 }
@@ -616,25 +709,36 @@ void WebServerHandler::handleListStorage() {
       html = HTML_MISSING_DATA_UPLOAD;
     } else {
       html.replace("API_MINION_TOKEN",apiToken);
-      html.replace("FILELIST",utilscds->listaArquivos());
-      html.replace("MESSAGE", "Upload de arquivos para o storage interno do ESP32");
-      html.replace("FREE",utilscds->obtemTamanhoLegivel((LittleFS.totalBytes() - LittleFS.usedBytes())));
-      html.replace("USED",utilscds->obtemTamanhoLegivel(LittleFS.usedBytes()));
-      html.replace("TOTAL",utilscds->obtemTamanhoLegivel(LittleFS.totalBytes()));
+      String jsonPayload = utilscds->listaArquivos();
+      html.replace("FILELIST",jsonPayload);
     }
     request->send(HTTP_OK, utilscds->obtemTipoMime(filename), html);
   });
 }
 
 void WebServerHandler::handleUploadStorage() {
-  // run handleUpload function when any file is uploaded
   server->on("/uploadStorage", HTTP_POST,
     [this](AsyncWebServerRequest *request) {
-      request->send(HTTP_OK);
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), "UPLOADED_FILE");
     },
     [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-      this->handleUploadStorage(request, filename, index, data, len, final);
-    });
+      static File uploadFile;
+
+      if (!index) {
+        Serial.printf("Upload start: %s\n", filename.c_str());
+        uploadFile = LittleFS.open("/" + filename, "w");
+      }
+
+      if (uploadFile) {
+        uploadFile.write(data, len);
+      }
+
+      if (final) {
+        Serial.printf("Upload end: %s (%u bytes)\n", filename.c_str(), (unsigned int)(index + len));
+        uploadFile.close();
+      }
+    }
+  );
 }
  
 void WebServerHandler::handleListSdcard() {
@@ -650,11 +754,8 @@ void WebServerHandler::handleListSdcard() {
     } else {
       File entry =  SD.open("/", FILE_WRITE);
       html.replace("API_MINION_TOKEN",apiToken);
-      html.replace("FILELIST",utilscds->listaArquivosSD(entry, 0, apiToken));
-      html.replace("MESSAGE", "Mídias no cartão SD");
-      html.replace("FREE",utilscds->obtemTamanhoLegivel((SD.totalBytes() - SD.usedBytes())));
-      html.replace("USED",utilscds->obtemTamanhoLegivel(SD.usedBytes()));
-      html.replace("TOTAL",utilscds->obtemTamanhoLegivel(SD.totalBytes()));
+      String jsonPayload = utilscds->listaArquivosSD(entry, 0, apiToken);
+      html.replace("FILELIST",jsonPayload);
       entry.close();
     }
     request->send(HTTP_OK, utilscds->obtemTipoMime(filename), html);
@@ -663,16 +764,53 @@ void WebServerHandler::handleListSdcard() {
 
 // handles uploads to sd card
 void WebServerHandler::handleUploadSdCard() {
-  // run handleUpload function when any file is uploaded
   server->on("/uploadSdcard", HTTP_POST,
     [this](AsyncWebServerRequest *request) {
-      request->send(HTTP_OK);
+      // Quando o upload termina, responde ao cliente
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), "UPLOADED_FILE");
     },
     [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-      this->handleUploadSdcard(request, filename, index, data, len, final);
-    });
+      static File uploadFile;
+
+      // Quando index == 0, é o início do upload
+      if (index == 0) {
+        Serial.printf("Iniciando upload para SD: %s\n", filename.c_str());
+
+        // Garante que o SD está montado
+        if (!SD.begin()) {
+          Serial.println("Erro: SD não inicializado!");
+          return;
+        }
+
+        // Remove arquivo existente com mesmo nome
+        if (SD.exists("/" + filename)) {
+          SD.remove("/" + filename);
+        }
+
+        // Cria novo arquivo no SD
+        uploadFile = SD.open("/" + filename, FILE_WRITE);
+        if (!uploadFile) {
+          Serial.printf("Erro ao abrir %s no SD!\n", filename.c_str());
+          return;
+        }
+      }
+
+      // Escreve os dados recebidos no arquivo
+      if (uploadFile) {
+        uploadFile.write(data, len);
+      }
+
+      // Se chegou ao final do upload, fecha o arquivo
+      if (final) {
+        Serial.printf("Upload completo: %s (%u bytes)\n", filename.c_str(), (unsigned int)(index + len));
+        if (uploadFile) {
+          uploadFile.close();
+        }
+      }
+    }
+  );
 }
-  
+
 void WebServerHandler::handleInsertJigSaw(){
   server->on("/jigsaw", HTTP_POST, [this](AsyncWebServerRequest * request){}, NULL,
     [this](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
@@ -687,6 +825,9 @@ void WebServerHandler::handleInsertJigSaw(){
           #endif
       }
       String JSONmessageBody;
+      for (size_t i = 0; i < len; i++) {
+        JSONmessageBody += (char)data[i];
+      }
       JsonDocument doc;  // v7: alocação dinâmica
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {

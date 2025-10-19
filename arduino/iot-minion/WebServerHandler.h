@@ -35,7 +35,6 @@
 #include <ArduinoJson.h>
 
 #define HTTP_REST_PORT               80
-#define WEB_PAYLOAD_SIZE             2000
 
 //Volume
 #define DEFAULT_VOLUME               20
@@ -56,8 +55,6 @@ private:
     ArduinoUtilsCds * utilscds;
     String chatGPTUrl;
     String callerOrigin;
-    uint64_t sdcard_total;
-    uint64_t sdcard_used;
     String savedSsid;
     String savedPass;
     ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();                              // Lista de media no sdcard
@@ -69,7 +66,6 @@ private:
     int obtemContagemBoots();
     void incrementaContagemBoots();
     bool check_authorization_header(AsyncWebServerRequest * request);
-    char payloadBuffer[WEB_PAYLOAD_SIZE];
     void handleFileServing();
     void handleHomeRaw();
     void handleHome();

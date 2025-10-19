@@ -139,6 +139,12 @@ mv ~/Downloads/esp32littlefs.jar ~/Arduino/tools/ESP32LittleFS/tool/esp32littlef
 | <API_MINION_TOKEN>             | Base64 Basic Auth              |
 | <API_VERSION>                  | Versão da API                  |
 
+> 
+**Ignorando o arquivo de credenciais pelo git:**
+`git update-index --skip-worktree arduino/iot-minion/data/credentials.txt`
+**Voltando a considerar modificações no arquivo de credenciais pelo git:**
+`git update-index --no-skip-worktree arduino/iot-minion/data/credentials.txt`
+
 3. Clique no botão de compilação ![compilar](../others/imgs/compilar.png)
 
 > Se por acaso a compilação do arduino aparecer a mensagem: `"exec: "python": executable file not found in $PATH`, faça essa instalação abaixo:
