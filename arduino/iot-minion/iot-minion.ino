@@ -22,7 +22,7 @@ bool isWiFiConnected = false;
   Serial.begin(SERIAL_PORT);
   Serial.println("\nBoot...");
   
-  // === Carrega credenciais de firmware/host etc. (credentials.txt) === 
+  // === Carrega credenciais de firmware/host etc. (credentials.enc) === 
   static const char* required[] = {
     "MQTT_BROKER", "MQTT_USERNAME", "MQTT_USERNAME_LENGTH", "MQTT_PASSWORD", "MQTT_PASSWORD_LENGTH", "MQTT_PORT",
     "USER_FIRMWARE", "USER_FIRMWARE_LENGTH", "PASS_FIRMWARE", "PASS_FIRMWARE_LENGTH",
