@@ -208,11 +208,11 @@
 	  const nomeArquivo = dados[index].nome.toLowerCase();
 
 	  // Verifica se termina com uma das extensões permitidas
-	  const extensoesPermitidas = [".log", ".pem", ".crt"];
+	  const extensoesPermitidas = [".log", ".mp3", ".wav"];
 	  const permitido = extensoesPermitidas.some(ext => nomeArquivo.endsWith(ext));
 
 	  if (!permitido) {
-		alert("Apenas arquivos com extensão .log, .pem ou .crt podem ser removidos.");
+		alert("Apenas arquivos com extensão .log, .mp3 e .wav podem ser removidos.");
 		return;
 	  }
 

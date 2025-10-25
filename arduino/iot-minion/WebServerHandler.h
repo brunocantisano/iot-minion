@@ -28,11 +28,10 @@
 #else
   #error "Plataforma não suportada"
 #endif
-
-#include "WebMessages.h"
 #include <ArduinoUtilsCds.h>
 #include <pgmspace.h>   // PROGMEM
 #include <ArduinoJson.h>
+#include "WebMessages.h"
 
 #define HTTP_REST_PORT               80
 
@@ -53,8 +52,8 @@ private:
     String apiVersion;
     String host;
     ArduinoUtilsCds * utilscds;
-    String chatGPTUrl;
     String callerOrigin;
+    String chatGPTUrl;
     String savedSsid;
     String savedPass;
     ListaEncadeada<Media*> mediaListaEncadeada = ListaEncadeada<Media*>();                              // Lista de media no sdcard
@@ -92,7 +91,6 @@ private:
     void handleUploadStorage();
     void handleListSdcard();
     void handleUploadSdCard();
-    void handleInsertJigSaw();
     void handleWiFiManager();
     void handleSaveCredentials();
     void handleOptions();
@@ -102,9 +100,6 @@ private:
     String enviarMensagemParaChatGPT(String mensagem);
     void handleUploadStorage(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
     void handleUploadSdcard(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
-    //void notifySensors(const String& id, bool s25, bool s50, bool s75, bool s100);
-    //void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len);
-
     void addApplication(String name, String language, String description);
     void removeApplication(int index);
     void addMedia(String name, int size, String lastModified);
@@ -115,7 +110,6 @@ private:
     bool addSensor(int id, int gpio, String name);
     ArduinoSensorPort * searchListSensor(int gpio);
     int searchList(String name, String language);
-    bool readSensorStable(int pin, uint8_t samples = 7, uint16_t gap_ms = 3);
 public:
     WebServerHandler(
         const String& token, 

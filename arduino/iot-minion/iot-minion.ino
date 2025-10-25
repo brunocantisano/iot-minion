@@ -1,6 +1,5 @@
 #include "Config.h"
 #include "WebServerHandler.h"
-
 // ====== Objetos do seu projeto ======
 ArduinoUtilsCds utilscds;
 AsyncWebServer server(HTTP_REST_PORT);
@@ -46,7 +45,8 @@ bool isWiFiConnected = false;
     Serial.println("decrypted_userFirmware: "+decrypted_userFirmware);
     Serial.println("decrypted_passFirmware: "+decrypted_passFirmware);
     Serial.println("decrypted_passAuthor: "+decrypted_passAuthor);
-
+    Serial.println("decrypted_openIA_Key: "+decrypted_openIA_Key);
+    
     const String hostName = creds.host.isEmpty() ? String("device") : creds.host;
     
     // === Servidor principal e OTA (só quando conectado) ===
@@ -74,17 +74,6 @@ bool isWiFiConnected = false;
       strncpy(senha, pass.c_str(), sizeof(senha));
       utilscds.salvaCredenciaisWiFi(usuario, senha);
 
-      // inicio storage
-      utilscds.iniciaStorage();
-      // inicio sdcard
-      utilscds.iniciaSdCard();
-      // inicio temperatura
-      utilscds.iniciaTemperatura();
-      // inicio audio
-      utilscds.iniciaSound(decrypted_openIA_Key);
-      // inicio o mqtt
-      utilscds.iniciaMqtt(creds.mqttBroker, decrypted_userMqtt, decrypted_passMqtt, usuario, senha); 
-
       pinMode(RelayEyes, OUTPUT);
       pinMode(RelayHat, OUTPUT);
       pinMode(RelayBlink, OUTPUT);
@@ -92,14 +81,36 @@ bool isWiFiConnected = false;
       pinMode(TemperatureHumidity, OUTPUT);
       
       websrvhdl->startWebServer();   // registra rotas no 'server' e chama server->begin() lá dentro
-      utilscds.logInfo("Web Server inicializado");
+      Serial.println("Web Server inicializado");
       utilscds.iniciaOta(&server, decrypted_userFirmware, decrypted_passFirmware);
-      utilscds.logInfo("OTA inicializado");
+      Serial.println("OTA inicializado");
 
       const char * hostname = hostName.c_str();
       MDNS.end();
       // Atribuindo clock para conseguir usar datetime nos arquivos de log
       utilscds.atribuiRelogio();
+
+      // inicio storage
+      utilscds.iniciaStorage();
+      
+      #ifdef USE_SDCARD
+        // inicio sdcard
+        utilscds.iniciaSdCard();
+      #endif
+      #ifdef USE_TEMPERATURE
+        // inicio temperatura
+        utilscds.iniciaTemperatura();
+      #endif
+      #ifdef USE_AUDIO
+        // inicio audio
+        utilscds.iniciaSound(decrypted_openIA_Key);
+      #endif
+
+      #ifdef USE_MQTT
+        // inicio o mqtt
+        utilscds.iniciaMqtt(creds.mqttBroker, decrypted_userMqtt, decrypted_passMqtt, usuario, senha);
+      #endif
+
       if(!MDNS.begin(hostname)){
         Serial.println("mDNS falhou");
         delay(1000);
@@ -112,7 +123,7 @@ bool isWiFiConnected = false;
       Serial.println(F(".local"));
     }
   } else {
-    Serial.println("Credenciais inválidas em /credentials.txt");
+    Serial.println("Credenciais inválidas em /credentials.enc");
   }
 }
 
@@ -124,7 +135,9 @@ void loop() {
   if (isWiFiConnected) {
     //MDNS.update();
     utilscds.loopOta();    // se o seu OtaHandler exigir
-    utilscds.loopAudio();  //Executa o loop interno da biblioteca audio
+    #ifdef USE_AUDIO
+      utilscds.loopAudio();  //Executa o loop interno da biblioteca audio
+    #endif
     /*
     // Report every 1 minuto.
     if (currentMillis - previousMillis >= 60000) {

@@ -1,6 +1,11 @@
 const char WRONG_CLIMATE[] PROGMEM = "Erro desconhecido ao buscar temperatura e umidade";
 const char PLAYED[] PROGMEM = "Arquivo foi colocado para tocar.";
+const char URL_PLAYED[] PROGMEM = "A url foi colocada para tocar.";
+const char API_TOKEN_CHAT_GPT_ERROR[] PROGMEM = "Erro ao utilizar  chave de api do chat GPT.";
+const char URL_CHAT_GPT[] PROGMEM = "Erro ao analisar a resposta JSON do ChatGPT";
+const char ERRO_CONEXAO[] PROGMEM = "Falha na conexão";
 const char NOT_PLAYED[] PROGMEM = "Não foi possível tocar o áudio.";
+const char NOT_LOADED_AUDIO[] PROGMEM = "Não foi possível carregar a biblioteca de áudio.";
 const char WRONG_AUTHORIZATION[] PROGMEM = "Authorization token errado";
 const char NOT_AUTHORIZED_EXTENTIONS[] PROGMEM = "Extensão de arquivo inválida para upload";
 const char SDCARD_PHOTO_WRITTEN[] PROGMEM = "Imagem salva no cartão SD com sucesso";

@@ -141,9 +141,9 @@ mv ~/Downloads/esp32littlefs.jar ~/Arduino/tools/ESP32LittleFS/tool/esp32littlef
 
 > 
 **Ignorando o arquivo de credenciais pelo git:**
-`git update-index --skip-worktree arduino/iot-minion/data/credentials.txt`
+`git update-index --skip-worktree arduino/iot-minion/data/credentials.enc`
 **Voltando a considerar modificações no arquivo de credenciais pelo git:**
-`git update-index --no-skip-worktree arduino/iot-minion/data/credentials.txt`
+`git update-index --no-skip-worktree arduino/iot-minion/data/credentials.enc`
 
 3. Clique no botão de compilação ![compilar](../others/imgs/compilar.png)
 
