@@ -70,14 +70,22 @@ jobs:
         arduino-cli lib install "Adafruit SleepyDog Library"
         arduino-cli lib install "Adafruit Unified Sensor"
         arduino-cli lib install "ArduinoJson"
-        arduino-cli lib install "ESP_Async_WebServer"
+        arduino-cli lib install "ESP Async WebServer"
         arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
-        arduino-cli lib install --git-url https://github.com/schreibfaul1/ESP32-audioI2S.git
+        arduino-cli lib install "ESP32-audioI2S-master"
+        arduino-cli lib install "ElegantOTA"
+        arduino-cli lib install "AESLib"
+        arduino-cli lib install "ESP Mail Client"
         arduino-cli lib install "DHT sensor library"
         arduino-cli lib install "PubSubClient"
         arduino-cli lib install "WiFi101"
         arduino-cli lib install "LittleFS_esp32"
-        arduino-cli lib install "Preferences"        
+        arduino-cli lib install "Preferences"
+        arduino-cli lib install "Ultrasonic"
+        arduino-cli lib install "TinyGPSPlus"
+        arduino-cli lib install "LoRa"
+        arduino-cli lib install "SparkFun u-blox GNSS Arduino Library"
+        arduino-cli lib install "ESP8266 and ESP32 OLED driver for SSD1306 displays"        
         arduino-cli config dump
 
     - name: Change Adafruit Username

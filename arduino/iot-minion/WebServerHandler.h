@@ -15,7 +15,7 @@
   #include <HTTPClient.h>
   #include <AsyncTCP.h>           // em vez de ESPAsyncTCP.h
   #include <ESPAsyncWebServer.h>  // igual
-  #include <ESPAsyncDNSServer.h>  // ou <DNSServer.h> se preferir síncrono
+  #include <ESPAsyncDNSServer.h>
 #elif defined(ESP8266)
 /*******************************
  *  Build para ESP8266

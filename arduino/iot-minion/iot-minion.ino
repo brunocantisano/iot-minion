@@ -1,6 +1,7 @@
 #include "Config.h"
 #include "WebServerHandler.h"
 // ====== Objetos do seu projeto ======
+WiFiClient wifiClientMqtt;
 ArduinoUtilsCds utilscds;
 AsyncWebServer server(HTTP_REST_PORT);
 WebServerHandler * websrvhdl = nullptr;
@@ -13,7 +14,8 @@ String decrypted_passMqtt;
 String decrypted_openIA_Key;
 String decrypted_passAuthor;
 bool isWiFiConnected = false;
-//unsigned long previousMillis;
+unsigned long previousMillis;
+unsigned long currentMillis;
 //---------------------------------//
 /**********************************************
  *  SETUP
@@ -30,7 +32,8 @@ bool isWiFiConnected = false;
     "SMTP_HOST", "SMTP_PORT", "AUTHOR_EMAIL", "AUTHOR_PASSWORD", "AUTHOR_PASSWORD_LENGTH", "RECIPIENT_NAME", "RECIPIENT_EMAIL"
   };
   const size_t requiredSize = sizeof(required) / sizeof(required[0]);
-  creds = utilscds.quebraValidaCredenciais(required, requiredSize, true, true);
+  String payload;
+  creds = utilscds.quebraValidaCredenciais(payload, required, requiredSize, true, true);
   if (creds.valid) {
     decrypted_userMqtt      = utilscds.decrypta(creds.mqttUsername, creds.mqttUsernameLength);
     decrypted_passMqtt      = utilscds.decrypta(creds.mqttPassword, creds.mqttPasswordLength);
@@ -108,7 +111,7 @@ bool isWiFiConnected = false;
 
       #ifdef USE_MQTT
         // inicio o mqtt
-        utilscds.iniciaMqtt(creds.mqttBroker, decrypted_userMqtt, decrypted_passMqtt, usuario, senha);
+        utilscds.iniciaMqtt(&wifiClientMqtt, creds.mqttBroker, decrypted_userMqtt, decrypted_passMqtt);
       #endif
 
       if(!MDNS.begin(hostname)){
@@ -123,7 +126,7 @@ bool isWiFiConnected = false;
       Serial.println(F(".local"));
     }
   } else {
-    Serial.println("Credenciais inválidas em /credentials.enc");
+    Serial.println("Credenciais inválidas");
   }
 }
 
@@ -138,14 +141,12 @@ void loop() {
     #ifdef USE_AUDIO
       utilscds.loopAudio();  //Executa o loop interno da biblioteca audio
     #endif
-    /*
     // Report every 1 minuto.
     if (currentMillis - previousMillis >= 60000) {
       previousMillis = currentMillis;
       // Reading temperature or humidity takes about 250 milliseconds!
       // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-      //utilscds.obtemDadosTemperatura();
+      utilscds.obtemDadosTemperatura();
     }
-    */
   }
 }

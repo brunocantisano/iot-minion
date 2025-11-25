@@ -45,25 +45,7 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 
 #### Instalar as bibliotecas
 
-* ArduinoWebsockets
-* Adafruit FONA Library
-* Adafruit MQTT Library
-* Adafruit SleepyDog Library
-* Adafruit Unified Sensor
-* ArduinoJson
-* DHT sensor library
-* PubSubClient
-* LittleFS_esp32
-* Preferences
-* ESPAsyncWebServer
-* AsyncTCP
-* ESP32-audioI2S
-
-#### Instalar as bibliotecas .zip (fazer download do código e importar no arduino IDE)
-
-* https://github.com/me-no-dev/ESPAsyncWebServer.git
-* https://github.com/me-no-dev/AsyncTCP.git
-* https://github.com/schreibfaul1/ESP32-audioI2S.git
+* bibliotecas descritas na sessão: `Install Arduino platforms and libraries` do path: `.github/workflows/arduino.yml`
 
 ### Plugins (Pre-requisito do ESP8266/ESP32 para decodificar Exception Stack Trace e para gravar arquivos do webserver na pasta `data` - LittleFS filesystem uploader)
 
@@ -122,6 +104,44 @@ mkdir -p ~/Arduino/tools/ESP32LittleFS/tool/
 ```
 mv ~/Downloads/esp32littlefs.jar ~/Arduino/tools/ESP32LittleFS/tool/esp32littlefs.jar
 ```
+
+### Credenciais
+
+> Este arquivo: `credentials.enc` foi versionado somente a primeira vez, qualquer mudança no mesmo não refletirá no repositório. Para ignorar mudanças em um arquivo que já está sendo rastreado pelo Git, você tem algumas opções:
+
+1. Ignorar mudanças locais temporariamente (mais comum)
+
+```bash
+git update-index --skip-worktree iot-minion/data/credentials.enc
+```
+
+Este comando faz o Git ignorar mudanças locais no arquivo. É útil para arquivos de configuração que você precisa modificar localmente mas não quer commitar.
+
+Para reverter:
+
+```bash
+git update-index --no-skip-worktree iot-minion/data/credentials.enc
+```
+
+Para ver quais arquivos estão sendo ignorados:
+
+```bash
+git ls-files -v | grep ^S
+```
+2. Assume unchanged (alternativa)
+
+```bash
+git update-index --assume-unchanged iot-minion/data/credentials.enc
+```
+Similar ao anterior, mas menos robusto (pode ser revertido por algumas operações do Git).
+
+Para reverter:
+
+```bash
+git update-index --no-assume-unchanged iot-minion/data/credentials.enc
+```
+
+> Recomendação: Para arquivos de configuração local, use    `--skip-worktree`. É a opção mais apropriada para ignorar mudanças em arquivos que já existem no repositório mas que você precisa modificar localmente.
 
 ### Compilação
 

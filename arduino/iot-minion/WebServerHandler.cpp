@@ -35,8 +35,16 @@ String WebServerHandler::obtemMetricas() {
   int free_heap = ESP.getFreeHeap();
   int psram_size = ESP.getPsramSize();
   int free_psram_size = ESP.getFreePsram();
+  int min_free_psram = ESP.getMinFreePsram();
+  int max_alloc_psram = ESP.getMaxAllocPsram();
+
+  /* ⚠️ Nota importante:
+  O sensor de temperatura interno do ESP32 não é muito preciso (±10°C de erro). 
+  É útil para detectar superaquecimento, mas não para medições precisas. Se precisar de temperatura 
+  ambiente real, use um sensor externo como DHT22, DS18B20 ou BME280.
+  */
+  float temperature = temperatureRead();
   const String boardName = "esp32";
-  float temperature = 0;
   float celsius = 0;
   float fahrenheit = 0;
   float humidity = 0;
@@ -45,8 +53,10 @@ String WebServerHandler::obtemMetricas() {
   int volume = 0;
   uint64_t totalSdcard = 0;
   uint64_t usadosSdcard = 0;
+  uint64_t chipId = ESP.getEfuseMac();
+  String chipRevision = String(ESP.getChipRevision());
+  String chipRevisionDesc = String(ESP.getChipModel()) + " Rev " + chipRevision;
   #ifdef USE_TEMPERATURE
-    temperature = ((temprature_sens_read() - 32) / 1.8);
     celsius = utilscds->obtemCelsius();
     fahrenheit= utilscds->obtemFahrenheit();
     humidity = utilscds->obtemUmidade();
@@ -60,16 +70,32 @@ String WebServerHandler::obtemMetricas() {
     totalSdcard = utilscds->obtemTotalSdcard();
     usadosSdcard = utilscds->obtemUsadosSdcard();
   #endif
-   
-  atribuiMetrica(&p, boardName+"_uptime", String(millis()));
-  atribuiMetrica(&p, boardName+"_wifi_rssi", String(WiFi.RSSI()));
+  
+  atribuiMetrica(&p, boardName+"_chip_id", String(chipId, HEX));
+  atribuiMetrica(&p, boardName+"_sketch_md5", ESP.getSketchMD5());
+  atribuiMetrica(&p, boardName+"_cycle_count", String(ESP.getCycleCount()));
+  atribuiMetrica(&p, boardName+"_chip_model", ESP.getChipModel());
+  atribuiMetrica(&p, boardName+"_chip_revision", chipRevision);
+  atribuiMetrica(&p, boardName+"_chip_revision_desc", chipRevisionDesc);
+  atribuiMetrica(&p, boardName+"_chip_cores", String(ESP.getChipCores()));
+  atribuiMetrica(&p, boardName+"_cpu_freq_mhz", String(ESP.getCpuFreqMHz()));
+  atribuiMetrica(&p, boardName+"_sdk_version", ESP.getSdkVersion());
+  atribuiMetrica(&p, boardName+"_psram_size", String(psram_size));
+  atribuiMetrica(&p, boardName+"_free_psram_size", String(free_psram_size));
+  atribuiMetrica(&p, boardName+"_min_free_psram", String(min_free_psram));
+  atribuiMetrica(&p, boardName+"_max_alloc_psram", String(max_alloc_psram));
+  atribuiMetrica(&p, boardName+"_flash_chip_size", String(ESP.getFlashChipSize()));
+  atribuiMetrica(&p, boardName+"_flash_chip_speed", String(ESP.getFlashChipSpeed()));
+  atribuiMetrica(&p, boardName+"_flash_chip_mode", String(ESP.getFlashChipMode()));
   atribuiMetrica(&p, boardName+"_sketch_size", String(sketch_size));
   atribuiMetrica(&p, boardName+"_flash_size", String(flash_size));
+  atribuiMetrica(&p, boardName+"_min_free_heap", String(ESP.getMinFreeHeap()));
+  atribuiMetrica(&p, boardName+"_max_alloc_heap", String(ESP.getMaxAllocHeap()));
+  atribuiMetrica(&p, boardName+"_uptime", String(millis()));
+  atribuiMetrica(&p, boardName+"_wifi_rssi", String(WiFi.RSSI()));
   atribuiMetrica(&p, boardName+"_available_size", String(available_size));
   atribuiMetrica(&p, boardName+"_heap_size", String(heap_size));
   atribuiMetrica(&p, boardName+"_free_heap", String(free_heap));
-  atribuiMetrica(&p, boardName+"_psram_size", String(psram_size));
-  atribuiMetrica(&p, boardName+"_free_psram_size", String(free_psram_size));
   atribuiMetrica(&p, boardName+"_temperature", String(temperature));
   atribuiMetrica(&p, boardName+"_boot_counter", String(obtemContagemBoots()));
   atribuiMetrica(&p, boardName+"_celsius", String(celsius));
@@ -152,8 +178,8 @@ void WebServerHandler::handleFileServing(void){
 
 void WebServerHandler::handleHome(){
   server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {    
-    String html = "";
-    if(!utilscds->lerArquivo(LittleFS, "/home.html", html)) {
+    String html = utilscds->lerArquivo("/home.html");
+    if(html.isEmpty()) {
       html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
     } else {
       // versao do firmware: https://semver.org/
@@ -171,8 +197,8 @@ void WebServerHandler::handleHome(){
 
 void WebServerHandler::handleCiCd() {
   server->on("/cicd", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    String html;
-    if (utilscds->lerArquivo(LittleFS, "/cicd.html", html)) {
+    String html = utilscds->lerArquivo("/cicd.html");
+    if (html.isEmpty()) {
       String mqttBroker = "";
       String mqttUser = "";
       String mqttPass = "";
@@ -193,8 +219,8 @@ void WebServerHandler::handleCiCd() {
 
 void WebServerHandler::handleSwagger(){
   server->on("/swagger.json", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    String html = "";
-    if(!utilscds->lerArquivo(LittleFS, "/swagger.json", html)) {      
+    String html = utilscds->lerArquivo("/swagger.json");
+    if(html.isEmpty()) {
       html=String(MSG_ARQUIVO_NAO_ENCONTRADO);  
     } else {
       html.replace("0.0.0",apiVersion);
@@ -206,8 +232,8 @@ void WebServerHandler::handleSwagger(){
 
 void WebServerHandler::handleSwaggerUI(){
   server->on("/swaggerUI", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    String html = "";
-    if(!utilscds->lerArquivo(LittleFS, "/swaggerUI.html", html)) {
+    String html = utilscds->lerArquivo("/swaggerUI.html");
+    if(html.isEmpty()) {
       html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
     } else {
       html.replace("HOST_MINION",host);  
@@ -611,7 +637,7 @@ void WebServerHandler::handleInsertItemList(){
           // Grava no Storage
           String JSONmessage = saveApplicationList();
           // Grava no storage
-          utilscds->escreveArquivo(LittleFS,"/lista.json",JSONmessage.c_str()); 
+          utilscds->escreveArquivo("/lista.json",JSONmessage.c_str()); 
           utilscds->mensagemLog("handleInsertItemList:"+JSONmessage);
           String feedName="list";
           #ifdef USE_MQTT
@@ -651,7 +677,7 @@ void WebServerHandler::handleDeleteItemList(){
         // Grava no Storage
         String JSONmessage = saveApplicationList();
         // Grava no storage
-        utilscds->escreveArquivo(LittleFS,"/lista.json",JSONmessage.c_str()); 
+        utilscds->escreveArquivo("/lista.json",JSONmessage.c_str()); 
         utilscds->mensagemLog("handleDeleteItemList:"+JSONmessage);
         String feedName="list";
         #ifdef USE_MQTT
@@ -771,8 +797,8 @@ void WebServerHandler::handleListStorage() {
     String message = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     utilscds->mensagemLog(message);
     char filename[] = "/storageAndSdcard.html";
-    String html;
-    if (!utilscds->lerArquivo(LittleFS, filename, html)) {
+    String html = utilscds->lerArquivo(filename);
+    if(html.isEmpty()) {
       html = HTML_MISSING_DATA_UPLOAD;
     } else {
       html.replace("API_MINION_TOKEN",apiToken);
@@ -813,8 +839,8 @@ void WebServerHandler::handleListSdcard() {
     String message = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     utilscds->mensagemLog(message);
     char filename[] = "/storageAndSdcard.html";
-    String html;
-    if(!utilscds->lerArquivo(LittleFS, filename, html)){
+    String html = utilscds->lerArquivo(filename);
+    if(html.isEmpty()){
       html=HTML_MISSING_DATA_UPLOAD;
     } else {
       File entry =  SD.open("/", FILE_WRITE);
@@ -883,8 +909,8 @@ void WebServerHandler::handleWiFiManager(void){
   // Página principal
   server->on("/", HTTP_GET, [this](AsyncWebServerRequest* request){
     Serial.println("[HTTP] GET /");
-    String html = "";
-    if(!utilscds->lerArquivo(LittleFS, "/wifimanager.html", html)) {
+    String html = utilscds->lerArquivo("/wifimanager.html");
+    if(html.isEmpty()) {
       Serial.println("handleWiFiManager");
       request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".html"), MSG_ARQUIVO_NAO_ENCONTRADO);
     }
