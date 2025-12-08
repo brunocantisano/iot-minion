@@ -180,7 +180,7 @@ void WebServerHandler::handleHome(){
   server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {    
     String html = utilscds->lerArquivo("/home.html");
     if(html.isEmpty()) {
-      html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
+      html=HTML_MISSING_DATA_UPLOAD;
     } else {
       // versao do firmware: https://semver.org/
       html.replace("0.0.0",apiVersion);
@@ -199,6 +199,8 @@ void WebServerHandler::handleCiCd() {
   server->on("/cicd", HTTP_GET, [this](AsyncWebServerRequest *request) {
     String html = utilscds->lerArquivo("/cicd.html");
     if (html.isEmpty()) {
+      html = HTML_MISSING_DATA_UPLOAD;
+    } else {
       String mqttBroker = "";
       String mqttUser = "";
       String mqttPass = "";
@@ -210,8 +212,6 @@ void WebServerHandler::handleCiCd() {
       html.replace("MQTT_BROKER", mqttBroker);
       html.replace("MQTT_USERNAME", mqttUser);
       html.replace("MQTT_PASSWORD", mqttPass);
-    } else {
-      html = HTML_MISSING_DATA_UPLOAD;
     }
     request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".html"), html);
   });
@@ -221,7 +221,7 @@ void WebServerHandler::handleSwagger(){
   server->on("/swagger.json", HTTP_GET, [this](AsyncWebServerRequest *request) {
     String html = utilscds->lerArquivo("/swagger.json");
     if(html.isEmpty()) {
-      html=String(MSG_ARQUIVO_NAO_ENCONTRADO);  
+      html=HTML_MISSING_DATA_UPLOAD;  
     } else {
       html.replace("0.0.0",apiVersion);
       html.replace("HOST_MINION",host);
@@ -234,7 +234,7 @@ void WebServerHandler::handleSwaggerUI(){
   server->on("/swaggerUI", HTTP_GET, [this](AsyncWebServerRequest *request) {
     String html = utilscds->lerArquivo("/swaggerUI.html");
     if(html.isEmpty()) {
-      html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
+      html=HTML_MISSING_DATA_UPLOAD;
     } else {
       html.replace("HOST_MINION",host);  
     }

@@ -13,9 +13,7 @@
 #if defined(ESP32)
   #include <WiFi.h>               // em vez de ESP8266WiFi.h
   #include <HTTPClient.h>
-  #include <AsyncTCP.h>           // em vez de ESPAsyncTCP.h
-  #include <ESPAsyncWebServer.h>  // igual
-  #include <ESPAsyncDNSServer.h>
+  #include <AsyncTCP.h>           // em vez de ESPAsyncTCP.h 
 #elif defined(ESP8266)
 /*******************************
  *  Build para ESP8266
@@ -23,11 +21,11 @@
   #include <ESP8266WiFi.h>
   #include <ESP8266HTTPClient.h>
   #include <ESPAsyncTCP.h>
-  #include <ESPAsyncWebServer.h>
-  #include <ESPAsyncDNSServer.h>
 #else
   #error "Plataforma não suportada"
 #endif
+#include <ESPAsyncWebServer.h>
+#include <ESPAsyncDNSServer.h>
 #include <ArduinoUtilsCds.h>
 #include <pgmspace.h>   // PROGMEM
 #include <ArduinoJson.h>
