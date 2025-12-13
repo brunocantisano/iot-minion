@@ -6,8 +6,6 @@ ArduinoUtilsCds utilscds;
 AsyncWebServer server(HTTP_REST_PORT);
 WebServerHandler * websrvhdl = nullptr;
 Credentials creds;
-String decrypted_userFirmware;
-String decrypted_passFirmware;
 String decrypted_apiToken;
 String decrypted_userMqtt;
 String decrypted_passMqtt;
@@ -27,7 +25,6 @@ unsigned long currentMillis;
   // === Carrega credenciais de firmware/host etc. (credentials.enc) === 
   static const char* required[] = {
     "MQTT_BROKER", "MQTT_USERNAME", "MQTT_USERNAME_LENGTH", "MQTT_PASSWORD", "MQTT_PASSWORD_LENGTH", "MQTT_PORT",
-    "USER_FIRMWARE", "USER_FIRMWARE_LENGTH", "PASS_FIRMWARE", "PASS_FIRMWARE_LENGTH",
     "HOST", "API_TOKEN", "API_TOKEN_LENGTH", "OPEN_IA_KEY", "OPEN_IA_KEY_LENGTH", "API_VERSION", "CALLER_ORIGIN",
     "SMTP_HOST", "SMTP_PORT", "AUTHOR_EMAIL", "AUTHOR_PASSWORD", "AUTHOR_PASSWORD_LENGTH", "RECIPIENT_NAME", "RECIPIENT_EMAIL"
   };
@@ -54,16 +51,12 @@ unsigned long currentMillis;
     if (creds.valid) {
       decrypted_userMqtt      = utilscds.decrypta(creds.mqttUsername, creds.mqttUsernameLength);
       decrypted_passMqtt      = utilscds.decrypta(creds.mqttPassword, creds.mqttPasswordLength);
-      decrypted_userFirmware  = utilscds.decrypta(creds.userFirmware, creds.userFirmwareLength);
-      decrypted_passFirmware  = utilscds.decrypta(creds.passFirmware, creds.passFirmwareLength);
       decrypted_apiToken      = utilscds.decrypta(creds.apiToken, creds.apiTokenLength);
       decrypted_openIA_Key    = utilscds.decrypta(creds.openIA_Key, creds.openIA_KeyLength);
       decrypted_passAuthor    = utilscds.decrypta(creds.authorPassword, creds.authorPasswordLength);
 
       Serial.println("decrypted_userMqtt: "+decrypted_userMqtt);
       Serial.println("decrypted_passMqtt: "+decrypted_passMqtt);
-      Serial.println("decrypted_userFirmware: "+decrypted_userFirmware);
-      Serial.println("decrypted_passFirmware: "+decrypted_passFirmware);
       Serial.println("decrypted_passAuthor: "+decrypted_passAuthor);
       Serial.println("decrypted_openIA_Key: "+decrypted_openIA_Key);
       
@@ -102,8 +95,6 @@ unsigned long currentMillis;
         
         websrvhdl->startWebServer();   // registra rotas no 'server' e chama server->begin() lá dentro
         Serial.println("Web Server inicializado");
-        //utilscds.iniciaOta(&server, decrypted_userFirmware, decrypted_passFirmware);
-        //Serial.println("OTA inicializado");
 
         const char * hostname = hostName.c_str();
         MDNS.end();
@@ -151,22 +142,21 @@ unsigned long currentMillis;
  *  LOOP
  **********************************************/
 void loop() {
-  //unsigned long currentMillis = millis();  
+  currentMillis = millis();  
   if (isWiFiConnected) {
     //MDNS.update();
-    //utilscds.loopOta();    // se o seu OtaHandler exigir
     #ifdef USE_MQTT
       utilscds.atualizaMqtt();
     #endif    
     #ifdef USE_AUDIO
-      //utilscds.loopAudio();  //Executa o loop interno da biblioteca audio
+      utilscds.loopAudio();  //Executa o loop interno da biblioteca audio
     #endif
     // Report every 1 minuto.
     if (currentMillis - previousMillis >= 60000) {
       previousMillis = currentMillis;
       // Reading temperature or humidity takes about 250 milliseconds!
       // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-      //utilscds.obtemDadosTemperatura();
+      utilscds.obtemDadosTemperatura();
     }
   }
 }

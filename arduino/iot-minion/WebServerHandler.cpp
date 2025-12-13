@@ -37,13 +37,6 @@ String WebServerHandler::obtemMetricas() {
   int free_psram_size = ESP.getFreePsram();
   int min_free_psram = ESP.getMinFreePsram();
   int max_alloc_psram = ESP.getMaxAllocPsram();
-
-  /* ⚠️ Nota importante:
-  O sensor de temperatura interno do ESP32 não é muito preciso (±10°C de erro). 
-  É útil para detectar superaquecimento, mas não para medições precisas. Se precisar de temperatura 
-  ambiente real, use um sensor externo como DHT22, DS18B20 ou BME280.
-  */
-  float temperature = temperatureRead();
   const String boardName = "esp32";
   float celsius = 0;
   float fahrenheit = 0;
@@ -96,7 +89,7 @@ String WebServerHandler::obtemMetricas() {
   atribuiMetrica(&p, boardName+"_available_size", String(available_size));
   atribuiMetrica(&p, boardName+"_heap_size", String(heap_size));
   atribuiMetrica(&p, boardName+"_free_heap", String(free_heap));
-  atribuiMetrica(&p, boardName+"_temperature", String(temperature));
+
   atribuiMetrica(&p, boardName+"_boot_counter", String(obtemContagemBoots()));
   atribuiMetrica(&p, boardName+"_celsius", String(celsius));
   atribuiMetrica(&p, boardName+"_fahrenheit", String(fahrenheit));
@@ -299,7 +292,7 @@ void WebServerHandler::handleSensors() {
       on = s->status;
     }
     
-    String resp = on==0 ? "desativado":"ativado";
+    String resp = on == HIGH ? "ativado":"desativado";
     request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".txt"), resp);
   });  
 }
@@ -358,11 +351,11 @@ void WebServerHandler::handleUpdateSensors() {
     
     // Atualiza o pino
     pinMode(pin, OUTPUT);
-    int n = newValue==0?LOW:HIGH;
+    int n = newValue==0?HIGH:LOW;
     digitalWrite(pin, n);
     if (auto s = searchListSensor(pin)) s->status = n;
 
-    String resp = n == 0 ? "desativado":"ativado";
+    String resp = n == HIGH ? "ativado":"desativado";
     request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".txt"), resp);
   });
 }
@@ -803,6 +796,7 @@ void WebServerHandler::handleListStorage() {
     } else {
       html.replace("API_MINION_TOKEN",apiToken);
       String jsonPayload = utilscds->listaArquivos();
+      html.replace("MESSAGE","Storage");
       html.replace("FILELIST",jsonPayload);
     }
     request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(filename), html);
@@ -849,6 +843,7 @@ void WebServerHandler::handleListSdcard() {
       #ifdef USE_SDCARD
         payload = utilscds->listaArquivosSD(entry, 0, apiToken);
       #endif
+      html.replace("MESSAGE","SdCard");
       html.replace("FILELIST",payload);
       entry.close();
     }
