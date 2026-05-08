@@ -1,0 +1,11 @@
+ThingPulse/ESP8266 and ESP32 OLED driver for SSD1306 displays
+https://github.com/Jockey-Repos/ArduinoUtilsCds.git
+https://github.com/mathieucarbou/ESPAsyncWebServer/archive/refs/tags/v3.1.4.zip
+suculent/AESLib
+ayushsharma82/ElegantOTA
+bblanchon/ArduinoJson
+https://github.com/ESP32Async/AsyncTCP.git
+sparkfun/SparkFun u-blox GNSS Arduino Library
+rweather/Crypto @ ^0.4.0
+sandeepmistry/LoRa
+arduino-libraries/NTPClient
