@@ -21,32 +21,44 @@ unsigned long currentMillis;
   
   // === Carrega credenciais de firmware/host etc. (credentials.enc) === 
   const String decrypted_userFirmware  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "USER_FIRMWARE"),utilscds->getCampoCredencial(USER, "USER_FIRMWARE_LENGTH").toInt());
+  #ifdef DEBUG 
+    Serial.println("decrypted_userFirmware: "+decrypted_userFirmware); 
+  #endif
   const String decrypted_passFirmware  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "PASS_FIRMWARE"),utilscds->getCampoCredencial(USER, "PASS_FIRMWARE_LENGTH").toInt());
-  
+  #ifdef DEBUG
+    Serial.println("decrypted_passFirmware: "+decrypted_passFirmware);
+  #endif
   const String mqttBroker = utilscds->getCampoCredencial(USER, "MQTT_BROKER");
   const String decrypted_mqttUser  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "MQTT_USERNAME"),utilscds->getCampoCredencial(USER, "MQTT_USERNAME_LENGTH").toInt());
+  #ifdef DEBUG
+    Serial.println("decrypted_mqttUser: "+decrypted_mqttUser);
+  #endif
   const String decrypted_mqttPass  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "MQTT_PASSWORD"),utilscds->getCampoCredencial(USER, "MQTT_PASSWORD_LENGTH").toInt());
+  #ifdef DEBUG
+    Serial.println("decrypted_mqttPass: "+decrypted_mqttPass);
+  #endif
   const int mqttPort = utilscds->getCampoCredencial(USER, "MQTT_PORT").toInt();
  
   const String hostName = utilscds->getCampoCredencial(USER, "HOST");
   const String apiVersion = utilscds->getCampoCredencial(USER, "API_VERSION");
   const String callerOrigin = utilscds->getCampoCredencial(USER, "CALLER_ORIGIN");
   const String decrypted_apiToken = utilscds->decrypta(utilscds->getCampoCredencial(USER, "API_TOKEN"), utilscds->getCampoCredencial(USER, "API_TOKEN_LENGTH").toInt());  
+  #ifdef DEBUG
+    Serial.println("decrypted_apiToken: "+decrypted_apiToken);
+  #endif
   const String decrypted_apiOpenAIToken  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "OPEN_IA_KEY"),utilscds->getCampoCredencial(USER, "OPEN_IA_KEY_LENGTH").toInt());
-  
+  #ifdef DEBUG
+    Serial.println("decrypted_apiOpenAIToken: "+decrypted_apiOpenAIToken);
+  #endif
   const String smtpHost = utilscds->getCampoCredencial(USER, "SMTP_HOST");
   const int smtpPort = utilscds->getCampoCredencial(USER, "SMTP_PORT").toInt();
   const String authorEmail = utilscds->getCampoCredencial(USER, "AUTHOR_EMAIL");
   const String decrypted_emailAuthorPass  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "AUTHOR_PASSWORD"),utilscds->getCampoCredencial(USER, "AUTHOR_PASSWORD_LENGTH").toInt());
+  #ifdef DEBUG
+    Serial.println("decrypted_emailAuthorPass: "+decrypted_emailAuthorPass);
+  #endif
   const String recipientName = utilscds->getCampoCredencial(USER, "RECIPIENT_NAME");
   const String recipientEmail = utilscds->getCampoCredencial(USER, "RECIPIENT_EMAIL");
-
-  #ifdef DEBUG
-    Serial.println("decrypted_userFirmware: "+decrypted_userFirmware);
-    Serial.println("decrypted_passFirmware: "+decrypted_passFirmware);
-    //Serial.println("decrypted_apiToken: "+decrypted_apiToken);
-    Serial.println("host: http://"+hostName+".local");    
-  #endif
 
   // === Servidor principal e OTA (só quando conectado) ===
   websrvhdl = new WebServerHandler(
@@ -61,16 +73,22 @@ unsigned long currentMillis;
   wifi_connected = websrvhdl->connectSTA(hostName);
   if (!wifi_connected) {
     String apName = hostName.isEmpty() ? String("device-setup") : (hostName + "-setup");
-    Serial.printf("Heap livre antes do AP: %d bytes\n", ESP.getFreeHeap());
+    #ifdef DEBUG
+      Serial.printf("Heap livre antes do AP: %d bytes\n", ESP.getFreeHeap());
+    #endif
     websrvhdl->startWebServerWifiManager(apName);
-    Serial.println("WiFi não configurado!");
-    Serial.println("Por favor, conecte-se em: " + apName + " e entre em: http://" + hostName + ".local para configuração do WiFi.");
+    #ifdef DEBUG
+      Serial.println("WiFi não configurado!");
+      Serial.println("Por favor, conecte-se em: " + apName + " e entre em: http://" + hostName + ".local para configuração do WiFi.");
+    #endif
   } else {
     ElegantOTA.begin(websrvhdl->getWebServer(), decrypted_userFirmware.c_str(), decrypted_passFirmware.c_str());
-    Serial.println("OTA inicializado");
-    Serial.printf("Heap após OTA: %d\n", ESP.getFreeHeap());
-    Serial.printf("Heap maior bloco: %d\n", ESP.getMaxAllocHeap());
-
+    #ifdef DEBUG
+      Serial.println("OTA inicializado");
+      Serial.printf("Heap após OTA: %d\n", ESP.getFreeHeap());
+      Serial.printf("Heap maior bloco: %d\n", ESP.getMaxAllocHeap());
+      Serial.println("host: http://"+hostName+".local");
+    #endif
     pinMode(RelayEyes, OUTPUT);
     pinMode(RelayHat, OUTPUT);
     pinMode(RelayBlink, OUTPUT);
