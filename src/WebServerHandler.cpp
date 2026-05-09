@@ -1,7 +1,6 @@
 // WebServerHandler.cpp
 #include "WebServerHandler.h"
 
-static const char* MSG_ARQUIVO_NAO_ENCONTRADO = "Provavelmente voce nao carregou os arquivos da pasta \"data\" (LittleFS) para o servidor!";
 WebServerHandler::WebServerHandler(
     const String& token, 
     const String& version, 
@@ -1064,7 +1063,7 @@ String WebServerHandler::enviarMensagemParaChatGPT(String mensagem) {
   docRequest["presence_penalty"] = 0.9;
   
   JsonArray messages = docRequest["messages"].to<JsonArray>();
-  JsonObject message = messages.createNestedObject();
+  JsonObject message = messages.add<JsonObject>();
   message["role"] = "user";
   message["content"] = mensagem;
   
@@ -1210,8 +1209,10 @@ void WebServerHandler::handleUploadSdcard(AsyncWebServerRequest *request, String
  **********************************************/
 void WebServerHandler::startWebServerWifiManager(const String& apName) {
   
-  Serial.println("==> Iniciando AP + DNS cativo + Portal");
+  Serial.println("==> Iniciando AP + DNS cativo + Portal"); 
+  delay(500); // aguarda estabilização da alimentação
   WiFi.mode(WIFI_AP);
+  delay(100);
   WiFi.softAP(apName.c_str());         // coloque senha se quiser: softAP(ssid, pass)
   IPAddress apIP = WiFi.softAPIP();
   Serial.printf("AP '%s' em %s\n", apName.c_str(), apIP.toString().c_str());
@@ -1219,6 +1220,8 @@ void WebServerHandler::startWebServerWifiManager(const String& apName) {
   dns.start(53, "*", apIP);            // captive DNS
 
   registerPortalRoutes();
+  server->begin();
+  _apMode = true;
 }
 
 /**********************************************
@@ -1366,4 +1369,8 @@ int WebServerHandler::searchList(String name, String language) {
     }
   }
   return -1;
+}
+
+void WebServerHandler::loop() {
+  if (_apMode) dns.processNextRequest();
 }

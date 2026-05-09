@@ -1,18 +1,13 @@
 #include <Arduino.h>
-
+#include <ArduinoUtilsCds.h>
 #include "WebServerHandler.h"
+#include <ElegantOTA.h>
 // ====== Objetos do seu projeto ======
 WiFiClient wifiClientMqtt;
-ArduinoUtilsCds utilscds;
+ArduinoUtilsCds* utilscds = nullptr;
 AsyncWebServer server(HTTP_REST_PORT);
 WebServerHandler * websrvhdl = nullptr;
-Credentials creds;
-String decrypted_apiToken;
-String decrypted_userMqtt;
-String decrypted_passMqtt;
-String decrypted_openIA_Key;
-String decrypted_passAuthor;
-bool isWiFiConnected = false;
+bool wifi_connected = false;
 unsigned long previousMillis;
 unsigned long currentMillis;
 //---------------------------------//
@@ -20,122 +15,102 @@ unsigned long currentMillis;
  *  SETUP
  **********************************************/
  void setup() {
-  Serial.begin(SERIAL_PORT);
+  Serial.begin(SERIAL_BAUD);
+  utilscds = new ArduinoUtilsCds();
   Serial.println("\nBoot...");
   
   // === Carrega credenciais de firmware/host etc. (credentials.enc) === 
-  static const char* required[] = {
-    "MQTT_BROKER", "MQTT_USERNAME", "MQTT_USERNAME_LENGTH", "MQTT_PASSWORD", "MQTT_PASSWORD_LENGTH", "MQTT_PORT",
-    "HOST", "API_TOKEN", "API_TOKEN_LENGTH", "OPEN_IA_KEY", "OPEN_IA_KEY_LENGTH", "API_VERSION", "CALLER_ORIGIN",
-    "SMTP_HOST", "SMTP_PORT", "AUTHOR_EMAIL", "AUTHOR_PASSWORD", "AUTHOR_PASSWORD_LENGTH", "RECIPIENT_NAME", "RECIPIENT_EMAIL"
-  };
-  const size_t requiredSize = sizeof(required) / sizeof(required[0]);
-  String payload;
-  if (!utilscds.iniciaStorage()) {
-    Serial.println("ERRO: Falha ao inicializar o sistema de arquivos!");
-    return;
-  }
-  // Verifica se o arquivo existe
-  String credentialsPath = "/credentials.enc";
+  const String decrypted_userFirmware  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "USER_FIRMWARE"),utilscds->getCampoCredencial(USER, "USER_FIRMWARE_LENGTH").toInt());
+  const String decrypted_passFirmware  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "PASS_FIRMWARE"),utilscds->getCampoCredencial(USER, "PASS_FIRMWARE_LENGTH").toInt());
   
-  if (utilscds.verificaArquivoExiste(credentialsPath)) {
-    Serial.println("=== Arquivo encontrado! ===\n");
-    
-    // Lê e imprime o conteúdo do arquivo
-    Serial.println("=== Conteúdo do arquivo credentials ===");
-    Serial.println("-------------------------------------------");
-    
-    String content=utilscds.lerArquivo(credentialsPath);
-    creds = utilscds.quebraValidaCredenciais(content, required, requiredSize, true, false);
-    Serial.println("-------------------------------------------\n");
+  const String mqttBroker = utilscds->getCampoCredencial(USER, "MQTT_BROKER");
+  const String decrypted_mqttUser  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "MQTT_USERNAME"),utilscds->getCampoCredencial(USER, "MQTT_USERNAME_LENGTH").toInt());
+  const String decrypted_mqttPass  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "MQTT_PASSWORD"),utilscds->getCampoCredencial(USER, "MQTT_PASSWORD_LENGTH").toInt());
+  const int mqttPort = utilscds->getCampoCredencial(USER, "MQTT_PORT").toInt();
+ 
+  const String hostName = utilscds->getCampoCredencial(USER, "HOST");
+  const String apiVersion = utilscds->getCampoCredencial(USER, "API_VERSION");
+  const String callerOrigin = utilscds->getCampoCredencial(USER, "CALLER_ORIGIN");
+  const String decrypted_apiToken = utilscds->decrypta(utilscds->getCampoCredencial(USER, "API_TOKEN"), utilscds->getCampoCredencial(USER, "API_TOKEN_LENGTH").toInt());  
+  const String decrypted_apiOpenAIToken  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "OPEN_IA_KEY"),utilscds->getCampoCredencial(USER, "OPEN_IA_KEY_LENGTH").toInt());
+  
+  const String smtpHost = utilscds->getCampoCredencial(USER, "SMTP_HOST");
+  const int smtpPort = utilscds->getCampoCredencial(USER, "SMTP_PORT").toInt();
+  const String authorEmail = utilscds->getCampoCredencial(USER, "AUTHOR_EMAIL");
+  const String decrypted_emailAuthorPass  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "AUTHOR_PASSWORD"),utilscds->getCampoCredencial(USER, "AUTHOR_PASSWORD_LENGTH").toInt());
+  const String recipientName = utilscds->getCampoCredencial(USER, "RECIPIENT_NAME");
+  const String recipientEmail = utilscds->getCampoCredencial(USER, "RECIPIENT_EMAIL");
 
-    if (creds.valid) {
-      decrypted_userMqtt      = utilscds.decrypta(creds.mqttUsername, creds.mqttUsernameLength);
-      decrypted_passMqtt      = utilscds.decrypta(creds.mqttPassword, creds.mqttPasswordLength);
-      decrypted_apiToken      = utilscds.decrypta(creds.apiToken, creds.apiTokenLength);
-      decrypted_openIA_Key    = utilscds.decrypta(creds.openIA_Key, creds.openIA_KeyLength);
-      decrypted_passAuthor    = utilscds.decrypta(creds.authorPassword, creds.authorPasswordLength);
+  #ifdef DEBUG
+    Serial.println("decrypted_userFirmware: "+decrypted_userFirmware);
+    Serial.println("decrypted_passFirmware: "+decrypted_passFirmware);
+    //Serial.println("decrypted_apiToken: "+decrypted_apiToken);
+    Serial.println("host: http://"+hostName+".local");    
+  #endif
 
-      Serial.println("decrypted_userMqtt: "+decrypted_userMqtt);
-      Serial.println("decrypted_passMqtt: "+decrypted_passMqtt);
-      Serial.println("decrypted_passAuthor: "+decrypted_passAuthor);
-      Serial.println("decrypted_openIA_Key: "+decrypted_openIA_Key);
-      
-      const String hostName = creds.host.isEmpty() ? String("device") : creds.host;
-      
-      // === Servidor principal e OTA (só quando conectado) ===
-      websrvhdl = new WebServerHandler(
-        decrypted_apiToken.c_str(), 
-        creds.apiVersion, 
-        hostName,
-        creds.callerOrigin,
-        &utilscds
-      );
+  // === Servidor principal e OTA (só quando conectado) ===
+  websrvhdl = new WebServerHandler(
+    decrypted_apiToken.c_str(), 
+    apiVersion, 
+    hostName,
+    callerOrigin,
+    utilscds
+  );
 
-      // === Wi-Fi: tenta STA; se falhar, abre portal ===
-      isWiFiConnected = websrvhdl->connectSTA(hostName);
-      if (!isWiFiConnected) {
-        String apName = hostName.isEmpty() ? String("device-setup") : (hostName + "-setup");
-        websrvhdl->startWebServerWifiManager(apName);
-        Serial.println("WiFi não configurado!");
-        Serial.println("Por favor, conecte-se em: " + apName + " e entre em: http://" + hostName + ".local para configuração do WiFi.");
-      } else {
-        char usuario[64];
-        char senha[64];
-        String ssid = WiFi.SSID();
-        String pass = WiFi.psk();
-        strncpy(usuario, ssid.c_str(), sizeof(usuario));
-        strncpy(senha, pass.c_str(), sizeof(senha));
-        utilscds.salvaCredenciaisWiFi(usuario, senha);
-
-        pinMode(RelayEyes, OUTPUT);
-        pinMode(RelayHat, OUTPUT);
-        pinMode(RelayBlink, OUTPUT);
-        pinMode(RelayShake, OUTPUT);
-        pinMode(TemperatureHumidity, OUTPUT);
-        
-        websrvhdl->startWebServer();   // registra rotas no 'server' e chama server->begin() lá dentro
-        Serial.println("Web Server inicializado");
-
-        const char * hostname = hostName.c_str();
-        MDNS.end();
-        // Atribuindo clock para conseguir usar datetime nos arquivos de log
-        utilscds.atribuiRelogio();
-      
-        #ifdef USE_SDCARD
-          // inicio sdcard
-          utilscds.iniciaSdCard();
-        #endif
-        #ifdef USE_TEMPERATURE
-          // inicio temperatura
-          utilscds.iniciaTemperatura();
-        #endif
-        #ifdef USE_AUDIO
-          // inicio audio
-          utilscds.iniciaSound(decrypted_openIA_Key);
-        #endif
-        
-        #ifdef USE_MQTT
-          // inicio o mqtt
-          utilscds.iniciaMqtt(&wifiClientMqtt, creds.mqttBroker, decrypted_userMqtt, decrypted_passMqtt);
-        #endif
-        
-        if(!MDNS.begin(hostname)){
-          Serial.println("mDNS falhou");
-          delay(1000);
-          delete websrvhdl;
-          ESP.restart();
-        }
-        MDNS.addService("http", "tcp", 80);
-        Serial.print(F("mDNS ok: http://"));
-        Serial.print(hostname);     // hostname = const char* ou String
-        Serial.println(F(".local"));
-      }
-    } else {
-      Serial.println("Credenciais inválidas");
-    }
+  // === Wi-Fi: tenta STA; se falhar, abre portal ===
+  wifi_connected = websrvhdl->connectSTA(hostName);
+  if (!wifi_connected) {
+    String apName = hostName.isEmpty() ? String("device-setup") : (hostName + "-setup");
+    Serial.printf("Heap livre antes do AP: %d bytes\n", ESP.getFreeHeap());
+    websrvhdl->startWebServerWifiManager(apName);
+    Serial.println("WiFi não configurado!");
+    Serial.println("Por favor, conecte-se em: " + apName + " e entre em: http://" + hostName + ".local para configuração do WiFi.");
   } else {
-    Serial.println("Arquivo de credenciais não existe!");
+    ElegantOTA.begin(websrvhdl->getWebServer(), decrypted_userFirmware.c_str(), decrypted_passFirmware.c_str());
+    Serial.println("OTA inicializado");
+    Serial.printf("Heap após OTA: %d\n", ESP.getFreeHeap());
+    Serial.printf("Heap maior bloco: %d\n", ESP.getMaxAllocHeap());
+
+    pinMode(RelayEyes, OUTPUT);
+    pinMode(RelayHat, OUTPUT);
+    pinMode(RelayBlink, OUTPUT);
+    pinMode(RelayShake, OUTPUT);
+    pinMode(TemperatureHumidity, OUTPUT);
+    
+   const char * hostname = hostName.c_str();
+    MDNS.end();
+
+    // Atribuindo clock para conseguir usar datetime nos arquivos de log
+    utilscds->atribuiRelogio();
+
+    utilscds->iniciaOled();
+    utilscds->exibeMensagem("Inicializando o oled");
+
+    utilscds->iniciaStorage();
+    utilscds->exibeMensagem("Inicializando o storage");
+
+    utilscds->iniciaSdCard();
+    utilscds->exibeMensagem("Inicializando o sdcard");
+
+    utilscds->iniciaTemperatura();
+    utilscds->exibeMensagem("Inicializando a temperatura");
+    
+    utilscds->iniciaSound(decrypted_apiOpenAIToken);
+    utilscds->exibeMensagem("Inicializando o audio");
+    
+    utilscds->iniciaMqtt(&wifiClientMqtt, mqttBroker, decrypted_mqttUser, decrypted_mqttPass);
+    utilscds->exibeMensagem("Inicializando o mqtt");
+
+    if(!MDNS.begin(hostname)){
+      Serial.println("mDNS falhou");
+      delay(1000);
+      delete websrvhdl;
+      ESP.restart();
+    }
+    MDNS.addService("http", "tcp", 80);
+    Serial.print(F("mDNS ok: http://"));
+    Serial.print(hostname);     // hostname = const char* ou String
+    Serial.println(F(".local"));
   }
 }
 
@@ -144,20 +119,17 @@ unsigned long currentMillis;
  **********************************************/
 void loop() {
   currentMillis = millis();  
-  if (isWiFiConnected) {
-    //MDNS.update();
-    #ifdef USE_MQTT
-      utilscds.atualizaMqtt();
-    #endif    
-    #ifdef USE_AUDIO
-      utilscds.loopAudio();  //Executa o loop interno da biblioteca audio
-    #endif
+  if (wifi_connected) {
+    utilscds->atualizaMqtt();
+    utilscds->loopAudio();  //Executa o loop interno da biblioteca audio
     // Report every 1 minuto.
     if (currentMillis - previousMillis >= 60000) {
       previousMillis = currentMillis;
       // Reading temperature or humidity takes about 250 milliseconds!
       // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-      utilscds.obtemDadosTemperatura();
+      utilscds->obtemDadosTemperatura();
     }
+    ElegantOTA.loop();
+    websrvhdl->loop();
   }
 }

@@ -27,7 +27,12 @@ const char HTML_MISSING_DATA_UPLOAD[] PROGMEM = "<!DOCTYPE html><html lang=\"en\
                 "<b><a src=\"https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/\">Install ESP32 Filesystem Uploader in Arduino IDE\"</a></b>"
                 " e utilizar o menu no Arduino IDE: <b>Ferramentas->ESP32 Sketch Data Upload</b>"
                 " para gravar o conteúdo do web server (pasta: <b>/data</b>) no <b>Storage</b>.</div></body></html>";
+static const char* MSG_ARQUIVO_NAO_ENCONTRADO = "Provavelmente voce nao carregou os arquivos da pasta \"data\" (LittleFS) para o servidor!";
 
-
-
-
+// HTTP status code aliases
+#define HTTP_CODE_OK            HTTP_OK
+#define HTTP_CODE_BAD_REQUEST   HTTP_BAD_REQUEST
+#define HTTP_CODE_UNAUTHORIZED  HTTP_UNAUTHORIZED
+#define HTTP_CODE_NOT_FOUND     HTTP_NOT_FOUND
+#define HTTP_CODE_NO_CONTENT    HTTP_NO_CONTENT
+#define HTTP_CODE_CONFLICT      HTTP_CONFLICT

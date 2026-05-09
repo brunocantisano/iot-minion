@@ -7,3 +7,5 @@ pwa/.env
 *.pem
 *.crt
 package-lock.json
+.pio
+.vscode
