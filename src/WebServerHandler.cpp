@@ -931,8 +931,9 @@ void WebServerHandler::handleSaveCredentials(void){
 }
 
 void WebServerHandler::handleOptions(){
-  server->on("/", HTTP_OPTIONS, [this](AsyncWebServerRequest *request){
-    request->send(HTTP_CODE_NO_CONTENT); // No Content
+  server->onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){});  
+  server->on("/*", HTTP_OPTIONS, [](AsyncWebServerRequest *request){
+    request->send(HTTP_CODE_NO_CONTENT);
   });
 }
 
