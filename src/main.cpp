@@ -16,50 +16,72 @@ unsigned long currentMillis;
  **********************************************/
  void setup() {
   Serial.begin(SERIAL_BAUD);
+  delay(100);
+
+  // Força inicialização completa do subsistema Wi-Fi
+  WiFi.mode(WIFI_STA);
+  WiFi.begin("init", "init");  // credenciais inválidas, só para inicializar
+  delay(500);
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  delay(300);
+  Serial.println("WiFi subsystem ok");
+  Serial.flush();
+
   utilscds = new ArduinoUtilsCds();
   Serial.println("\nBoot...");
   
-  // === Carrega credenciais de firmware/host etc. (credentials.enc) === 
-  const String decrypted_userFirmware  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "USER_FIRMWARE"),utilscds->getCampoCredencial(USER, "USER_FIRMWARE_LENGTH").toInt());
-  #ifdef DEBUG 
-    Serial.println("decrypted_userFirmware: "+decrypted_userFirmware); 
-  #endif
-  const String decrypted_passFirmware  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "PASS_FIRMWARE"),utilscds->getCampoCredencial(USER, "PASS_FIRMWARE_LENGTH").toInt());
-  #ifdef DEBUG
-    Serial.println("decrypted_passFirmware: "+decrypted_passFirmware);
-  #endif
-  const String mqttBroker = utilscds->getCampoCredencial(USER, "MQTT_BROKER");
-  const String decrypted_mqttUser  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "MQTT_USERNAME"),utilscds->getCampoCredencial(USER, "MQTT_USERNAME_LENGTH").toInt());
-  #ifdef DEBUG
-    Serial.println("decrypted_mqttUser: "+decrypted_mqttUser);
-  #endif
-  const String decrypted_mqttPass  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "MQTT_PASSWORD"),utilscds->getCampoCredencial(USER, "MQTT_PASSWORD_LENGTH").toInt());
-  #ifdef DEBUG
-    Serial.println("decrypted_mqttPass: "+decrypted_mqttPass);
-  #endif
-  const int mqttPort = utilscds->getCampoCredencial(USER, "MQTT_PORT").toInt();
- 
-  const String hostName = utilscds->getCampoCredencial(USER, "HOST");
-  const String apiVersion = utilscds->getCampoCredencial(USER, "API_VERSION");
-  const String callerOrigin = utilscds->getCampoCredencial(USER, "CALLER_ORIGIN");
-  const String decrypted_apiToken = utilscds->decrypta(utilscds->getCampoCredencial(USER, "API_TOKEN"), utilscds->getCampoCredencial(USER, "API_TOKEN_LENGTH").toInt());  
-  #ifdef DEBUG
-    Serial.println("decrypted_apiToken: "+decrypted_apiToken);
-  #endif
-  const String decrypted_apiOpenAIToken  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "OPEN_IA_KEY"),utilscds->getCampoCredencial(USER, "OPEN_IA_KEY_LENGTH").toInt());
-  #ifdef DEBUG
-    Serial.println("decrypted_apiOpenAIToken: "+decrypted_apiOpenAIToken);
-  #endif
-  const String smtpHost = utilscds->getCampoCredencial(USER, "SMTP_HOST");
-  const int smtpPort = utilscds->getCampoCredencial(USER, "SMTP_PORT").toInt();
-  const String authorEmail = utilscds->getCampoCredencial(USER, "AUTHOR_EMAIL");
-  const String decrypted_emailAuthorPass  = utilscds->decrypta(utilscds->getCampoCredencial(USER, "AUTHOR_PASSWORD"),utilscds->getCampoCredencial(USER, "AUTHOR_PASSWORD_LENGTH").toInt());
-  #ifdef DEBUG
-    Serial.println("decrypted_emailAuthorPass: "+decrypted_emailAuthorPass);
-  #endif
-  const String recipientName = utilscds->getCampoCredencial(USER, "RECIPIENT_NAME");
-  const String recipientEmail = utilscds->getCampoCredencial(USER, "RECIPIENT_EMAIL");
+   // === 1. Leitura de TODOS os campos brutos primeiro ===
+  const String raw_userFirmware       = utilscds->getCampoCredencial(USER, "USER_FIRMWARE");
+  const int    len_userFirmware       = utilscds->getCampoCredencial(USER, "USER_FIRMWARE_LENGTH").toInt();
 
+  const String raw_passFirmware       = utilscds->getCampoCredencial(USER, "PASS_FIRMWARE");
+  const int    len_passFirmware       = utilscds->getCampoCredencial(USER, "PASS_FIRMWARE_LENGTH").toInt();
+
+  const String mqttBroker             = utilscds->getCampoCredencial(USER, "MQTT_BROKER");
+  const String raw_mqttUser           = utilscds->getCampoCredencial(USER, "MQTT_USERNAME");
+  const int    len_mqttUser           = utilscds->getCampoCredencial(USER, "MQTT_USERNAME_LENGTH").toInt();
+  const String raw_mqttPass           = utilscds->getCampoCredencial(USER, "MQTT_PASSWORD");
+  const int    len_mqttPass           = utilscds->getCampoCredencial(USER, "MQTT_PASSWORD_LENGTH").toInt();
+  const int    mqttPort               = utilscds->getCampoCredencial(USER, "MQTT_PORT").toInt();
+
+  const String hostName               = utilscds->getCampoCredencial(USER, "HOST");
+  const String apiVersion             = utilscds->getCampoCredencial(USER, "API_VERSION");
+  const String callerOrigin           = utilscds->getCampoCredencial(USER, "CALLER_ORIGIN");
+  const String raw_apiToken           = utilscds->getCampoCredencial(USER, "API_TOKEN");
+  const int    len_apiToken           = utilscds->getCampoCredencial(USER, "API_TOKEN_LENGTH").toInt();
+
+  const String raw_apiOpenAIToken     = utilscds->getCampoCredencial(USER, "OPEN_IA_KEY");
+  const int    len_apiOpenAIToken     = utilscds->getCampoCredencial(USER, "OPEN_IA_KEY_LENGTH").toInt();
+
+  const String smtpHost               = utilscds->getCampoCredencial(USER, "SMTP_HOST");
+  const int    smtpPort               = utilscds->getCampoCredencial(USER, "SMTP_PORT").toInt();
+  const String authorEmail            = utilscds->getCampoCredencial(USER, "AUTHOR_EMAIL");
+  const String raw_emailAuthorPass    = utilscds->getCampoCredencial(USER, "AUTHOR_PASSWORD");
+  const int    len_emailAuthorPass    = utilscds->getCampoCredencial(USER, "AUTHOR_PASSWORD_LENGTH").toInt();
+
+  const String recipientName          = utilscds->getCampoCredencial(USER, "RECIPIENT_NAME");
+  const String recipientEmail         = utilscds->getCampoCredencial(USER, "RECIPIENT_EMAIL");
+
+  // === 2. Descriptografia depois, com todos os dados já em memória ===
+  const String decrypted_userFirmware    = utilscds->decrypta(raw_userFirmware, len_userFirmware);
+  const String decrypted_passFirmware    = utilscds->decrypta(raw_passFirmware, len_passFirmware);
+  const String decrypted_mqttUser        = utilscds->decrypta(raw_mqttUser, len_mqttUser);
+  const String decrypted_mqttPass        = utilscds->decrypta(raw_mqttPass, len_mqttPass);
+  const String decrypted_apiToken        = utilscds->decrypta(raw_apiToken, len_apiToken);
+  const String decrypted_apiOpenAIToken  = utilscds->decrypta(raw_apiOpenAIToken, len_apiOpenAIToken);
+  const String decrypted_emailAuthorPass = utilscds->decrypta(raw_emailAuthorPass, len_emailAuthorPass);
+
+  #ifdef DEBUG
+    Serial.println("userFirmware: "    + decrypted_userFirmware);
+    Serial.println("mqttBroker: "      + mqttBroker);
+    Serial.println("mqttUser: "        + decrypted_mqttUser);
+    Serial.println("mqttUserLength: "  + String(len_mqttUser));
+    Serial.println("mqttPass: "        + decrypted_mqttPass);
+    Serial.println("apiToken: "        + decrypted_apiToken);
+    Serial.println("openAIToken: "     + decrypted_apiOpenAIToken);
+  #endif
+  
   // === Servidor principal e OTA (só quando conectado) ===
   websrvhdl = new WebServerHandler(
     decrypted_apiToken.c_str(), 
@@ -82,20 +104,13 @@ unsigned long currentMillis;
       Serial.println("Por favor, conecte-se em: " + apName + " e entre em: http://" + hostName + ".local para configuração do WiFi.");
     #endif
   } else {
-    ElegantOTA.begin(websrvhdl->getWebServer(), decrypted_userFirmware.c_str(), decrypted_passFirmware.c_str());
-    #ifdef DEBUG
-      Serial.println("OTA inicializado");
-      Serial.printf("Heap após OTA: %d\n", ESP.getFreeHeap());
-      Serial.printf("Heap maior bloco: %d\n", ESP.getMaxAllocHeap());
-      Serial.println("host: http://"+hostName+".local");
-    #endif
     pinMode(RelayEyes, OUTPUT);
     pinMode(RelayHat, OUTPUT);
     pinMode(RelayBlink, OUTPUT);
     pinMode(RelayShake, OUTPUT);
     pinMode(TemperatureHumidity, OUTPUT);
     
-   const char * hostname = hostName.c_str();
+    const char * hostname = hostName.c_str();
     MDNS.end();
 
     // Atribuindo clock para conseguir usar datetime nos arquivos de log
@@ -119,16 +134,36 @@ unsigned long currentMillis;
     utilscds->iniciaMqtt(&wifiClientMqtt, mqttBroker, decrypted_mqttUser, decrypted_mqttPass);
     utilscds->exibeMensagem("Inicializando o mqtt");
 
+    websrvhdl->startWebServer();   // registra rotas no 'server' e chama server->begin() lá dentro
+
+    #ifdef DEBUG
+      Serial.println("Web Server inicializado");
+      Serial.printf("Heap após startWebServer: %d\n", ESP.getFreeHeap());
+      Serial.printf("Heap maior bloco: %d\n", ESP.getMaxAllocHeap());
+    #endif
+    
+    ElegantOTA.begin(websrvhdl->getWebServer(), decrypted_userFirmware.c_str(), decrypted_passFirmware.c_str());
+    #ifdef DEBUG
+      Serial.println("OTA inicializado");
+      Serial.printf("Heap após OTA: %d\n", ESP.getFreeHeap());
+      Serial.printf("Heap maior bloco: %d\n", ESP.getMaxAllocHeap());
+      Serial.println("host: http://"+hostName+".local");
+    #endif
+
     if(!MDNS.begin(hostname)){
-      Serial.println("mDNS falhou");
+      #ifdef DEBUG
+        Serial.println("mDNS falhou");
+      #endif
       delay(1000);
       delete websrvhdl;
       ESP.restart();
     }
     MDNS.addService("http", "tcp", 80);
-    Serial.print(F("mDNS ok: http://"));
-    Serial.print(hostname);     // hostname = const char* ou String
-    Serial.println(F(".local"));
+    #ifdef DEBUG
+      Serial.print(F("mDNS ok: http://"));
+      Serial.print(hostname);     // hostname = const char* ou String
+      Serial.println(F(".local"));
+    #endif
   }
 }
 

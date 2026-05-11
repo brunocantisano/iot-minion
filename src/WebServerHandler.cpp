@@ -1229,23 +1229,29 @@ void WebServerHandler::startWebServerWifiManager(const String& apName) {
  **********************************************/
 bool WebServerHandler::connectSTA(const String& hostForMDNS) {
   (void)hostForMDNS;
- 
+
   utilscds->carregaCredenciaisWiFi(savedSsid, savedPass);
   if (savedSsid.isEmpty()) {
     Serial.println(F("Sem credenciais salvas."));
     return false;
   }
 
-  Serial.printf("Tentando STA: ssid='%s'\n", savedSsid.c_str());
-  WiFi.mode(WIFI_STA);
+  Serial.printf("Tentando STA: ssid='%s' len=%d\n",
+                savedSsid.c_str(), savedSsid.length());
+  Serial.flush();
+
   WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
+  delay(200);
+
   WiFi.begin(savedSsid.c_str(), savedPass.c_str());
 
-  for (int i = 0; i < 30 && WiFi.status() != WL_CONNECTED; i++) {
+  for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
     delay(500);
-    Serial.print('.');
+    yield();
+    Serial.printf("status=%d\n", WiFi.status());
+    Serial.flush();
   }
-  Serial.println();
 
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println(F("Falha na conexão STA."));
