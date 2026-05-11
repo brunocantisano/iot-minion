@@ -66,7 +66,6 @@ Adicionar no campo `URLs Adicionais para Gerenciadores de Placas` as linhas abai
 * AsyncElegantOTA
 * DHT sensor library
 * NTPClient
-* PubSubClient
 * WiFi101
 * LittleFS_esp32
 * Preferences
