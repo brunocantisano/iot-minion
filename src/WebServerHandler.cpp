@@ -1028,7 +1028,6 @@ void WebServerHandler::registerPortalRoutes() {
   handleFileServing();
   handleWiFiManager();
   handleSaveCredentials();
-  server->begin();
 }
 
 String WebServerHandler::treatTemperatureAndHumidity(String field, String value)
@@ -1241,7 +1240,6 @@ bool WebServerHandler::connectSTA(const String& hostForMDNS) {
                 savedSsid.c_str(), savedSsid.length());
   Serial.flush();
 
-  WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   delay(200);
 

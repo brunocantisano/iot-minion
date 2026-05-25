@@ -22,7 +22,7 @@ unsigned long currentMillis;
   WiFi.mode(WIFI_STA);
   WiFi.begin("init", "init");  // credenciais inválidas, só para inicializar
   delay(500);
-  WiFi.disconnect(true);
+  WiFi.disconnect(false);  // false = não apaga credenciais do NVS
   WiFi.mode(WIFI_OFF);
   delay(300);
   Serial.println("WiFi subsystem ok");
