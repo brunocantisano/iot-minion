@@ -140,11 +140,9 @@ void WebServerHandler::incrementaContagemBoots() {
 
 bool WebServerHandler::check_authorization_header(AsyncWebServerRequest * request){
   int headers = request->headers();
-  int i;
-  for(i=0;i<headers;i++){
+  for(int i=0;i<headers;i++){
     const AsyncWebHeader* h = request->getHeader(i);
-    //Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
-    if(h->name()=="Authorization" && h->value()=="Basic "+String(apiToken)){
+    if(h->name().equalsIgnoreCase("Authorization") && h->value()=="Basic "+String(apiToken)){
       return true;
     }
   }
@@ -939,7 +937,11 @@ void WebServerHandler::handleOptions(){
 
 void WebServerHandler::handleOnError(){
   server->onNotFound([this](AsyncWebServerRequest *request) {
-    request->send(HTTP_CODE_NOT_FOUND, utilscds->obtemTipoMime(".txt"), "Rota não encontrada");
+    if (request->method() == HTTP_OPTIONS) {
+      request->send(HTTP_NO_CONTENT); // responde ao preflight com 204
+      return;
+    }
+    request->send(HTTP_NOT_FOUND, utilshdl->getMimeType(".txt"), "Rota não encontrada");
   });
 }
 
