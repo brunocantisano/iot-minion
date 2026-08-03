@@ -1,1 +1,809 @@
-{"swagger":"2.0","info":{"description":"Minion Soap Esp32 using REST api server [minion-server](https://github.com/brunocantisano/iot-minion)","version":"1.0.0","title":"Swagger Minion","termsOfService":"http://swagger.io/terms/","contact":{"email":"bruno.cantisano@gmail.com"},"license":{"name":"Apache 2.0","url":"http://www.apache.org/licenses/LICENSE-2.0.html"}},"host":"minion","basePath":"/","schemes":["http","https"],"tags":[{"name":"comando","description":"Comandos","externalDocs":{"description":"Descubra mais sobre a garagem digital","url":"https://garagem.ipiranga.io"}},{"name":"lista","description":"Lista","externalDocs":{"description":"Descubra mais sobre a garagem digital","url":"https://garagem.ipiranga.io"}}],"paths":{"/health":{"get":{"tags":["comando"],"summary":"Checagem Health","description":"Faz checagem da saúde da aplicação","operationId":"health","produces":["application/json"],"responses":{"200":{"description":"OK"}}}},"/metrics":{"get":{"tags":["comando"],"summary":"Métricas do ESP32 (Prometheus)","description":"Exibe métricas em formato texto.","operationId":"metrics","produces":["text/plain"],"responses":{"200":{"description":"OK"}}}},"/ports":{"get":{"tags":["comando"],"summary":"Lista de portas/sensores","security":[{"basicAuth":[]}],"produces":["application/json"],"responses":{"200":{"description":"OK"},"401":{"description":"Não autenticado"}}}},"/audios":{"get":{"tags":["comando"],"summary":"Lista de mídias disponíveis","security":[{"basicAuth":[]}],"produces":["application/json"],"responses":{"200":{"description":"OK"},"401":{"description":"Não autenticado"}}}},"/sensors":{"get":{"tags":["comando"],"summary":"Lê estado de um sensor","description":"Retorna 'ativado' ou 'desativado' em texto simples.","security":[{"basicAuth":[]}],"produces":["text/plain"],"parameters":[{"name":"sensor","in":"query","description":"Sensor (1..4 = relés; 5 = temperatura/umidade)","required":true,"type":"integer","enum":[1,2,3,4,5]}],"responses":{"200":{"description":"Leitura realizada (text/plain: 'ativado'|'desativado')"},"400":{"description":"Parâmetros inválidos ou ausentes"},"401":{"description":"Não autenticado"},"404":{"description":"Sensor não encontrado"}}},"put":{"tags":["comando"],"summary":"Atualiza estado de um sensor (relé)","description":"Altera estado de 1..4 via corpo JSON. Retorna 'ativado' ou 'desativado' (text/plain).","security":[{"basicAuth":[]}],"consumes":["application/json"],"produces":["text/plain"],"parameters":[{"name":"sensor","in":"query","required":true,"type":"integer","enum":[1,2,3,4]},{"in":"body","name":"body","required":true,"schema":{"type":"object","properties":{"value":{"type":"integer","enum":[0,1],"description":"0=desliga, 1=liga"}},"required":["value"]}}],"responses":{"200":{"description":"Atualizado (text/plain: 'ativado'|'desativado')"},"400":{"description":"Parâmetros/JSON inválidos"},"401":{"description":"Não autenticado"},"404":{"description":"Sensor não encontrado"}}}},"/climate":{"get":{"tags":["comando"],"summary":"Clima (temperatura/umidade)","description":"Retorna valor numérico como texto (celsius/fahrenheit/humidity).","security":[{"basicAuth":[]}],"produces":["application/json","text/plain"],"parameters":[{"name":"type","in":"query","required":true,"type":"string","enum":["celsius","fahrenheit","humidity"]}],"responses":{"200":{"description":"OK"},"400":{"description":"Tipo inválido"},"401":{"description":"Não autenticado"}}}},"/talk":{"post":{"tags":["comando"],"summary":"Fala mensagem no alto-falante","security":[{"basicAuth":[]}],"consumes":["application/json"],"produces":["text/plain"],"parameters":[{"in":"body","name":"body","required":true,"schema":{"$ref":"#/definitions/Mensagem"}}],"responses":{"200":{"description":"PLAYED"},"400":{"description":"PARSER_ERROR ou NOT_PLAYED"},"401":{"description":"Não autenticado"}}}},"/ask":{"post":{"tags":["comando"],"summary":"Pergunta ao ChatGPT e fala a resposta","security":[{"basicAuth":[]}],"consumes":["application/json"],"produces":["text/plain"],"parameters":[{"in":"body","name":"body","required":true,"schema":{"$ref":"#/definitions/Mensagem"}}],"responses":{"200":{"description":"Texto da resposta (também é falado)"},"400":{"description":"Erro ao conversar com o ChatGPT / JSON inválido"},"401":{"description":"Não autenticado"}}}},"/play":{"post":{"tags":["comando"],"summary":"Toca um áudio local pelo nome","security":[{"basicAuth":[]}],"consumes":["application/json"],"produces":["text/plain"],"parameters":[{"in":"body","name":"body","required":true,"schema":{"$ref":"#/definitions/Midia"}}],"responses":{"200":{"description":"PLAYED"},"400":{"description":"NOT_PLAYED / JSON inválido"},"401":{"description":"Não autenticado"}}}},"/playRemote":{"post":{"tags":["comando"],"summary":"Toca um áudio remoto por URL","security":[{"basicAuth":[]}],"consumes":["application/json"],"produces":["text/plain"],"parameters":[{"in":"body","name":"body","required":true,"schema":{"$ref":"#/definitions/RemoteMidia"}}],"responses":{"200":{"description":"PLAYED"},"400":{"description":"PARSER_ERROR"},"401":{"description":"Não autenticado"}}}},"/volume":{"put":{"tags":["comando"],"summary":"Regula o volume do áudio","security":[{"basicAuth":[]}],"consumes":["application/json"],"produces":["text/plain"],"parameters":[{"in":"body","name":"body","required":true,"schema":{"$ref":"#/definitions/Volume"}}],"responses":{"200":{"description":"Mensagem de confirmação"},"400":{"description":"JSON inválido"},"401":{"description":"Não autenticado"}}}},"/uploadStorage":{"post":{"tags":["comando"],"summary":"Upload de arquivo no LittleFS (storage)","security":[{"basicAuth":[]}],"consumes":["multipart/form-data"],"parameters":[{"in":"formData","name":"file","type":"file","required":true,"description":"Arquivo para enviar ao LittleFS"}],"produces":["text/plain"],"responses":{"200":{"description":"UPLOADED_FILE"},"400":{"description":"Extensão não autorizada"},"401":{"description":"Não autenticado"}}}},"/uploadSdcard":{"post":{"tags":["comando"],"summary":"Upload de arquivo no SD Card","security":[{"basicAuth":[]}],"consumes":["multipart/form-data"],"parameters":[{"in":"formData","name":"file","type":"file","required":true,"description":"Arquivo para enviar ao SD"}],"produces":["text/plain"],"responses":{"200":{"description":"SDCARD_PHOTO_WRITTEN"},"400":{"description":"Extensão não autorizada"},"401":{"description":"Não autenticado"}}}},"/deleteFile":{"delete":{"tags":["comando"],"summary":"Apaga arquivo do storage ou sdcard","security":[{"basicAuth":[]}],"produces":["text/plain"],"consumes":["application/json"],"parameters":[{"name":"type","in":"query","required":true,"type":"string","enum":["storage","sdcard"],"description":"Local do arquivo"},{"in":"body","name":"body","required":true,"schema":{"$ref":"#/definitions/Arquivo"},"description":"Nome do arquivo"}],"responses":{"200":{"description":"REMOVED_FILE"},"400":{"description":"JSON inválido"},"401":{"description":"Não autenticado"}}}},"/list":{"post":{"tags":["lista"],"summary":"Insere item na lista","security":[{"basicAuth":[]}],"consumes":["application/json"],"produces":["application/json","text/plain"],"parameters":[{"in":"body","name":"body","required":true,"schema":{"$ref":"#/definitions/Lista"}}],"responses":{"200":{"description":"Item inserido (JSON da lista)"},"400":{"description":"JSON inválido"},"401":{"description":"Não autenticado"},"409":{"description":"EXISTING_ITEM"}}},"delete":{"tags":["lista"],"summary":"Apaga item da lista","security":[{"basicAuth":[]}],"consumes":["application/json"],"produces":["text/plain"],"parameters":[{"in":"body","name":"body","required":true,"schema":{"$ref":"#/definitions/Lista"}}],"responses":{"200":{"description":"REMOVED_ITEM"},"400":{"description":"JSON inválido"},"401":{"description":"Não autenticado"},"404":{"description":"NOT_FOUND_ITEM"}}}},"/lists":{"get":{"tags":["lista"],"summary":"Busca o estado da lista","security":[{"basicAuth":[]}],"produces":["application/json"],"responses":{"200":{"description":"OK"},"401":{"description":"Não autenticado"}}}}},"securityDefinitions":{"basicAuth":{"type":"basic"}},"definitions":{"Lista":{"type":"object","properties":{"name":{"type":"string","description":"Nome da aplicação"},"language":{"type":"string","description":"Linguagem de programação"},"description":{"type":"string","description":"Descrição de execução"}},"required":["name","language","description"]},"Arquivo":{"type":"object","properties":{"filename":{"type":"string","format":"binary","description":"Nome do arquivo"}}},"Mensagem":{"type":"object","properties":{"mensagem":{"type":"string","description":"Texto a ser falado"}},"required":["mensagem"]},"Midia":{"type":"object","properties":{"midia":{"type":"string","description":"Nome do áudio/arquivo"}},"required":["midia"]},"RemoteMidia":{"type":"object","properties":{"url":{"type":"string","description":"URL do áudio a ser tocado"}},"required":["url"]},"Volume":{"type":"object","properties":{"intensidade":{"type":"integer","format":"int32","description":"Volume (padrão 70)"}},"required":["intensidade"]}},"externalDocs":{"description":"Descubra mais","url":"https://garagem.ipiranga.io"}}
+{
+   "swagger":"2.0",
+   "info":{
+      "description":"Minion Soap Esp32 using REST api server [minion-server](https://github.com/brunocantisano/iot-minion)",
+      "version":"1.0.0",
+      "title":"Swagger Minion",
+      "termsOfService":"http://swagger.io/terms/",
+      "contact":{
+         "email":"bruno.cantisano@gmail.com"
+      },
+      "license":{
+         "name":"Apache 2.0",
+         "url":"http://www.apache.org/licenses/LICENSE-2.0.html"
+      }
+   },
+   "host":"minion",
+   "basePath":"/",
+   "schemes":[
+      "http",
+      "https"
+   ],
+   "tags":[
+      {
+         "name":"comando",
+         "description":"Comandos",
+         "externalDocs":{
+            "description":"Descubra mais sobre a garagem digital",
+            "url":"https://garagem.ipiranga.io"
+         }
+      },
+      {
+         "name":"lista",
+         "description":"Lista",
+         "externalDocs":{
+            "description":"Descubra mais sobre a garagem digital",
+            "url":"https://garagem.ipiranga.io"
+         }
+      }
+   ],
+   "paths":{
+      "/health":{
+         "get":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Checagem Health",
+            "description":"Faz checagem da saúde da aplicação",
+            "operationId":"health",
+            "produces":[
+               "application/json"
+            ],
+            "responses":{
+               "200":{
+                  "description":"OK"
+               }
+            }
+         }
+      },
+      "/metrics":{
+         "get":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Métricas do ESP32 (Prometheus)",
+            "description":"Exibe métricas em formato texto.",
+            "operationId":"metrics",
+            "produces":[
+               "text/plain"
+            ],
+            "responses":{
+               "200":{
+                  "description":"OK"
+               }
+            }
+         }
+      },
+      "/ports": {
+        "get": {
+            "tags": ["comando"],
+            "summary": "Lista de portas utilizadas",
+            "consumes": ["application/json"],
+            "produces": ["application/json"],
+            "security": [{ "basicAuth": [] }],
+            "description": "",
+            "operationId": "getPortas",
+            "parameters": [],
+            "responses": {
+            "200": { "description": "Comando executado com sucesso" },
+            "204": { "description": "Não foi possível encontrar as informações" },
+            "401": { "description": "Não autenticado" }
+            }
+        }
+      },
+      "/audios":{
+         "get":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Lista de mídias disponíveis",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "produces":[
+               "application/json"
+            ],
+            "responses":{
+               "200":{
+                  "description":"OK"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/sensors": {
+        "get": {
+            "tags": ["comando"],
+            "summary": "Busca o estado de um sensor",
+            "description": "Consulta o sensor",
+            "operationId": "getSensor",
+            "consumes": ["application/json"],
+            "produces": ["application/json"],
+            "security": [{ "basicAuth": [] }],
+            "parameters": [
+            {
+                "name": "sensor",
+                "in": "query",
+                "description": "Sensor (1..2)",
+                "required": true,
+                "type": "integer",
+                "enum": [1, 2]
+            }
+            ],
+            "responses": {
+            "200": {
+                "description": "Leitura realizada",
+                "schema": { "$ref": "#/definitions/SensorReading" },
+                "examples": {
+                "application/json": {
+                    "sensor": 3,
+                    "pin": "D3",
+                    "value": 1,
+                    "ts": 1725148800
+                }
+                }
+            },
+            "400": { "description": "Parâmetros inválidos ou ausentes" },
+            "401": { "description": "Não autenticado" },
+            "404": { "description": "Sensor não encontrado" }
+            }
+        },
+        "put": {
+            "tags": ["comando"],
+            "summary": "Atualiza o estado de um sensor",
+            "description": "Permite alterar o estado (ligado/desligado) de um sensor específico",
+            "operationId": "updateSensor",
+            "consumes": ["application/json"],
+            "produces": ["application/json"],
+            "security": [{ "basicAuth": [] }],
+            "parameters": [
+            {
+                "name": "sensor",
+                "in": "query",
+                "description": "Sensor (1..2)",
+                "required": true,
+                "type": "integer",
+                "enum": [1, 2]
+            },
+            {
+                "name": "body",
+                "in": "body",
+                "description": "Novo estado do sensor",
+                "required": true,
+                "schema": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                    "type": "integer",
+                    "description": "0 = desligado, 1 = ligado",
+                    "enum": [0, 1]
+                    }
+                },
+                "required": ["value"]
+                }
+            }
+            ],
+            "responses": {
+            "200": {
+                "description": "Estado atualizado com sucesso",
+                "schema": { "$ref": "#/definitions/SensorReading" },
+                "examples": {
+                "application/json": {
+                    "sensor": 3,
+                    "pin": "D3",
+                    "value": 1,
+                    "ts": 1725148800
+                }
+                }
+            },
+            "400": { "description": "Parâmetros inválidos ou ausentes" },
+            "401": { "description": "Não autenticado" },
+            "404": { "description": "Sensor não encontrado" }
+            }
+        }
+      },
+      "/climate":{
+         "get":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Clima (temperatura/umidade)",
+            "description":"Retorna valor numérico como texto (celsius/fahrenheit/humidity).",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "produces":[
+               "application/json",
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "name":"type",
+                  "in":"query",
+                  "required":true,
+                  "type":"string",
+                  "enum":[
+                     "celsius",
+                     "fahrenheit",
+                     "humidity"
+                  ]
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"OK"
+               },
+               "400":{
+                  "description":"Tipo inválido"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/talk":{
+         "post":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Fala mensagem no alto-falante",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/Mensagem"
+                  }
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"PLAYED"
+               },
+               "400":{
+                  "description":"PARSER_ERROR ou NOT_PLAYED"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/ask":{
+         "post":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Pergunta ao ChatGPT e fala a resposta",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/Mensagem"
+                  }
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"Texto da resposta (também é falado)"
+               },
+               "400":{
+                  "description":"Erro ao conversar com o ChatGPT / JSON inválido"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/play":{
+         "post":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Toca um áudio local pelo nome",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/Midia"
+                  }
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"PLAYED"
+               },
+               "400":{
+                  "description":"NOT_PLAYED / JSON inválido"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/playRemote":{
+         "post":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Toca um áudio remoto por URL",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/RemoteMidia"
+                  }
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"PLAYED"
+               },
+               "400":{
+                  "description":"PARSER_ERROR"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/volume":{
+         "put":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Regula o volume do áudio",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/Volume"
+                  }
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"Mensagem de confirmação"
+               },
+               "400":{
+                  "description":"JSON inválido"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/uploadStorage":{
+         "post":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Upload de arquivo no LittleFS (storage)",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "multipart/form-data"
+            ],
+            "parameters":[
+               {
+                  "in":"formData",
+                  "name":"file",
+                  "type":"file",
+                  "required":true,
+                  "description":"Arquivo para enviar ao LittleFS"
+               }
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "responses":{
+               "200":{
+                  "description":"UPLOADED_FILE"
+               },
+               "400":{
+                  "description":"Extensão não autorizada"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/uploadSdcard":{
+         "post":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Upload de arquivo no SD Card",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "multipart/form-data"
+            ],
+            "parameters":[
+               {
+                  "in":"formData",
+                  "name":"file",
+                  "type":"file",
+                  "required":true,
+                  "description":"Arquivo para enviar ao SD"
+               }
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "responses":{
+               "200":{
+                  "description":"SDCARD_PHOTO_WRITTEN"
+               },
+               "400":{
+                  "description":"Extensão não autorizada"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/deleteFile":{
+         "delete":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Apaga arquivo do storage ou sdcard",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "parameters":[
+               {
+                  "name":"type",
+                  "in":"query",
+                  "required":true,
+                  "type":"string",
+                  "enum":[
+                     "storage",
+                     "sdcard"
+                  ],
+                  "description":"Local do arquivo"
+               },
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/Arquivo"
+                  },
+                  "description":"Nome do arquivo"
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"REMOVED_FILE"
+               },
+               "400":{
+                  "description":"JSON inválido"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      },
+      "/list":{
+         "post":{
+            "tags":[
+               "lista"
+            ],
+            "summary":"Insere item na lista",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "produces":[
+               "application/json",
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/Lista"
+                  }
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"Item inserido (JSON da lista)"
+               },
+               "400":{
+                  "description":"JSON inválido"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               },
+               "409":{
+                  "description":"EXISTING_ITEM"
+               }
+            }
+         },
+         "delete":{
+            "tags":[
+               "lista"
+            ],
+            "summary":"Apaga item da lista",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/Lista"
+                  }
+               }
+            ],
+            "responses":{
+               "200":{
+                  "description":"REMOVED_ITEM"
+               },
+               "400":{
+                  "description":"JSON inválido"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               },
+               "404":{
+                  "description":"NOT_FOUND_ITEM"
+               }
+            }
+         }
+      },
+      "/lists":{
+         "get":{
+            "tags":[
+               "lista"
+            ],
+            "summary":"Busca o estado da lista",
+            "security":[
+               {
+                  "basicAuth":[
+                     
+                  ]
+               }
+            ],
+            "produces":[
+               "application/json"
+            ],
+            "responses":{
+               "200":{
+                  "description":"OK"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               }
+            }
+         }
+      }
+   },
+   "securityDefinitions":{
+      "basicAuth":{
+         "type":"basic"
+      }
+   },
+   "definitions":{
+      "Lista":{
+         "type":"object",
+         "properties":{
+            "name":{
+               "type":"string",
+               "description":"Nome da aplicação"
+            },
+            "language":{
+               "type":"string",
+               "description":"Linguagem de programação"
+            },
+            "description":{
+               "type":"string",
+               "description":"Descrição de execução"
+            }
+         },
+         "required":[
+            "name",
+            "language",
+            "description"
+         ]
+      },
+      "Arquivo":{
+         "type":"object",
+         "properties":{
+            "filename":{
+               "type":"string",
+               "format":"binary",
+               "description":"Nome do arquivo"
+            }
+         }
+      },
+      "Mensagem":{
+         "type":"object",
+         "properties":{
+            "mensagem":{
+               "type":"string",
+               "description":"Texto a ser falado"
+            }
+         },
+         "required":[
+            "mensagem"
+         ]
+      },
+      "Midia":{
+         "type":"object",
+         "properties":{
+            "midia":{
+               "type":"string",
+               "description":"Nome do áudio/arquivo"
+            }
+         },
+         "required":[
+            "midia"
+         ]
+      },
+      "RemoteMidia":{
+         "type":"object",
+         "properties":{
+            "url":{
+               "type":"string",
+               "description":"URL do áudio a ser tocado"
+            }
+         },
+         "required":[
+            "url"
+         ]
+      },
+      "Volume":{
+         "type":"object",
+         "properties":{
+            "intensidade":{
+               "type":"integer",
+               "format":"int32",
+               "description":"Volume (padrão 70)"
+            }
+         },
+         "required":[
+            "intensidade"
+         ]
+      }
+   },
+   "externalDocs":{
+      "description":"Descubra mais",
+      "url":"https://garagem.ipiranga.io"
+   }
+}

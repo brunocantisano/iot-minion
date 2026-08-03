@@ -16,7 +16,9 @@ WebServerHandler::WebServerHandler(
 {
   server = new AsyncWebServer(HTTP_REST_PORT);
   ws = new AsyncWebSocket("/ws");
-  utilscds->criaNovoArquivoLog();
+  strhdl   = utilscds->obtemStorage();
+  utilshdl = utilscds->obtemUtilitarios();
+  prefshdl = utilscds->obtemPreferences();
 }
 
 WebServerHandler::~WebServerHandler() {
@@ -170,18 +172,26 @@ void WebServerHandler::handleHome(){
   server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {    
     String html = utilscds->lerArquivo("/home.html");
     if(html.isEmpty()) {
-      html=HTML_MISSING_DATA_UPLOAD;
+      html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
     } else {
-      // versao do firmware: https://semver.org/
-      html.replace("0.0.0",apiVersion);
-      String mqttUser = "";
+      html.replace("{{API_VERSION}}", apiVersion);
+      html.replace("{{HOST_WATER_LEVEL}}", host + ".local");
+      // Slug do dashboard no Adafruit IO (io.adafruit.com/<user>/dashboards/<slug>) -
+      // nao tem relacao com o hostname mDNS do dispositivo.
+      html.replace("{{AIO_DASHBOARD}}", "minion");
+
+      String mqttStatus = "";
       #ifdef USE_MQTT
-        mqttUser = utilscds->obtemMqttUser();
+        String mqttUser = utilscds->obtemMqttUser();
+        html.replace("{{AIO_USERNAME}}", mqttUser);
+        if (utilscds->obtemMqttCredenciaisInvalidas()) {
+          mqttStatus = "<strong style=\"color:#b00020\">Configuração MQTT inválida: usuário ou senha incorretos. "
+                       "Corrija em <a href=\"/wifimanager.html\">/wifimanager.html</a>.</strong>";
+        }
       #endif
-      html.replace("MQTT_USERNAME",mqttUser);
-      html.replace("HOST_MINION",host);
+      html.replace("{{MQTT_STATUS}}", mqttStatus);
     }
-    request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".html"), html);
+    request->send(HTTP_OK, utilshdl->getMimeType(".html"), html);
   });
 }
 
@@ -209,14 +219,22 @@ void WebServerHandler::handleCiCd() {
 
 void WebServerHandler::handleSwagger(){
   server->on("/swagger.json", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    String html = utilscds->lerArquivo("/swagger.json");
-    if(html.isEmpty()) {
-      html=HTML_MISSING_DATA_UPLOAD;  
-    } else {
-      html.replace("0.0.0",apiVersion);
-      html.replace("HOST_MINION",host);
+    if (!LittleFS.exists("/swagger.json")) {
+      request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), MSG_ARQUIVO_NAO_ENCONTRADO);
+      return;
     }
-    request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".json"), html);
+    // Streaming direto do LittleFS (sem carregar o arquivo inteiro num String)
+    // - o swagger.json nao tem nenhum '%' fora dos placeholders, entao o
+    // template engine do ESPAsyncWebServer e seguro aqui (ver home.html
+    // pra saber por que isso NAO seria seguro num arquivo com '%' legitimo).
+    String apiVersionCopy = apiVersion;
+    String hostname = host + ".local";
+    request->send(LittleFS, "/swagger.json", "application/json", false,
+      [apiVersionCopy, hostname](const String& var) -> String {
+        if (var == "API_VERSION") return apiVersionCopy;
+        if (var == "HOST_WATER_LEVEL") return hostname;
+        return String();
+      });
   });
 }
 
@@ -224,11 +242,11 @@ void WebServerHandler::handleSwaggerUI(){
   server->on("/swaggerUI", HTTP_GET, [this](AsyncWebServerRequest *request) {
     String html = utilscds->lerArquivo("/swaggerUI.html");
     if(html.isEmpty()) {
-      html=HTML_MISSING_DATA_UPLOAD;
+      html=String(MSG_ARQUIVO_NAO_ENCONTRADO);
     } else {
-      html.replace("HOST_MINION",host);  
+      html.replace("{{HOST_WATER_LEVEL}}",host+".local");  
     }
-    request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".html"), html);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".html"), html);
   });  
 }
 
@@ -248,12 +266,25 @@ void WebServerHandler::handleMetrics(){
 void WebServerHandler::handlePorts(){
   server->on("/ports", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if(check_authorization_header(request)) {
-      String JSONmessage = listSensorJson();
-      request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".json"), '['+JSONmessage.substring(0, JSONmessage.length()-1)+']');
+      const int total = sensorListaEncadeada.size();
+      String JSONmessage = "[";
+      for(int i = 0; i < total; i++){
+        // Obtem a aplicação da lista
+        ArduinoSensorPort *arduinoSensorPort = sensorListaEncadeada.get(i);
+        if (!arduinoSensorPort) continue; // defensivo: nao deveria acontecer dentro de [0,size())
+        if (JSONmessage.length() > 1) JSONmessage += ",";
+        JSONmessage += "{\"id\": \""+String(arduinoSensorPort->id)+"\",\"gpio\": \""+String(arduinoSensorPort->gpio)+"\",\"name\": \""+String(arduinoSensorPort->name)+"\"}";
+      }
+      JSONmessage += "]";
+      request->send(HTTP_OK, utilshdl->getMimeType(".json"), JSONmessage);
     } else {
-      request->send(HTTP_CODE_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
+      // WRONG_AUTHORIZATION e PROGMEM (WebMessages.h) - send() normal faz
+      // String::operator=(const char*), que chama strlen() comum (nao
+      // safe pra flash) antes de copiar; send_P() evita isso (mesma causa
+      // do crash que já corrigimos no HTML_FALLBACK do portal AP).
+      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
     }
-  });  
+  });
 }
 
 void WebServerHandler::handleAudios(){
@@ -270,28 +301,33 @@ void WebServerHandler::handleAudios(){
 void WebServerHandler::handleSensors() {
   server->on("/sensors", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!check_authorization_header(request)) {
-      request->send(HTTP_CODE_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
       return;
     }
 
-    const AsyncWebParameter* pSensor = request->getParam("sensor");
-    if (!pSensor) { 
-      request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing sensor"); 
-      return; 
+    const AsyncWebParameter* pLevel = request->getParam("level");
+    if (!pLevel) { request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing level"); return; }
+
+    // Valida que "level" e um inteiro 1..4 antes de derivar o pino - sem isso
+    // um valor invalido (ausente, texto, fora do range) cai no pin=-1 sem
+    // avisar o cliente, respondendo "desativado" para um pino que nao existe.
+    String levelStr = pLevel->value();
+    bool numeric = levelStr.length() > 0;
+    for (size_t i = 0; i < levelStr.length() && numeric; i++) {
+      if (!isDigit(levelStr.charAt(i))) numeric = false;
+    }
+    int level = numeric ? levelStr.toInt() : -1;
+    if (level < 1 || level > 4) {
+      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "level invalido (use 1..4)");
+      return;
     }
 
-    int sensor = pSensor->value().toInt();
-    int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : (sensor==5)?TemperatureHumidity : -1;
-    
-    // ✅ Lê da struct, não do pino físico
-    int on = 0;
-    if (auto s = searchListSensor(pin)) {
-      on = s->status;
-    }
-    
-    String resp = on == HIGH ? "ativado":"desativado";
-    request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".txt"), resp);
-  });  
+    int pin = 25;
+    bool on = digitalRead(pin);
+    if (auto s = searchListSensor(pin)) s->status = on;
+    String resp = on ? "ativado" : "desativado";
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), resp);
+  });
 }
 
 void WebServerHandler::handleUpdateSensors() {
@@ -299,24 +335,17 @@ void WebServerHandler::handleUpdateSensors() {
     [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
 
     if (!check_authorization_header(request)) {
-      request->send(HTTP_CODE_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
+      request->send(HTTP_UNAUTHORIZED, utilshdl->getMimeType(".txt"), WRONG_AUTHORIZATION);
       return;
     }
 
     // Parâmetro sensor obrigatório na query
     const AsyncWebParameter* pSensor = request->getParam("sensor");
     if (!pSensor) { 
-      request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing sensor"); 
+      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing sensor"); 
       return; 
     }
-
-    int sensor = pSensor->value().toInt();
-    int pin = (sensor==1)?RelayEyes : (sensor==2)?RelayHat : (sensor==3)?RelayBlink : (sensor==4)?RelayShake : (sensor==5)?TemperatureHumidity : -1;
-    if (pin < 0) {
-      request->send(HTTP_CODE_NOT_FOUND, utilscds->obtemTipoMime(".txt"), "sensor not found");
-      return;
-    }
-
+   
     // Monta o corpo JSON (body)
     String body;
     for (size_t i = 0; i < len; i++) {
@@ -331,29 +360,29 @@ void WebServerHandler::handleUpdateSensors() {
       newValue = doc["value"].as<int>();
     }
     if (err) {
-      request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "invalid json");
+      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "invalid json");
       return;
     }
     
     if (!(doc["value"].is<int>())) {
-      request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "missing or invalid 'value'");
+      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing or invalid 'value'");
       return;
     }
 
     newValue = doc["value"].as<int>();
     if (newValue != 0 && newValue != 1) {
-      request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "invalid value");
+      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "invalid value");
       return;
     }
-    
-    // Atualiza o pino
-    pinMode(pin, OUTPUT);
-    int n = newValue==0?HIGH:LOW;
-    digitalWrite(pin, n);
-    if (auto s = searchListSensor(pin)) s->status = n;
 
-    String resp = n == HIGH ? "ativado":"desativado";
-    request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".txt"), resp);
+    // Atualiza o pino
+    pinMode(newValue, OUTPUT);
+    int n = newValue==0?LOW:HIGH;
+    digitalWrite(newValue, n);
+    if (auto s = searchListSensor(newValue)) s->status = n;
+
+    String resp = n == 0 ? "desativado":"ativado";
+    request->send(HTTP_OK, utilshdl->getMimeType(".txt"), resp);
   });
 }
 
@@ -411,7 +440,7 @@ void WebServerHandler::handleInsertTalk(){
         const AsyncWebHeader* h = request->getHeader(i);
         if(h->name() == "Host") host = h->value();
         String message = "_HEADER["+h->name()+"]: "+h->value()+"\n";
-        utilscds->mensagemLog(message);
+        utilscds->mensagemLog("%s", message.c_str());
       }
       // monta corpo JSON
       String JSONmessageBody;
@@ -424,7 +453,7 @@ void WebServerHandler::handleInsertTalk(){
         request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
           const char * mensagem = doc["mensagem"];
-          utilscds->mensagemLog("Mensagem: "+String(mensagem));
+          utilscds->mensagemLog("%s", ("Mensagem: "+String(mensagem)).c_str());
           String feedName="talk";
           host +="->"+String(mensagem);
           #ifdef USE_MQTT
@@ -495,7 +524,7 @@ void WebServerHandler::handleInsertPlay(){
         const AsyncWebHeader* h = request->getHeader(i);
         if(h->name() == "Host") host = h->value();
         String message="_HEADER["+h->name()+"]: "+h->value()+"\n";
-        utilscds->mensagemLog(message);
+        utilscds->mensagemLog("%s", message.c_str());
       }      
       String JSONmessageBody;
       for (size_t i = 0; i < len; i++) {
@@ -507,7 +536,7 @@ void WebServerHandler::handleInsertPlay(){
         request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
         const char * midia = doc["midia"];
-        utilscds->mensagemLog("Arquivo: "+String(midia));
+        utilscds->mensagemLog("%s", ("Arquivo: "+String(midia)).c_str());
 
         String feedName="play";
         host +="->"+String(midia);
@@ -547,7 +576,7 @@ void WebServerHandler::handleInsertPlayRemote(){
         request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
         const char * url = doc["url"];        
-        utilscds->mensagemLog("URL: "+String(url));
+        utilscds->mensagemLog("%s", ("URL: "+String(url)).c_str());
         #ifdef USE_AUDIO
           // toca o audio
           // exemplos:
@@ -628,7 +657,7 @@ void WebServerHandler::handleInsertItemList(){
           String JSONmessage = saveApplicationList();
           // Grava no storage
           utilscds->escreveArquivo("/lista.json",JSONmessage.c_str()); 
-          utilscds->mensagemLog("handleInsertItemList:"+JSONmessage);
+          utilscds->mensagemLog("%s", ("handleInsertItemList:"+JSONmessage).c_str());
           String feedName="list";
           #ifdef USE_MQTT
             // Grava no adafruit
@@ -668,7 +697,7 @@ void WebServerHandler::handleDeleteItemList(){
         String JSONmessage = saveApplicationList();
         // Grava no storage
         utilscds->escreveArquivo("/lista.json",JSONmessage.c_str()); 
-        utilscds->mensagemLog("handleDeleteItemList:"+JSONmessage);
+        utilscds->mensagemLog("%s", ("handleDeleteItemList:"+JSONmessage).c_str());
         String feedName="list";
         #ifdef USE_MQTT
           // Grava no adafruit
@@ -785,7 +814,7 @@ void WebServerHandler::handleDeleteFile(){
 void WebServerHandler::handleListStorage() {
   server->on("/storage", HTTP_GET, [this](AsyncWebServerRequest * request) {
     String message = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    utilscds->mensagemLog(message);
+    utilscds->mensagemLog("%s", message.c_str());
     char filename[] = "/storageAndSdcard.html";
     String html = utilscds->lerArquivo(filename);
     if(html.isEmpty()) {
@@ -828,7 +857,7 @@ void WebServerHandler::handleUploadStorage() {
 void WebServerHandler::handleListSdcard() {
   server->on("/sdcard", HTTP_GET, [this](AsyncWebServerRequest * request) {
     String message = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    utilscds->mensagemLog(message);
+    utilscds->mensagemLog("%s", message.c_str());
     char filename[] = "/storageAndSdcard.html";
     String html = utilscds->lerArquivo(filename);
     if(html.isEmpty()){
@@ -915,16 +944,136 @@ void WebServerHandler::handleWiFiManager(void){
 void WebServerHandler::handleSaveCredentials(void){
   // Salvar credenciais (usa PreferencesHandler do projeto)
   server->on("/save", HTTP_POST, [this](AsyncWebServerRequest* request){
-    Serial.println("[HTTP] POST /");
+    Serial.println("[HTTP] POST /save");
     String ssid = request->arg("ssid");
     String pass = request->arg("pass");
-    if (ssid.isEmpty()) { request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "SSID vazio"); return; }
+    if (ssid.isEmpty()) { request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "SSID vazio"); return; }
 
-    utilscds->salvaCredenciaisWiFi(ssid.c_str(), pass.c_str());
-  
-    request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".txt"), "Credenciais salvas. Reiniciando...");
-    delay(300);
-    ESP.restart();
+    prefshdl->saveDataPreferentials("wifi", "ssid", ssid.c_str());
+    prefshdl->saveDataPreferentials("wifi", "pass", pass.c_str());
+
+    // Campos opcionais: em branco mantém o valor já salvo anteriormente.
+    String userFirmware = request->arg("user_firmware");
+    String passFirmware = request->arg("pass_firmware");
+    String apiUser       = request->arg("api_user");
+    String apiPass       = request->arg("api_pass");
+
+    String callerOrigin  = request->arg("caller_origin");
+    String mqttBroker    = request->arg("mqtt_broker");
+    String mqttPort      = request->arg("mqtt_port");
+    String mqttUsername  = request->arg("mqtt_username");
+    String mqttPassword  = request->arg("mqtt_password");
+    
+    String smtpHost = request->arg("smtp_host");
+    String smtpPort = request->arg("smtp_port");
+    String smtpAuthorEmail = request->arg("smtp_author_email");
+    String authorPassword = request->arg("author_password");
+    String recipientEmail = request->arg("recipient_email");
+    String recipientName = request->arg("recipient_name");
+
+    if (!userFirmware.isEmpty()) {
+      prefshdl->saveDataPreferentials("firmware", "user", utilscds->encrypta(userFirmware));
+      prefshdl->saveDataPreferentials("firmware", "userLen", String(userFirmware.length()).c_str());
+    }
+    if (!passFirmware.isEmpty()) {
+      prefshdl->saveDataPreferentials("firmware", "pass", utilscds->encrypta(passFirmware));
+      prefshdl->saveDataPreferentials("firmware", "passLen", String(passFirmware.length()).c_str());
+    }
+    // Token de API no formato HTTP Basic: base64("usuario:senha"), depois criptografado.
+    if (!apiUser.isEmpty() && !apiPass.isEmpty()) {
+      String basicAuthPlain = apiUser + ":" + apiPass;
+      String basicAuthB64 = base64::encode(basicAuthPlain);
+      prefshdl->saveDataPreferentials("api", "token", utilscds->encrypta(basicAuthB64));
+      prefshdl->saveDataPreferentials("api", "tokenLen", String(basicAuthB64.length()).c_str());
+    }
+	  if (!callerOrigin.isEmpty()) {
+      prefshdl->saveDataPreferentials("api", "callerOrigin", callerOrigin.c_str());
+    } 
+        // Token de API no formato HTTP Basic: base64("usuario:senha"), depois criptografado.
+    if (!apiUser.isEmpty() && !apiPass.isEmpty()) {
+      String basicAuthPlain = apiUser + ":" + apiPass;
+      String basicAuthB64 = base64::encode(basicAuthPlain);
+      prefshdl->saveDataPreferentials("api", "token", utilscds->encrypta(basicAuthB64));
+      prefshdl->saveDataPreferentials("api", "tokenLen", String(basicAuthB64.length()).c_str());
+    }
+	  if (!callerOrigin.isEmpty()) {
+      prefshdl->saveDataPreferentials("api", "callerOrigin", callerOrigin.c_str());
+    }
+    if (!mqttBroker.isEmpty()) {
+      prefshdl->saveDataPreferentials("mqtt", "broker", mqttBroker.c_str());
+    }
+    if (!mqttPort.isEmpty()) {
+      prefshdl->saveDataPreferentials("mqtt", "port", mqttPort.c_str());
+    }
+    if (!mqttUsername.isEmpty()) {
+      prefshdl->saveDataPreferentials("mqtt", "username", utilscds->encrypta(mqttUsername));
+      prefshdl->saveDataPreferentials("mqtt", "usernameLen", String(mqttUsername.length()).c_str());
+    }
+    if (!mqttPassword.isEmpty()) {
+      prefshdl->saveDataPreferentials("mqtt", "password", utilscds->encrypta(mqttPassword));
+      prefshdl->saveDataPreferentials("mqtt", "passwordLen", String(mqttPassword.length()).c_str());
+    }
+
+    if (!smtpHost.isEmpty()) {
+      prefshdl->saveDataPreferentials("email", "smtp_host", smtpHost.c_str());
+    }
+    if (!smtpPort.isEmpty()) {
+      prefshdl->saveDataPreferentials("email", "smtp_port", smtpPort.c_str());
+    }
+    if (!smtpAuthorEmail.isEmpty()) {
+      prefshdl->saveDataPreferentials("email", "smtp_author_email", smtpAuthorEmail.c_str());
+    }
+    if (!authorPassword.isEmpty()) {
+      prefshdl->saveDataPreferentials("email", "authorPassword", utilscds->encrypta(authorPassword));
+      prefshdl->saveDataPreferentials("email", "authorPasswordLen", String(authorPassword.length()).c_str());
+    }
+    if (!recipientEmail.isEmpty()) {
+      prefshdl->saveDataPreferentials("email", "recipientEmail", recipientEmail.c_str());
+    }
+    if (!recipientName.isEmpty()) {
+      prefshdl->saveDataPreferentials("email", "recipientName", recipientName.c_str());
+    }
+
+    String mdnsHost = host.isEmpty() ? "nivel" : host;
+    String html = F(
+      "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\">"
+      "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+      "<title>Configuração salva</title><style>:root{--bg:#0f172a;--card:#1e293b;"
+      "--card-border:#334155;--accent:#38bdf8;--text:#e2e8f0;--muted:#94a3b8;--ok:#22c55e}"
+      "*{box-sizing:border-box}body{font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif;"
+      "margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;"
+      "background:radial-gradient(1200px 600px at 50% -10%,#1e293b 0,var(--bg) 60%);color:var(--text);padding:24px}"
+      ".card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--card-border);"
+      "border-radius:16px;padding:32px 28px;box-shadow:0 20px 50px rgba(0,0,0,.45);text-align:center}"
+      "h1{font-size:20px;margin:0 0 8px}p{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 20px}"
+      "a.url{display:inline-block;color:#06283d;background:var(--accent);padding:12px 18px;"
+      "border-radius:10px;font-weight:600;text-decoration:none;font-size:15px}"
+      ".foot{display:flex;align-items:center;gap:8px;margin-top:20px;color:var(--muted);"
+      "font-size:12px;justify-content:center}.dot{width:8px;height:8px;border-radius:50%;"
+      "background:var(--ok);box-shadow:0 0 8px var(--ok)}</style></head><body><div class=\"card\">"
+      "<h1>Configuração salva!</h1><p>O dispositivo vai reiniciar e conectar na sua rede Wi-Fi. "
+      "Depois de alguns segundos, acesse o endereço abaixo pelo navegador:</p>"
+      "<a class=\"url\" href=\"http://HOST.local\">http://HOST.local</a>"
+      "<div class=\"foot\"><span class=\"dot\"></span><span>Reiniciando...</span></div>"
+      "</div></body></html>"
+    );
+    html.replace("HOST", mdnsHost);
+    // request->send() e assincrono - so enfileira o envio, nao garante que os
+    // bytes ja chegaram no navegador. Em vez de um delay() as cegas (que
+    // tanto pode reiniciar cedo demais - pagina em branco - quanto demorar
+    // mais que o necessario), reinicia so quando o cliente desconectar (a
+    // resposta ja sai com "Connection: close", entao isso dispara assim que
+    // o navegador terminar de receber a pagina). O prazo abaixo e so uma
+    // rede de seguranca caso o onDisconnect nunca chegue a disparar.
+    this->_pendingRestartAfterSave = true;
+    this->_pendingRestartDeadline = millis() + 5000;
+    request->onDisconnect([this]() {
+      if (this->_pendingRestartAfterSave) {
+        this->_pendingRestartAfterSave = false;
+        ESP.restart();
+      }
+    });
+    request->send(HTTP_OK, utilshdl->getMimeType(".html"), html);
   });
 }
 
@@ -941,7 +1090,7 @@ void WebServerHandler::handleOnError(){
       request->send(HTTP_NO_CONTENT); // responde ao preflight com 204
       return;
     }
-    request->send(HTTP_NOT_FOUND, utilshdl->getMimeType(".txt"), "Rota não encontrada");
+    request->send(HTTP_NOT_FOUND, utilscds->obtemTipoMime(".txt"), "Rota não encontrada");
   });
 }
 
@@ -1130,26 +1279,26 @@ void WebServerHandler::handleUploadStorage(AsyncWebServerRequest *request, Strin
         const AsyncWebHeader* h = request->getHeader(i);
         Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
       }
-      utilscds->mensagemLog(message);
+      utilscds->mensagemLog("%s", message.c_str());
       if (!index) {
         message = "Upload Iniciado: " + String(filename);
         // open the file on first call and store the file handle in the request object
         request->_tempFile = LittleFS.open("/" + filename, "w");
-        utilscds->mensagemLog(message);
+        utilscds->mensagemLog("%s", message.c_str());
       }
     
       if (len) {
         // stream the incoming chunk to the opened file
         request->_tempFile.write(data, len);
         message = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-        utilscds->mensagemLog(message);
+        utilscds->mensagemLog("%s", message.c_str());
       }
     
       if (final) {
         message = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
         // close the file handle as the upload is now done
         request->_tempFile.close();
-        utilscds->mensagemLog(message);
+        utilscds->mensagemLog("%s", message.c_str());
         request->send(HTTP_CODE_OK, "text/plain", UPLOADED_FILE);
       }
     }      
@@ -1183,21 +1332,21 @@ void WebServerHandler::handleUploadSdcard(AsyncWebServerRequest *request, String
           // open the file on first call and store the file handle in the request object
           request->_tempFile = SD.open("/photos/" + filename, FILE_WRITE);          
         }
-        utilscds->mensagemLog(message);
+        utilscds->mensagemLog("%s", message.c_str());
       }
     
       if (len) {
         // stream the incoming chunk to the opened file
         request->_tempFile.write(data, len);
         message = "Escrevendo arquivo: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-        utilscds->mensagemLog(message);
+        utilscds->mensagemLog("%s", message.c_str());
       }
     
       if (final) {
         message = "Upload Completo: " + String(filename) + ",size: " + String(index + len);
         // close the file handle as the upload is now done
         request->_tempFile.close();
-        utilscds->mensagemLog(message);
+        utilscds->mensagemLog("%s", message.c_str());
         request->send(HTTP_CODE_OK, "text/plain", SDCARD_PHOTO_WRITTEN);
       }    
     }
@@ -1209,53 +1358,108 @@ void WebServerHandler::handleUploadSdcard(AsyncWebServerRequest *request, String
 /**********************************************
  *  AP + DNS cativo + portal
  **********************************************/
-void WebServerHandler::startWebServerWifiManager(const String& apName) {
+void WebServerHandler::startWebServerWifiManager(const String& apName) { 
+  Serial.println("==> Iniciando AP + DNS cativo + Portal");
   
-  Serial.println("==> Iniciando AP + DNS cativo + Portal"); 
+  #ifdef DEBUG
+    Serial.printf("server: %p\n", server);
+  #endif
+
   delay(500); // aguarda estabilização da alimentação
   WiFi.mode(WIFI_AP);
   delay(100);
+  /**
+   * Dava o erro: Brownout detector was triggered
+   * O problema é 100% elétrico. O rádio WiFi do ESP32 ao ligar puxa um pico de corrente que derruba a tensão.
+   * Com USB 3.0 e cabo novo ainda acontece porque a causa mais provável: A placa Heltec WiFi Kit 32 v2.
+   * Essa placa tem um regulador de tensão interno (normalmente HT7333 ou similar) que tem limitação de 
+   * corrente de pico. Mesmo com fonte boa, o regulador interno não aguenta o transitório do rádio WiFi. 
+   **/
   WiFi.softAP(apName.c_str());         // coloque senha se quiser: softAP(ssid, pass)
   IPAddress apIP = WiFi.softAPIP();
   Serial.printf("AP '%s' em %s\n", apName.c_str(), apIP.toString().c_str());
 
   dns.start(53, "*", apIP);            // captive DNS
 
-  registerPortalRoutes();
+  registerPortalRoutes();              // <<<<< REGISTRAR ANTES do begin()
   server->begin();
+
   _apMode = true;
 }
 
 /**********************************************
  *  Conexão STA (Wi-Fi do roteador)
  **********************************************/
+// Traduz wl_status_t em texto legível para diagnosticar falha de conexão
+// (senha errada, SSID fora de alcance, etc.) — ver wl_definitions.h.
+static const char* wifiStatusToString(wl_status_t status) {
+  switch (status) {
+    case WL_IDLE_STATUS:     return "IDLE_STATUS (ainda tentando/sem resultado)";
+    case WL_NO_SSID_AVAIL:   return "NO_SSID_AVAIL (SSID nao encontrado no ar - fora de alcance, oculto ou banda errada)";
+    case WL_SCAN_COMPLETED:  return "SCAN_COMPLETED";
+    case WL_CONNECTED:       return "CONNECTED";
+    case WL_CONNECT_FAILED:  return "CONNECT_FAILED (provavel senha incorreta ou modo de seguranca incompativel)";
+    case WL_CONNECTION_LOST: return "CONNECTION_LOST";
+    case WL_DISCONNECTED:    return "DISCONNECTED";
+    default:                 return "desconhecido";
+  }
+}
+
+static const char* wifiEncTypeToString(uint8_t encType) {
+  switch (encType) {
+    case WIFI_AUTH_OPEN:            return "aberta (sem senha)";
+    case WIFI_AUTH_WEP:             return "WEP";
+    case WIFI_AUTH_WPA_PSK:         return "WPA/PSK";
+    case WIFI_AUTH_WPA2_PSK:        return "WPA2/PSK";
+    case WIFI_AUTH_WPA_WPA2_PSK:    return "WPA/WPA2 misto";
+    case WIFI_AUTH_WPA3_PSK:        return "WPA3/PSK";
+    case WIFI_AUTH_WPA2_WPA3_PSK:   return "WPA2/WPA3 misto";
+    default:                        return "desconhecido";
+  }
+}
+
 bool WebServerHandler::connectSTA(const String& hostForMDNS) {
   (void)hostForMDNS;
+  String savedSsid, savedPass;
 
-  utilscds->carregaCredenciaisWiFi(savedSsid, savedPass);
+  savedSsid = utilscds->carregaDado("wifi", "ssid", savedSsid.c_str());
+  savedPass = utilscds->carregaDado("wifi", "pass", savedPass.c_str());
+
   if (savedSsid.isEmpty()) {
     Serial.println(F("Sem credenciais salvas."));
     return false;
   }
 
-  Serial.printf("Tentando STA: ssid='%s' len=%d\n",
-                savedSsid.c_str(), savedSsid.length());
-  Serial.flush();
+  Serial.printf("Tentando STA: ssid='%s' (senha com %d caracteres)\n", savedSsid.c_str(), savedPass.length());
 
+  // Diagnóstico: procura a rede salva no ar antes de tentar conectar, para
+  // distinguir "SSID nao existe/fora de alcance/so 5GHz" de "senha errada".
   WiFi.mode(WIFI_STA);
-  delay(200);
+  int redesEncontradas = WiFi.scanNetworks();
+  bool redeEncontrada = false;
+  for (int i = 0; i < redesEncontradas; i++) {
+    if (WiFi.SSID(i) == savedSsid) {
+      redeEncontrada = true;
+      Serial.printf("  Rede encontrada no scan: RSSI=%ddBm canal=%d seguranca=%s\n",
+                     WiFi.RSSI(i), WiFi.channel(i), wifiEncTypeToString(WiFi.encryptionType(i)));
+    }
+  }
+  if (!redeEncontrada) {
+    Serial.println(F("  AVISO: SSID salvo NAO apareceu no scan (fora de alcance, oculto, ou so 5GHz - ESP8266 nao suporta 5GHz)."));
+  }
+  WiFi.scanDelete();
 
+  WiFi.persistent(false);
   WiFi.begin(savedSsid.c_str(), savedPass.c_str());
 
-  for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
+  for (int i = 0; i < 30 && WiFi.status() != WL_CONNECTED; i++) {
     delay(500);
-    yield();
-    Serial.printf("status=%d\n", WiFi.status());
-    Serial.flush();
+    Serial.print('.');
   }
+  Serial.println();
 
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println(F("Falha na conexão STA."));
+    Serial.printf("Falha na conexao STA. status=%d (%s)\n", WiFi.status(), wifiStatusToString(WiFi.status()));
     return false;
   }
 
@@ -1321,17 +1525,6 @@ String WebServerHandler::listMediaJson() {
   return JSONmessage;
 }
 
-String WebServerHandler::listSensorJson(){
-  String JSONmessage;
-  ArduinoSensorPort *arduinoSensorPort;    
-  for(int i = 0; i < sensorListaEncadeada.size(); i++){
-    // Obtem a aplicação da lista
-    arduinoSensorPort = sensorListaEncadeada.get(i);
-    JSONmessage += "{\"id\": \""+String(arduinoSensorPort->id)+"\",\"gpio\": \""+String(arduinoSensorPort->gpio)+"\",\"name\": \""+arduinoSensorPort->name+"\",\"status\": \""+String(arduinoSensorPort->status ? LOW: HIGH)+"\"},";
-  }
-  return JSONmessage;
-}
-
 String WebServerHandler::saveApplicationList() {
   Application *app;
   String JSONmessage;
@@ -1379,5 +1572,13 @@ int WebServerHandler::searchList(String name, String language) {
 }
 
 void WebServerHandler::loop() {
-  if (_apMode) dns.processNextRequest();
+  if (_apMode) dns.processNextRequest();  // mesmo método, compatível
+  if (_pendingRestartAfterSave && (long)(millis() - _pendingRestartDeadline) >= 0) {
+    _pendingRestartAfterSave = false;
+    ESP.restart();
+  }
+}
+
+void WebServerHandler::atualizaApiToken(const String& token) {
+  apiToken = token;
 }
