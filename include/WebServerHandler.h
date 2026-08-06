@@ -61,6 +61,18 @@ private:
   // seguranca caso a desconexao nunca chegue a disparar.
   bool _pendingRestartAfterSave = false;
   unsigned long _pendingRestartDeadline = 0;
+  // /talk, /ask e /playRemote fazem chamadas de rede bloqueantes (TTS,
+  // ChatGPT, stream de radio). Rodar isso direto no callback do
+  // AsyncWebServer estoura o stack/watchdog da task e reinicia o ESP - por
+  // isso a acao so e enfileirada aqui e executada de fato no loop() (mesmo
+  // padrao do _pendingRestartAfterSave acima).
+  enum class PendingAudioAction { None, Talk, Ask, PlayRemote };
+  PendingAudioAction _pendingAudioAction = PendingAudioAction::None;
+  String _pendingAudioPayload;
+  // Envio de e-mail (SMTP) tambem e uma chamada de rede bloqueante - mesmo
+  // motivo/mesmo padrao do _pendingAudioAction acima.
+  bool _pendingEmailSend = false;
+  String _pendingEmailFilename;
   String chatGPTUrl;
   String savedSsid;
   String savedPass;
@@ -95,6 +107,7 @@ private:
   void handleInsertItemList();
   void handleDeleteItemList();
   void handleDeleteFile();
+  void handleSendEmail();
   void handleListStorage();
   void handleUploadStorage();
   void handleListSdcard();

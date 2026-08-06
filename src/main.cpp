@@ -38,7 +38,7 @@ unsigned long currentMillis;
   utilscds->iniciaStorage();
   utilscds->exibeMensagem("Inicializando o storage");
   // Carrega credenciais de texto simples
-  String hostName = "nivel";
+  String hostName = "minion";
   String version = String(API_VERSION);
   String callerOrigin = utilscds->carregaDado("api", "callerOrigin", "");
   utilscds->mensagemLog("[DEBUG] hostName.length() = %d", hostName.length());
@@ -155,7 +155,17 @@ unsigned long currentMillis;
     String decrypted_authorPassword = utilscds->decrypta(utilscds->carregaDado("email","authorPassword", ""), utilscds->carregaDado("email","authorPasswordLen", "0").toInt());
     String recipientEmail = utilscds->carregaDado("email","recipientEmail", "");
     String recipientName = utilscds->carregaDado("email","recipientName", "");
-    
+
+    #ifdef USE_EMAIL
+      if (!smtpHost.isEmpty() && !smtpAuthorEmail.isEmpty() && !decrypted_authorPassword.isEmpty() && smtpPort > 0) {
+        utilscds->iniciaEmail(smtpAuthorEmail.c_str(), decrypted_authorPassword.c_str(), smtpAuthorEmail.c_str(),
+                               "Minion ESP32", smtpHost.c_str(), (uint16_t)smtpPort);
+        utilscds->mensagemLog("[DEBUG] Email inicializado (smtp=%s:%d)", smtpHost.c_str(), smtpPort);
+      } else {
+        utilscds->mensagemLog("[AVISO] Credenciais de email nao configuradas; envio de email desabilitado.");
+      }
+    #endif
+
     if (!userFirmare.isEmpty() && !passFirmware.isEmpty() && !apiToken.isEmpty()) {
       utilscds->mensagemLog("[DEBUG] Credenciais carregadas com sucesso!");
       utilscds->mensagemLog("[DEBUG] Credenciais brutas carregadas:");

@@ -209,9 +209,9 @@ void WebServerHandler::handleCiCd() {
         mqttUser = utilscds->obtemMqttUser();
         mqttPass = utilscds->obtemMqttPass();      
       #endif
-      html.replace("MQTT_BROKER", mqttBroker);
-      html.replace("MQTT_USERNAME", mqttUser);
-      html.replace("MQTT_PASSWORD", mqttPass);
+      html.replace("{{MQTT_BROKER}}", mqttBroker);
+      html.replace("{{MQTT_USERNAME}}", mqttUser);
+      html.replace("{{MQTT_PASSWORD}}", mqttPass);
     }
     request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".html"), html);
   });
@@ -451,6 +451,13 @@ void WebServerHandler::handleInsertTalk(){
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
+      } else if (!doc["mensagem"].is<const char*>() || String((const char*)doc["mensagem"]).isEmpty()) {
+        // Sem isso, "mensagem" nulo (campo ausente/tipo errado) chega ate o
+        // strlen(speech) dentro do connecttospeech() da lib de audio, que nao
+        // valida null e derruba o ESP.
+        request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Campo 'mensagem' ausente ou vazio");
+      } else if (_pendingAudioAction != PendingAudioAction::None) {
+        request->send(HTTP_CODE_CONFLICT, utilscds->obtemTipoMime(".txt"), "Ja existe um comando de audio em processamento");
       } else {
           const char * mensagem = doc["mensagem"];
           utilscds->mensagemLog("%s", ("Mensagem: "+String(mensagem)).c_str());
@@ -460,18 +467,17 @@ void WebServerHandler::handleInsertTalk(){
             // Grava no Adafruit
             utilscds->atribuiFeed(feedName, host);
           #endif
-          doc.clear();
 
           #ifdef USE_AUDIO
-            // toca o audio
-            if(utilscds->tocaFala(mensagem)) {
-              request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".txt"), PLAYED);
-            } else {
-              request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), NOT_PLAYED);
-            }
+            // A chamada de rede (TTS) roda no loop() principal, nao aqui -
+            // ver comentario em _pendingAudioAction no header.
+            _pendingAudioPayload = mensagem;
+            _pendingAudioAction = PendingAudioAction::Talk;
+            request->send(HTTP_CODE_ACCEPTED, utilscds->obtemTipoMime(".txt"), ACCEPTED_PROCESSING);
           #else
             request->send(HTTP_CODE_BAD_REQUEST, "text/plain", NOT_LOADED_AUDIO);
           #endif
+          doc.clear();
       }
     } else {
       request->send(HTTP_CODE_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
@@ -496,18 +502,27 @@ void WebServerHandler::handleInsertAsk() {
         request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
         return;
       }
-
-      const char * mensagem = doc["mensagem"];
-      String retorno = enviarMensagemParaChatGPT(mensagem);
-
-      if (retorno.length() == 0) {
-        request->send(HTTP_CODE_BAD_REQUEST, "text/plain", "Erro ao conversar com o ChatGPT.");
+      // Sem isso, "mensagem" nulo (campo ausente/tipo errado) chega ate o
+      // strlen(speech) dentro do connecttospeech() da lib de audio, que nao
+      // valida null e derruba o ESP.
+      if (!doc["mensagem"].is<const char*>() || String((const char*)doc["mensagem"]).isEmpty()) {
+        request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Campo 'mensagem' ausente ou vazio");
         return;
       }
+
+      if (_pendingAudioAction != PendingAudioAction::None) {
+        request->send(HTTP_CODE_CONFLICT, utilscds->obtemTipoMime(".txt"), "Ja existe um comando de audio em processamento");
+        return;
+      }
+
       #ifdef USE_AUDIO
-        // toca o áudio em background, sem quebrar a resposta
-        utilscds->tocaFala(retorno.c_str());
-        request->send(HTTP_CODE_OK, "text/plain", retorno);
+        // A chamada ao ChatGPT (HTTPClient com timeout de 15s) e a fala da
+        // resposta rodam no loop() principal, nao aqui - ver comentario em
+        // _pendingAudioAction no header.
+        const char * mensagem = doc["mensagem"];
+        _pendingAudioPayload = mensagem;
+        _pendingAudioAction = PendingAudioAction::Ask;
+        request->send(HTTP_CODE_ACCEPTED, utilscds->obtemTipoMime(".txt"), ACCEPTED_PROCESSING);
       #else
         request->send(HTTP_CODE_BAD_REQUEST, "text/plain", NOT_LOADED_AUDIO);
       #endif
@@ -574,20 +589,26 @@ void WebServerHandler::handleInsertPlayRemote(){
       DeserializationError error = deserializeJson(doc, JSONmessageBody);
       if(error) {
         request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
+      } else if (!doc["url"].is<const char*>() || String((const char*)doc["url"]).isEmpty()) {
+        // Sem isso, "url" nula (campo ausente/tipo errado) chega ate o
+        // strlen(host) dentro do connecttohost() da lib de audio.
+        request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Campo 'url' ausente ou vazio");
+      } else if (_pendingAudioAction != PendingAudioAction::None) {
+        request->send(HTTP_CODE_CONFLICT, utilscds->obtemTipoMime(".txt"), "Ja existe um comando de audio em processamento");
       } else {
-        const char * url = doc["url"];        
+        const char * url = doc["url"];
         utilscds->mensagemLog("%s", ("URL: "+String(url)).c_str());
         #ifdef USE_AUDIO
-          // toca o audio
-          // exemplos:
-          // 1- http://mp3.ffh.de/radioffh/hqlivestream.mp3
-          // 2- http://stream.friskyradio.com:9000/frisky_mp3_h
-          utilscds->tocaMidiaRemota(url);
+          // A conexao ao stream remoto roda no loop() principal, nao aqui -
+          // ver comentario em _pendingAudioAction no header.
+          // Exemplos de radios web validas: ver definicao RemoteMidia no swagger.json.
+          _pendingAudioPayload = url;
+          _pendingAudioAction = PendingAudioAction::PlayRemote;
+          request->send(HTTP_CODE_ACCEPTED, utilscds->obtemTipoMime(".txt"), ACCEPTED_PROCESSING);
         #else
           request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".txt"), URL_PLAYED);
         #endif
         doc.clear();
-        request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), NOT_PLAYED);
       }
     } else {
       request->send(HTTP_CODE_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
@@ -811,6 +832,61 @@ void WebServerHandler::handleDeleteFile(){
   });
 }
 
+void WebServerHandler::handleSendEmail(){
+  server->on("/sendEmail", HTTP_POST, [this](AsyncWebServerRequest * request){}, NULL,
+    [this](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+    if (!check_authorization_header(request)) {
+      request->send(HTTP_CODE_UNAUTHORIZED, utilscds->obtemTipoMime(".txt"), WRONG_AUTHORIZATION);
+      return;
+    }
+
+    if (index == 0) request->_tempObject = new String();
+    String *body = reinterpret_cast<String*>(request->_tempObject);
+    body->reserve(total);
+    body->concat((const char*)data, len);
+
+    if (index + len != total) return;
+
+    JsonDocument doc; // ArduinoJson v7
+    DeserializationError err = deserializeJson(doc, *body);
+    delete body;
+    request->_tempObject = nullptr;
+    if (err) {
+      request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "JSON invalido");
+      return;
+    }
+
+    String filename = doc["filename"] | "";
+    filename.trim();
+    // Somente arquivos .log podem ser enviados por email (mesma restricao
+    // aplicada aos botoes na pagina /storage).
+    if (filename.isEmpty() || !filename.endsWith(".log")) {
+      request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Somente arquivos .log podem ser enviados por email");
+      return;
+    }
+    if (!LittleFS.exists("/" + filename)) {
+      request->send(HTTP_CODE_NOT_FOUND, utilscds->obtemTipoMime(".txt"), NOT_FOUND_ITEM);
+      return;
+    }
+    if (_pendingEmailSend) {
+      request->send(HTTP_CODE_CONFLICT, utilscds->obtemTipoMime(".txt"), "Ja existe um envio de email em processamento");
+      return;
+    }
+
+    #ifdef USE_EMAIL
+      // O envio de fato (SMTP) roda no loop() principal, nao aqui - ver
+      // comentario em _pendingEmailSend no header (mesmo motivo do
+      // _pendingAudioAction: chamada de rede bloqueante dentro do callback
+      // do AsyncWebServer estoura stack/watchdog e reinicia o ESP).
+      _pendingEmailFilename = filename;
+      _pendingEmailSend = true;
+      request->send(HTTP_CODE_ACCEPTED, utilscds->obtemTipoMime(".txt"), ACCEPTED_PROCESSING);
+    #else
+      request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Suporte a email nao habilitado no firmware");
+    #endif
+  });
+}
+
 void WebServerHandler::handleListStorage() {
   server->on("/storage", HTTP_GET, [this](AsyncWebServerRequest * request) {
     String message = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
@@ -823,6 +899,7 @@ void WebServerHandler::handleListStorage() {
       html.replace("API_MINION_TOKEN",apiToken);
       String jsonPayload = utilscds->listaArquivos();
       html.replace("MESSAGE","Storage");
+      html.replace("IS_STORAGE_ROUTE","true");
       html.replace("FILELIST",jsonPayload);
     }
     request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(filename), html);
@@ -870,6 +947,7 @@ void WebServerHandler::handleListSdcard() {
         payload = utilscds->listaArquivosSD(entry, 0, apiToken);
       #endif
       html.replace("MESSAGE","SdCard");
+      html.replace("IS_STORAGE_ROUTE","false");
       html.replace("FILELIST",payload);
       entry.close();
     }
@@ -947,29 +1025,42 @@ void WebServerHandler::handleSaveCredentials(void){
     Serial.println("[HTTP] POST /save");
     String ssid = request->arg("ssid");
     String pass = request->arg("pass");
-    if (ssid.isEmpty()) { request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "SSID vazio"); return; }
-
-    prefshdl->saveDataPreferentials("wifi", "ssid", ssid.c_str());
-    prefshdl->saveDataPreferentials("wifi", "pass", pass.c_str());
-
-    // Campos opcionais: em branco mantém o valor já salvo anteriormente.
     String userFirmware = request->arg("user_firmware");
     String passFirmware = request->arg("pass_firmware");
     String apiUser       = request->arg("api_user");
     String apiPass       = request->arg("api_pass");
+    String openaiKey     = request->arg("openai_key");
 
     String callerOrigin  = request->arg("caller_origin");
     String mqttBroker    = request->arg("mqtt_broker");
     String mqttPort      = request->arg("mqtt_port");
     String mqttUsername  = request->arg("mqtt_username");
     String mqttPassword  = request->arg("mqtt_password");
-    
+
     String smtpHost = request->arg("smtp_host");
     String smtpPort = request->arg("smtp_port");
     String smtpAuthorEmail = request->arg("smtp_author_email");
     String authorPassword = request->arg("author_password");
     String recipientEmail = request->arg("recipient_email");
     String recipientName = request->arg("recipient_name");
+
+    // Todos os campos sao obrigatorios agora - nenhum fica "em branco mantem valor anterior".
+    const struct { const char* name; const String& value; } requiredFields[] = {
+      {"ssid", ssid}, {"pass", pass}, {"user_firmware", userFirmware}, {"pass_firmware", passFirmware},
+      {"api_user", apiUser}, {"api_pass", apiPass}, {"openai_key", openaiKey}, {"caller_origin", callerOrigin},
+      {"mqtt_broker", mqttBroker}, {"mqtt_port", mqttPort}, {"mqtt_username", mqttUsername}, {"mqtt_password", mqttPassword},
+      {"smtp_host", smtpHost}, {"smtp_port", smtpPort}, {"smtp_author_email", smtpAuthorEmail}, {"author_password", authorPassword},
+      {"recipient_email", recipientEmail}, {"recipient_name", recipientName}
+    };
+    for (const auto &f : requiredFields) {
+      if (f.value.isEmpty()) {
+        request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "Campo obrigatório ausente: " + String(f.name));
+        return;
+      }
+    }
+
+    prefshdl->saveDataPreferentials("wifi", "ssid", ssid.c_str());
+    prefshdl->saveDataPreferentials("wifi", "pass", pass.c_str());
 
     if (!userFirmware.isEmpty()) {
       prefshdl->saveDataPreferentials("firmware", "user", utilscds->encrypta(userFirmware));
@@ -988,7 +1079,11 @@ void WebServerHandler::handleSaveCredentials(void){
     }
 	  if (!callerOrigin.isEmpty()) {
       prefshdl->saveDataPreferentials("api", "callerOrigin", callerOrigin.c_str());
-    } 
+    }
+    if (!openaiKey.isEmpty()) {
+      prefshdl->saveDataPreferentials("openai", "token", utilscds->encrypta(openaiKey));
+      prefshdl->saveDataPreferentials("openai", "tokenLen", String(openaiKey.length()).c_str());
+    }
         // Token de API no formato HTTP Basic: base64("usuario:senha"), depois criptografado.
     if (!apiUser.isEmpty() && !apiPass.isEmpty()) {
       String basicAuthPlain = apiUser + ":" + apiPass;
@@ -1034,7 +1129,7 @@ void WebServerHandler::handleSaveCredentials(void){
       prefshdl->saveDataPreferentials("email", "recipientName", recipientName.c_str());
     }
 
-    String mdnsHost = host.isEmpty() ? "nivel" : host;
+    String mdnsHost = host.isEmpty() ? "minion" : host;
     String html = F(
       "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\">"
       "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
@@ -1142,6 +1237,7 @@ void WebServerHandler::startWebServer() {
   handleInsertItemList();
   handleDeleteItemList();
   handleDeleteFile();
+  handleSendEmail();
   handleListStorage();
   handleUploadStorage();
   handleListSdcard();
@@ -1576,6 +1672,53 @@ void WebServerHandler::loop() {
   if (_pendingRestartAfterSave && (long)(millis() - _pendingRestartDeadline) >= 0) {
     _pendingRestartAfterSave = false;
     ESP.restart();
+  }
+
+  if (_pendingAudioAction != PendingAudioAction::None) {
+    PendingAudioAction action = _pendingAudioAction;
+    String payload = _pendingAudioPayload;
+    _pendingAudioAction = PendingAudioAction::None;
+    _pendingAudioPayload = "";
+
+    switch (action) {
+      case PendingAudioAction::Talk:
+        #ifdef USE_AUDIO
+          utilscds->tocaFala(payload.c_str());
+        #endif
+        break;
+      case PendingAudioAction::Ask: {
+        String retorno = enviarMensagemParaChatGPT(payload);
+        #ifdef USE_AUDIO
+          if (!retorno.isEmpty()) utilscds->tocaFala(retorno.c_str());
+        #endif
+        break;
+      }
+      case PendingAudioAction::PlayRemote:
+        #ifdef USE_AUDIO
+          utilscds->tocaMidiaRemota(payload.c_str());
+        #endif
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (_pendingEmailSend) {
+    _pendingEmailSend = false;
+    String filename = _pendingEmailFilename;
+    _pendingEmailFilename = "";
+    #ifdef USE_EMAIL
+      String recipientEmail = utilscds->carregaDado("email", "recipientEmail", "");
+      if (recipientEmail.isEmpty()) {
+        utilscds->mensagemLog("[AVISO] Envio de email cancelado: destinatario nao configurado");
+      } else {
+        String path = "/" + filename;
+        bool enviado = utilscds->enviaEmail(recipientEmail, "Log do Minion ESP32: " + filename,
+                                             "Segue em anexo o arquivo de log solicitado.",
+                                             true, false, path.c_str());
+        utilscds->mensagemLog(enviado ? "[DEBUG] Email enviado: %s" : "[ERRO] Falha ao enviar email: %s", filename.c_str());
+      }
+    #endif
   }
 }
 

@@ -257,7 +257,7 @@
             "tags":[
                "comando"
             ],
-            "summary":"Fala mensagem no alto-falante",
+            "summary":"Fala mensagem no alto-falante (assíncrono: aceita e processa em segundo plano)",
             "security":[
                {
                   "basicAuth":[
@@ -282,14 +282,17 @@
                }
             ],
             "responses":{
-               "200":{
-                  "description":"PLAYED"
+               "202":{
+                  "description":"Comando aceito; a fala é processada em segundo plano"
                },
                "400":{
-                  "description":"PARSER_ERROR ou NOT_PLAYED"
+                  "description":"PARSER_ERROR ou campo 'mensagem' ausente/vazio"
                },
                "401":{
                   "description":"Não autenticado"
+               },
+               "409":{
+                  "description":"Já existe um comando de áudio em processamento"
                }
             }
          }
@@ -299,7 +302,7 @@
             "tags":[
                "comando"
             ],
-            "summary":"Pergunta ao ChatGPT e fala a resposta",
+            "summary":"Pergunta ao ChatGPT e fala a resposta (assíncrono: aceita e processa em segundo plano)",
             "security":[
                {
                   "basicAuth":[
@@ -324,14 +327,17 @@
                }
             ],
             "responses":{
-               "200":{
-                  "description":"Texto da resposta (também é falado)"
+               "202":{
+                  "description":"Comando aceito; a pergunta é enviada ao ChatGPT e a resposta é falada em segundo plano"
                },
                "400":{
-                  "description":"Erro ao conversar com o ChatGPT / JSON inválido"
+                  "description":"JSON inválido ou campo 'mensagem' ausente/vazio"
                },
                "401":{
                   "description":"Não autenticado"
+               },
+               "409":{
+                  "description":"Já existe um comando de áudio em processamento"
                }
             }
          }
@@ -383,7 +389,7 @@
             "tags":[
                "comando"
             ],
-            "summary":"Toca um áudio remoto por URL",
+            "summary":"Toca um áudio remoto por URL (assíncrono: aceita e processa em segundo plano)",
             "security":[
                {
                   "basicAuth":[
@@ -408,14 +414,17 @@
                }
             ],
             "responses":{
-               "200":{
-                  "description":"PLAYED"
+               "202":{
+                  "description":"Comando aceito; a conexão ao stream é feita em segundo plano"
                },
                "400":{
-                  "description":"PARSER_ERROR"
+                  "description":"PARSER_ERROR ou campo 'url' ausente/vazio"
                },
                "401":{
                   "description":"Não autenticado"
+               },
+               "409":{
+                  "description":"Já existe um comando de áudio em processamento"
                }
             }
          }
@@ -781,7 +790,8 @@
          "properties":{
             "url":{
                "type":"string",
-               "description":"URL do áudio a ser tocado"
+               "description":"URL de stream de áudio (rádio web) a ser tocado. Precisa ser um stream direto (mp3/aac), não uma página HTML. Exemplos de rádios válidas: http://mp3.ffh.de/radioffh/hqlivestream.mp3 (FFH, 128k mp3), http://icecast.omroep.nl/3fm-bb-mp3 (3FM), http://air.ofr.fm:8008/jazz/mp3/128 (Radio FR Jazz), http://mp3channels.webradio.antenne.de:80/oldies-but-goldies (Antenne Oldies).",
+               "example":"http://mp3.ffh.de/radioffh/hqlivestream.mp3"
             }
          },
          "required":[

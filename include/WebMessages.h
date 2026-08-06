@@ -5,6 +5,7 @@ const char API_TOKEN_CHAT_GPT_ERROR[] PROGMEM = "Erro ao utilizar  chave de api 
 const char URL_CHAT_GPT[] PROGMEM = "Erro ao analisar a resposta JSON do ChatGPT";
 const char ERRO_CONEXAO[] PROGMEM = "Falha na conexão";
 const char NOT_PLAYED[] PROGMEM = "Não foi possível tocar o áudio.";
+const char ACCEPTED_PROCESSING[] PROGMEM = "Comando recebido, processando em segundo plano.";
 const char NOT_LOADED_AUDIO[] PROGMEM = "Não foi possível carregar a biblioteca de áudio.";
 const char WRONG_AUTHORIZATION[] PROGMEM = "Authorization token errado";
 const char NOT_AUTHORIZED_EXTENTIONS[] PROGMEM = "Extensão de arquivo inválida para upload";
@@ -30,6 +31,7 @@ const char HTML_MISSING_DATA_UPLOAD[] PROGMEM = "<!DOCTYPE html><html lang=\"en\
 static const char* MSG_ARQUIVO_NAO_ENCONTRADO = "Provavelmente voce nao carregou os arquivos da pasta \"data\" (LittleFS) para o servidor!";
 
 // HTTP status code aliases
+#define HTTP_CODE_ACCEPTED      202
 #define HTTP_CODE_OK            HTTP_OK
 #define HTTP_CODE_BAD_REQUEST   HTTP_BAD_REQUEST
 #define HTTP_CODE_UNAUTHORIZED  HTTP_UNAUTHORIZED

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "author": "Bruno Cardoso Cantisano",
+  "editor": "wokwi",
+  "parts": [
+    { 
+      "type": "wokwi-esp32-devkit-v1", 
+      "id": "esp32", 
+      "top": 0, 
+      "left": 0, 
+      "attrs": {} 
+    }
+  ],
+  "connections": []
+}
