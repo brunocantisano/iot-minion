@@ -1,261 +1,233 @@
 <!DOCTYPE HTML>
 <html lang="en">
-
 <head>
-    <title>Minion ESP32-MESSAGE</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta charset="UTF-8">
-    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-    <link href="get-file?name=minion-ico.ico" rel="icon" type="image/x-icon">
-    <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.1.0/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="get-file?name=style.css" rel="stylesheet" type="text/css" media="screen">
-    <script src="get-file?name=api.js"></script>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minion ESP32-MESSAGE</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<link href="https://ibb.co/CpRqwWwP" rel="icon" type="image/x-icon">
+<script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.1.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+<link href="get-file?name=style.css" rel="stylesheet" type="text/css" media="screen">
+<script src="get-file?name=api.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
 <body class="bg-light">
-  <div class="container my-5">
-	<p style="text-align: justify; text-align-last: left;">
-	  <b>Obs.:</b> Depois de clicar em upload, levará algum tempo para que o arquivo seja carregado primeiro e depois gravado fisicamente, não há nenhum indicador de que o upload começou. Por favor, seja paciente.
-	  Depois de carregada, a página será atualizada e o arquivo recém-carregado aparecerá na lista de arquivos. Se um arquivo não aparecer, é porque o arquivo era muito grande ou tinha caracteres incomuns 
-	  no nome do arquivo (como espaços). Você pode ver o progresso do upload observando a saída serial.
-	</p>
-  	<form id="myForm">
-        <div class="fileUpload btn btn-primary"><span>Escolher Arquivo</span>
-            <input id="inputFile" name="filename" type="file" class="upload" multiple="multiple">
-        </div>
-        <div class="fileUpload btn btn-primary">
-            <a onclick='uploadFile(window.location.pathname,"API_MINION_TOKEN")'>
-                <div class="upload">Upload</div>
-            </a>
-        </div>
-    </form>
-    <h2 class="mb-4" style="color: #fff;">Lista de Arquivos</h2>
-    <div class="mb-3">
-      <input type="text" id="searchInput" class="form-control" placeholder="Buscar por nome...">
-    </div>
-
-    <table class="table table-hover table-bordered align-middle">
-      <thead class="table-success">
-        <tr>
-          <th onclick="ordenarTabela('nome')" style="cursor:pointer;">
-            <i class="bi bi-person-fill"></i> Nome <span id="sortNome"></span>
-          </th>
-          <th onclick="ordenarTabela('tamanho')" style="cursor:pointer;">
-            <i class="bi bi-stack"></i> Tamanho <span id="sortTamanho"></span>
-          </th>
-          <th class="text-center"><i class="bi bi-gear-fill"></i> Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaBody"></tbody>
-	</table>
-    <nav>
-      <ul class="pagination justify-content-center" id="paginacao"></ul>
-    </nav>
-  </div>
-	<div class="m-4">
-		<div class="toast" id="myToast">
-			<div class="toast-header"><strong class="me-auto"><img src="get-file?name=minion-ico.ico" alt="minion-ico" type="image/x-icon" width="24"> Atenção!</strong><small>IOT Minion</small>
-				<button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-			</div>
-			<div id="message" class="toast-body"></div>
-		</div>
-	</div>
-  <!-- Modal de visualização -->
-  <div class="modal fade" id="visualizar" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <form id="formVisualizar">
-          <div class="modal-header">
-            <h5 class="modal-title">Visualizar Log</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <input type="hidden" id="index">
-            <div class="mb-3">
-              <label class="form-label">Nome</label>
-              <input type="text" class="form-control" id="nome" required disabled>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Tamanho</label>
-              <input type="text" class="form-control" id="tamanho" required disabled>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Conteúdo</label>
-              <div class="form-control" id="conteudo" style="white-space:pre-wrap;max-height:400px;overflow-y:auto" disabled></div>
-            </div>            
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    const dados = FILELIST
-    const isStorageRoute = IS_STORAGE_ROUTE;
-    const apiToken = "API_MINION_TOKEN";
-
-    let currentPage = 1;
-    const itemsPerPage = 5;
-    const tabelaBody = document.getElementById("tabelaBody");
-    const paginacao = document.getElementById("paginacao");
-    const searchInput = document.getElementById("searchInput");
-    let ordemAtual = { campo: null, direcao: 'asc' };
-
-    function renderTabela() {
-      tabelaBody.innerHTML = "";
-      const filtro = searchInput.value.toLowerCase();
-      let dadosFiltrados = dados.filter(d => d.nome.toLowerCase().includes(filtro));
-
-      // Ordenar se houver campo definido
-      if (ordemAtual.campo) {
-        dadosFiltrados.sort((a, b) => {
-          const valA = a[ordemAtual.campo].toLowerCase();
-          const valB = b[ordemAtual.campo].toLowerCase();
-          return ordemAtual.direcao === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        });
-      }
-
-      const totalPages = Math.ceil(dadosFiltrados.length / itemsPerPage);
-      currentPage = Math.min(currentPage, totalPages || 1);
-      const start = (currentPage - 1) * itemsPerPage;
-      const end = start + itemsPerPage;
-      const paginaAtual = dadosFiltrados.slice(start, end);
-
-      paginaAtual.forEach((dado, index) => {
-        const realIndex = dados.indexOf(dado);
-        const isLog = dado.nome.toLowerCase().endsWith(".log");
-        // Na rota /storage, os botoes so ficam habilitados para arquivos .log.
-        const disabledAttr = (isStorageRoute && !isLog) ? "disabled" : "";
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${dado.nome}</td>
-          <td>${dado.tamanho}</td>
-          <td class="text-center">
-            <button class="btn btn-sm btn-primary me-1" ${disabledAttr} onclick="ver(${realIndex})">
-              <i class="bi bi-eye-fill"></i>
-            </button>
-            <button class="btn btn-sm btn-primary me-1" ${disabledAttr} onclick="enviarEmail(${realIndex})">
-              <i class="bi bi-envelope-fill"></i>
-            </button>
-            <button class="btn btn-sm btn-danger" ${disabledAttr} onclick="removerRegistro(${realIndex})">
-              <i class="bi bi-trash-fill"></i>
-            </button>
-          </td>`;
-        tabelaBody.appendChild(tr);
-      });
-
-      renderPaginacao(dadosFiltrados.length, totalPages);
-      atualizarSetasOrdenacao();
-    }
-
-    function renderPaginacao(total, totalPages) {
-      paginacao.innerHTML = "";
-      for (let i = 1; i <= totalPages; i++) {
-        const li = document.createElement("li");
-        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-        li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-        li.onclick = (e) => {
-          e.preventDefault();
-          currentPage = i;
-          renderTabela();
-        };
-        paginacao.appendChild(li);
-      }
-    }
-
-    function ordenarTabela(campo) {
-      if (ordemAtual.campo === campo) {
-        ordemAtual.direcao = ordemAtual.direcao === 'asc' ? 'desc' : 'asc';
-      } else {
-        ordemAtual.campo = campo;
-        ordemAtual.direcao = 'asc';
-      }
-      renderTabela();
-    }
-
-    function atualizarSetasOrdenacao() {
-      ['nome', 'tamanho'].forEach(c => {
-        const span = document.getElementById("sort" + c.charAt(0).toUpperCase() + c.slice(1));
-        if (ordemAtual.campo === c) {
-          span.innerHTML = ordemAtual.direcao === 'asc' ? '↑' : '↓';
-        } else {
-          span.innerHTML = '';
-        }
-      });
-    }
-
-    function ver(index) {
-      const dado = dados[index];
-      document.getElementById("index").value = index;
-      document.getElementById("nome").value = dado.nome;
-      document.getElementById("tamanho").value = dado.tamanho;
-      document.getElementById("conteudo").textContent = dado.conteudo;
-      new bootstrap.Modal(document.getElementById("visualizar")).show();
-    }
-
-    document.getElementById("formVisualizar").onsubmit = function (e) {
-      e.preventDefault();
-      const index = parseInt(document.getElementById("index").value);
-      dados[index] = {
-        nome: document.getElementById("nome").value,
-        tamanho: document.getElementById("tamanho").value,
-        conteudo: document.getElementById("conteudo").textContent,
-      };
-      bootstrap.Modal.getInstance(document.getElementById("visualizar")).hide();
-      renderTabela();
-    }
-
-    function removerRegistro(index) {
-	  const dado = dados[index];
-	  const nomeArquivo = dado.nome.toLowerCase();
-
-	  // Na rota /storage so .log pode ser removido (mesma regra dos botoes);
-	  // em /sdcard mantem .log, .mp3 e .wav.
-	  const extensoesPermitidas = isStorageRoute ? [".log"] : [".log", ".mp3", ".wav"];
-	  const permitido = extensoesPermitidas.some(ext => nomeArquivo.endsWith(ext));
-
-	  if (!permitido) {
-		alert("Apenas arquivos com extensão " + extensoesPermitidas.join(", ") + " podem ser removidos.");
-		return;
-	  }
-
-	  if (confirm("Tem certeza que deseja remover este registro?")) {
-		// deleteFile() (api.js) chama DELETE /deleteFile de verdade e recarrega
-		// a pagina ao terminar - a lista exibida passa a refletir o servidor.
-		deleteFile(isStorageRoute ? "storage" : "sdcard", dado.nome, apiToken);
-	  }
-	}
-
-    function enviarEmail(index) {
-      const dado = dados[index];
-      if (!dado.nome.toLowerCase().endsWith(".log")) {
-        alert("Apenas arquivos com extensão .log podem ser enviados por e-mail.");
-        return;
-      }
-      if (!confirm("Enviar o arquivo \"" + dado.nome + "\" por e-mail?")) return;
-
-      fetch("/sendEmail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: "Basic " + apiToken },
-        body: JSON.stringify({ filename: dado.nome })
-      })
-        .then(r => r.text().then(msg => alert(msg)))
-        .catch(e => { console.log(e); alert("Falha ao enviar o pedido de e-mail."); });
-    }
-
-    searchInput.addEventListener("input", () => {
-      currentPage = 1;
-      renderTabela();
-    });
-
-    renderTabela();
-  </script>
+<div class="container my-5">
+<p style="text-align: justify; text-align-last: left;">
+<b>Obs.:</b> Depois de clicar em upload, levará algum tempo para que o arquivo seja carregado primeiro e depois gravado fisicamente, não há nenhum indicador de que o upload começou. Por favor, seja paciente.
+Depois de carregada, a página será atualizada e o arquivo recém-carregado aparecerá na lista de arquivos. Se um arquivo não aparecer, é porque o arquivo era muito grande ou tinha caracteres incomuns
+no nome do arquivo (como espaços). Você pode ver o progresso do upload observando a saída serial.
+</p>
+<form id="myForm">
+<div class="fileUpload btn btn-primary"><span>Escolher Arquivo</span>
+<input id="inputFile" name="filename" type="file" class="upload" multiple="multiple">
+</div>
+<div class="fileUpload btn btn-primary">
+<a onclick='uploadFile(window.location.pathname,"API_MINION_TOKEN")'>
+<div class="upload">Upload</div>
+</a>
+</div>
+</form>
+<h2 class="mb-4" style="color: #fff;">Lista de Arquivos</h2>
+<div class="mb-3">
+<input type="text" id="searchInput" class="form-control" placeholder="Buscar por nome...">
+</div>
+<table class="table table-hover table-bordered align-middle">
+<thead class="table-success">
+<tr>
+<th onclick="ordenarTabela('nome')" style="cursor:pointer;">
+<i class="bi bi-person-fill"></i> Nome <span id="sortNome"></span>
+</th>
+<th onclick="ordenarTabela('tamanho')" style="cursor:pointer;">
+<i class="bi bi-stack"></i> Tamanho <span id="sortTamanho"></span>
+</th>
+<th class="text-center"><i class="bi bi-gear-fill"></i> Ações</th>
+</tr>
+</thead>
+<tbody id="tabelaBody"></tbody>
+</table>
+<nav>
+<ul class="pagination justify-content-center" id="paginacao"></ul>
+</nav>
+</div>
+<div class="m-4">
+<div class="toast" id="myToast">
+<div class="toast-header"><strong class="me-auto"><img src="https://ibb.co/CpRqwWwP" alt="minion-ico" type="image/x-icon" width="24"> Atenção!</strong><small>IOT Minion</small>
+<button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+</div>
+<div id="message" class="toast-body"></div>
+</div>
+</div>
+<!-- Modal de visualização -->
+<div class="modal fade" id="visualizar" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<form id="formVisualizar">
+<div class="modal-header">
+<h5 class="modal-title">Visualizar Log</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+<input type="hidden" id="index">
+<div class="mb-3">
+<label class="form-label">Nome</label>
+<input type="text" class="form-control" id="nome" required disabled>
+</div>
+<div class="mb-3">
+<label class="form-label">Tamanho</label>
+<input type="text" class="form-control" id="tamanho" required disabled>
+</div>
+<div class="mb-3">
+<label class="form-label">Conteúdo</label>
+<div class="form-control" id="conteudo" style="white-space:pre-wrap;max-height:400px;overflow-y:auto" disabled></div>
+</div>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const dados = FILELIST
+const isStorageRoute = IS_STORAGE_ROUTE;
+const apiToken = "API_MINION_TOKEN";
+let currentPage = 1;
+const itemsPerPage = 5;
+const tabelaBody = document.getElementById("tabelaBody");
+const paginacao = document.getElementById("paginacao");
+const searchInput = document.getElementById("searchInput");
+let ordemAtual = { campo: null, direcao: 'asc' };
+function renderTabela() {
+tabelaBody.innerHTML = "";
+const filtro = searchInput.value.toLowerCase();
+let dadosFiltrados = dados.filter(d => d.nome.toLowerCase().includes(filtro));
+if (ordemAtual.campo) {
+dadosFiltrados.sort((a, b) => {
+const valA = a[ordemAtual.campo].toLowerCase();
+const valB = b[ordemAtual.campo].toLowerCase();
+return ordemAtual.direcao === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+});
+}
+const totalPages = Math.ceil(dadosFiltrados.length / itemsPerPage);
+currentPage = Math.min(currentPage, totalPages || 1);
+const start = (currentPage - 1) * itemsPerPage;
+const end = start + itemsPerPage;
+const paginaAtual = dadosFiltrados.slice(start, end);
+paginaAtual.forEach((dado, index) => {
+const realIndex = dados.indexOf(dado);
+const isLog = dado.nome.toLowerCase().endsWith(".log");
+const disabledAttr = (isStorageRoute && !isLog) ? "disabled" : "";
+const tr = document.createElement("tr");
+tr.innerHTML = `
+<td>${dado.nome}</td>
+<td>${dado.tamanho}</td>
+<td class="text-center">
+<button class="btn btn-sm btn-primary me-1" ${disabledAttr} onclick="ver(${realIndex})">
+<i class="bi bi-eye-fill"></i>
+</button>
+<button class="btn btn-sm btn-primary me-1" ${disabledAttr} onclick="enviarEmail(${realIndex})">
+<i class="bi bi-envelope-fill"></i>
+</button>
+<button class="btn btn-sm btn-danger" ${disabledAttr} onclick="removerRegistro(${realIndex})">
+<i class="bi bi-trash-fill"></i>
+</button>
+</td>`;
+tabelaBody.appendChild(tr);
+});
+renderPaginacao(dadosFiltrados.length, totalPages);
+atualizarSetasOrdenacao();
+}
+function renderPaginacao(total, totalPages) {
+paginacao.innerHTML = "";
+for (let i = 1; i <= totalPages; i++) {
+const li = document.createElement("li");
+li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+li.onclick = (e) => {
+e.preventDefault();
+currentPage = i;
+renderTabela();
+};
+paginacao.appendChild(li);
+}
+}
+function ordenarTabela(campo) {
+if (ordemAtual.campo === campo) {
+ordemAtual.direcao = ordemAtual.direcao === 'asc' ? 'desc' : 'asc';
+} else {
+ordemAtual.campo = campo;
+ordemAtual.direcao = 'asc';
+}
+renderTabela();
+}
+function atualizarSetasOrdenacao() {
+['nome', 'tamanho'].forEach(c => {
+const span = document.getElementById("sort" + c.charAt(0).toUpperCase() + c.slice(1));
+if (ordemAtual.campo === c) {
+span.innerHTML = ordemAtual.direcao === 'asc' ? '↑' : '↓';
+} else {
+span.innerHTML = '';
+}
+});
+}
+function ver(index) {
+const dado = dados[index];
+document.getElementById("index").value = index;
+document.getElementById("nome").value = dado.nome;
+document.getElementById("tamanho").value = dado.tamanho;
+document.getElementById("conteudo").textContent = dado.conteudo;
+new bootstrap.Modal(document.getElementById("visualizar")).show();
+}
+document.getElementById("formVisualizar").onsubmit = function (e) {
+e.preventDefault();
+const index = parseInt(document.getElementById("index").value);
+dados[index] = {
+nome: document.getElementById("nome").value,
+tamanho: document.getElementById("tamanho").value,
+conteudo: document.getElementById("conteudo").textContent,
+};
+bootstrap.Modal.getInstance(document.getElementById("visualizar")).hide();
+renderTabela();
+}
+function removerRegistro(index) {
+const dado = dados[index];
+const nomeArquivo = dado.nome.toLowerCase();
+const extensoesPermitidas = isStorageRoute ? [".log"] : [".log", ".mp3", ".wav"];
+const permitido = extensoesPermitidas.some(ext => nomeArquivo.endsWith(ext));
+if (!permitido) {
+alert("Apenas arquivos com extensão " + extensoesPermitidas.join(", ") + " podem ser removidos.");
+return;
+}
+if (confirm("Tem certeza que deseja remover este registro?")) {
+deleteFile(isStorageRoute ? "storage" : "sdcard", dado.nome, apiToken);
+}
+}
+function enviarEmail(index) {
+const dado = dados[index];
+if (!dado.nome.toLowerCase().endsWith(".log")) {
+alert("Apenas arquivos com extensão .log podem ser enviados por e-mail.");
+return;
+}
+if (!confirm("Enviar o arquivo \"" + dado.nome + "\" por e-mail?")) return;
+fetch("/sendEmail", {
+method: "POST",
+headers: { "Content-Type": "application/json", Authorization: "Basic " + apiToken },
+body: JSON.stringify({ filename: dado.nome })
+})
+.then(r => r.text().then(msg => alert(msg)))
+.catch(e => { console.log(e); alert("Falha ao enviar o pedido de e-mail."); });
+}
+searchInput.addEventListener("input", () => {
+currentPage = 1;
+renderTabela();
+});
+renderTabela();
+</script>
 </body>
 </html>

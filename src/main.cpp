@@ -162,7 +162,16 @@ unsigned long currentMillis;
                                "Minion ESP32", smtpHost.c_str(), (uint16_t)smtpPort);
         utilscds->mensagemLog("[DEBUG] Email inicializado (smtp=%s:%d)", smtpHost.c_str(), smtpPort);
       } else {
-        utilscds->mensagemLog("[AVISO] Credenciais de email nao configuradas; envio de email desabilitado.");
+        // Sem isso, "email" fica nullptr e toda tentativa de envio falha em
+        // silencio (ArduinoUtilsCds::enviaEmail() so retorna false, sem
+        // detalhe algum) - por isso essa mensagem lista exatamente qual
+        // campo esta faltando, em vez de um aviso generico.
+        String faltando = "";
+        if (smtpHost.isEmpty())            faltando += "smtp_host ";
+        if (smtpAuthorEmail.isEmpty())      faltando += "smtp_author_email ";
+        if (decrypted_authorPassword.isEmpty()) faltando += "author_password ";
+        if (smtpPort <= 0)                  faltando += "smtp_port ";
+        utilscds->mensagemLog("[AVISO] Credenciais de email incompletas, envio desabilitado. Faltando: %s", faltando.c_str());
       }
     #endif
 

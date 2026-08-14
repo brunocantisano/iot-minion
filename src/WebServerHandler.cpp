@@ -577,11 +577,16 @@ void WebServerHandler::handleInsertPlay(){
       if(error) {
         request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".json"), PARSER_ERROR);
       } else {
-        const char * midia = doc["midia"];
-        utilscds->mensagemLog("%s", ("Arquivo: "+String(midia)).c_str());
+        // Copia pra um String antes de doc.clear(): "midia" (const char*)
+        // aponta pra dentro do buffer interno do JsonDocument, e doc.clear()
+        // libera esse buffer - usar "midia" depois do clear() e um
+        // use-after-free (o ponteiro passa a apontar pra memoria livre, que
+        // pode ja ter sido reaproveitada por outra coisa nesse meio-tempo).
+        String midia = (const char*)doc["midia"];
+        utilscds->mensagemLog("%s", ("Arquivo: "+midia).c_str());
 
         String feedName="play";
-        host +="->"+String(midia);
+        host +="->"+midia;
         #ifdef USE_MQTT
           // Grava no Adafruit
           utilscds->atribuiFeed(feedName, host);
@@ -589,7 +594,7 @@ void WebServerHandler::handleInsertPlay(){
         doc.clear();
         #ifdef USE_AUDIO
           // toca o audio
-          if(utilscds->tocaMidia(midia)) {
+          if(utilscds->tocaMidia(midia.c_str())) {
             request->send(HTTP_CODE_OK, utilscds->obtemTipoMime(".txt"), PLAYED);
           } else {
             request->send(HTTP_CODE_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), NOT_PLAYED);

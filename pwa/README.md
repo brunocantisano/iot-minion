@@ -2,6 +2,10 @@
 
 Este projeto foi criado com [Create React App](https://github.com/facebook/create-react-app).
 
+## Imagens
+
+As imagens foram salvas no serviço [ImgBB](https://imgbb.com/)
+
 ## Pré Requisitos
 
 1. Make

@@ -2,8 +2,8 @@ import React from 'react';
 import axios from 'axios';
 import useSpeechToText from 'react-hook-speech-to-text';
 import './styles.scss';
-import microphone from '../../assets/microphone.png';
-import micrecording from '../../assets/mic-recording.png';
+import microphone from 'https://ibb.co/HT1PRySZ';
+import micrecording from 'https://ibb.co/W4TsgnFL';
 
 const SpeechMinion: React.FC = () => {
   let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/ask':'';
