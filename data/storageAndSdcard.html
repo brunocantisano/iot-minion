@@ -86,7 +86,7 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Conteúdo</label>
-              <div class="form-control" id="conteudo" rows="50" disabled></div>
+              <div class="form-control" id="conteudo" style="white-space:pre-wrap;max-height:400px;overflow-y:auto" disabled></div>
             </div>            
           </div>
         </form>
@@ -196,7 +196,7 @@
       document.getElementById("index").value = index;
       document.getElementById("nome").value = dado.nome;
       document.getElementById("tamanho").value = dado.tamanho;
-      document.getElementById("conteudo").innerHTML = dado.conteudo;
+      document.getElementById("conteudo").textContent = dado.conteudo;
       new bootstrap.Modal(document.getElementById("visualizar")).show();
     }
 
@@ -206,27 +206,30 @@
       dados[index] = {
         nome: document.getElementById("nome").value,
         tamanho: document.getElementById("tamanho").value,
-        conteudo: document.getElementById("conteudo").innerHTML,
+        conteudo: document.getElementById("conteudo").textContent,
       };
       bootstrap.Modal.getInstance(document.getElementById("visualizar")).hide();
       renderTabela();
     }
 
     function removerRegistro(index) {
-	  const nomeArquivo = dados[index].nome.toLowerCase();
+	  const dado = dados[index];
+	  const nomeArquivo = dado.nome.toLowerCase();
 
-	  // Verifica se termina com uma das extensões permitidas
-	  const extensoesPermitidas = [".log", ".mp3", ".wav"];
+	  // Na rota /storage so .log pode ser removido (mesma regra dos botoes);
+	  // em /sdcard mantem .log, .mp3 e .wav.
+	  const extensoesPermitidas = isStorageRoute ? [".log"] : [".log", ".mp3", ".wav"];
 	  const permitido = extensoesPermitidas.some(ext => nomeArquivo.endsWith(ext));
 
 	  if (!permitido) {
-		alert("Apenas arquivos com extensão .log, .mp3 e .wav podem ser removidos.");
+		alert("Apenas arquivos com extensão " + extensoesPermitidas.join(", ") + " podem ser removidos.");
 		return;
 	  }
 
 	  if (confirm("Tem certeza que deseja remover este registro?")) {
-		dados.splice(index, 1);
-		renderTabela();
+		// deleteFile() (api.js) chama DELETE /deleteFile de verdade e recarrega
+		// a pagina ao terminar - a lista exibida passa a refletir o servidor.
+		deleteFile(isStorageRoute ? "storage" : "sdcard", dado.nome, apiToken);
 	  }
 	}
 

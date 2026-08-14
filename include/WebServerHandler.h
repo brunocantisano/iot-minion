@@ -129,6 +129,7 @@ private:
   String saveApplicationList();
   bool addSensor(int id, int gpio, String name);
   ArduinoSensorPort * searchListSensor(int gpio);
+  ArduinoSensorPort * searchListSensorById(int id);
   int searchList(String name, String language);
 public:
   WebServerHandler(

@@ -130,10 +130,10 @@
             {
                 "name": "sensor",
                 "in": "query",
-                "description": "Sensor (1..2)",
+                "description": "Sensor (1=Eyes, 2=Hat, 3=Blink, 4=Shake, 5=TemperatureHumidity)",
                 "required": true,
                 "type": "integer",
-                "enum": [1, 2]
+                "enum": [1, 2, 3, 4, 5]
             }
             ],
             "responses": {
@@ -143,7 +143,7 @@
                 "examples": {
                 "application/json": {
                     "sensor": 3,
-                    "pin": "D3",
+                    "pin": "15",
                     "value": 1,
                     "ts": 1725148800
                 }
@@ -166,10 +166,10 @@
             {
                 "name": "sensor",
                 "in": "query",
-                "description": "Sensor (1..2)",
+                "description": "Sensor (1=Eyes, 2=Hat, 3=Blink, 4=Shake, 5=TemperatureHumidity)",
                 "required": true,
                 "type": "integer",
-                "enum": [1, 2]
+                "enum": [1, 2, 3, 4, 5]
             },
             {
                 "name": "body",
@@ -196,7 +196,7 @@
                 "examples": {
                 "application/json": {
                     "sensor": 3,
-                    "pin": "D3",
+                    "pin": "15",
                     "value": 1,
                     "ts": 1725148800
                 }
@@ -607,6 +607,55 @@
             }
          }
       },
+      "/sendEmail":{
+         "post":{
+            "tags":[
+               "comando"
+            ],
+            "summary":"Envia um arquivo .log do storage por e-mail (assíncrono: aceita e processa em segundo plano)",
+            "security":[
+               {
+                  "basicAuth":[
+
+                  ]
+               }
+            ],
+            "consumes":[
+               "application/json"
+            ],
+            "produces":[
+               "text/plain"
+            ],
+            "parameters":[
+               {
+                  "in":"body",
+                  "name":"body",
+                  "required":true,
+                  "schema":{
+                     "$ref":"#/definitions/Arquivo"
+                  },
+                  "description":"Nome do arquivo .log a ser enviado por e-mail"
+               }
+            ],
+            "responses":{
+               "202":{
+                  "description":"Comando aceito; o e-mail é enviado em segundo plano"
+               },
+               "400":{
+                  "description":"JSON inválido, campo 'filename' ausente ou extensão diferente de .log"
+               },
+               "401":{
+                  "description":"Não autenticado"
+               },
+               "404":{
+                  "description":"Arquivo não encontrado"
+               },
+               "409":{
+                  "description":"Já existe um envio de e-mail em processamento"
+               }
+            }
+         }
+      },
       "/list":{
          "post":{
             "tags":[
@@ -749,6 +798,35 @@
             "name",
             "language",
             "description"
+         ]
+      },
+      "SensorReading":{
+         "type":"object",
+         "properties":{
+            "sensor":{
+               "type":"integer",
+               "description":"Identificador do sensor"
+            },
+            "pin":{
+               "type":"string",
+               "description":"Pino associado ao sensor"
+            },
+            "value":{
+               "type":"integer",
+               "description":"0 = desligado, 1 = ligado",
+               "enum":[0,1]
+            },
+            "ts":{
+               "type":"integer",
+               "format":"int64",
+               "description":"Timestamp Unix da leitura"
+            }
+         },
+         "required":[
+            "sensor",
+            "pin",
+            "value",
+            "ts"
          ]
       },
       "Arquivo":{

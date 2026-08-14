@@ -305,28 +305,36 @@ void WebServerHandler::handleSensors() {
       return;
     }
 
-    const AsyncWebParameter* pLevel = request->getParam("level");
-    if (!pLevel) { request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing level"); return; }
+    const AsyncWebParameter* pSensor = request->getParam("sensor");
+    if (!pSensor) { request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing sensor"); return; }
 
-    // Valida que "level" e um inteiro 1..4 antes de derivar o pino - sem isso
-    // um valor invalido (ausente, texto, fora do range) cai no pin=-1 sem
-    // avisar o cliente, respondendo "desativado" para um pino que nao existe.
-    String levelStr = pLevel->value();
-    bool numeric = levelStr.length() > 0;
-    for (size_t i = 0; i < levelStr.length() && numeric; i++) {
-      if (!isDigit(levelStr.charAt(i))) numeric = false;
+    // Valida que "sensor" e um inteiro antes de buscar na lista - sem isso um
+    // valor invalido (ausente, texto) cairia num id que nao existe sem avisar
+    // o cliente com uma mensagem clara.
+    String sensorStr = pSensor->value();
+    bool numeric = sensorStr.length() > 0;
+    for (size_t i = 0; i < sensorStr.length() && numeric; i++) {
+      if (!isDigit(sensorStr.charAt(i))) numeric = false;
     }
-    int level = numeric ? levelStr.toInt() : -1;
-    if (level < 1 || level > 4) {
-      request->send(HTTP_BAD_REQUEST, utilscds->obtemTipoMime(".txt"), "level invalido (use 1..4)");
+    int sensorId = numeric ? sensorStr.toInt() : -1;
+
+    ArduinoSensorPort * s = searchListSensorById(sensorId);
+    if (!s) {
+      request->send(HTTP_NOT_FOUND, utilscds->obtemTipoMime(".txt"), "Sensor nao encontrado");
       return;
     }
 
-    int pin = 25;
-    bool on = digitalRead(pin);
-    if (auto s = searchListSensor(pin)) s->status = on;
-    String resp = on ? "ativado" : "desativado";
-    request->send(HTTP_OK, utilscds->obtemTipoMime(".txt"), resp);
+    bool on = digitalRead(s->gpio);
+    s->status = on;
+
+    JsonDocument doc;
+    doc["sensor"] = s->id;
+    doc["pin"] = String(s->gpio);
+    doc["value"] = on ? 1 : 0;
+    doc["ts"] = (uint32_t)time(nullptr);
+    String resp;
+    serializeJson(doc, resp);
+    request->send(HTTP_OK, utilscds->obtemTipoMime(".json"), resp);
   });
 }
 
@@ -341,11 +349,24 @@ void WebServerHandler::handleUpdateSensors() {
 
     // Parâmetro sensor obrigatório na query
     const AsyncWebParameter* pSensor = request->getParam("sensor");
-    if (!pSensor) { 
-      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing sensor"); 
-      return; 
+    if (!pSensor) {
+      request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing sensor");
+      return;
     }
-   
+
+    String sensorStr = pSensor->value();
+    bool numeric = sensorStr.length() > 0;
+    for (size_t i = 0; i < sensorStr.length() && numeric; i++) {
+      if (!isDigit(sensorStr.charAt(i))) numeric = false;
+    }
+    int sensorId = numeric ? sensorStr.toInt() : -1;
+
+    ArduinoSensorPort * s = searchListSensorById(sensorId);
+    if (!s) {
+      request->send(HTTP_NOT_FOUND, utilshdl->getMimeType(".txt"), "Sensor nao encontrado");
+      return;
+    }
+
     // Monta o corpo JSON (body)
     String body;
     for (size_t i = 0; i < len; i++) {
@@ -355,34 +376,37 @@ void WebServerHandler::handleUpdateSensors() {
     // Faz parse do JSON
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, body);
-    int newValue = 0;
-    if (!err && doc["value"].is<int>()) {
-      newValue = doc["value"].as<int>();
-    }
     if (err) {
       request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "invalid json");
       return;
     }
-    
+
     if (!(doc["value"].is<int>())) {
       request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "missing or invalid 'value'");
       return;
     }
 
-    newValue = doc["value"].as<int>();
+    int newValue = doc["value"].as<int>();
     if (newValue != 0 && newValue != 1) {
       request->send(HTTP_BAD_REQUEST, utilshdl->getMimeType(".txt"), "invalid value");
       return;
     }
 
-    // Atualiza o pino
-    pinMode(newValue, OUTPUT);
-    int n = newValue==0?LOW:HIGH;
-    digitalWrite(newValue, n);
-    if (auto s = searchListSensor(newValue)) s->status = n;
+    // Atualiza o pino do sensor identificado por "sensor" (query), nao mais
+    // o valor 0/1 usado incorretamente como numero de pino.
+    pinMode(s->gpio, OUTPUT);
+    int n = newValue == 0 ? LOW : HIGH;
+    digitalWrite(s->gpio, n);
+    s->status = n;
 
-    String resp = n == 0 ? "desativado":"ativado";
-    request->send(HTTP_OK, utilshdl->getMimeType(".txt"), resp);
+    JsonDocument respDoc;
+    respDoc["sensor"] = s->id;
+    respDoc["pin"] = String(s->gpio);
+    respDoc["value"] = newValue;
+    respDoc["ts"] = (uint32_t)time(nullptr);
+    String resp;
+    serializeJson(respDoc, resp);
+    request->send(HTTP_OK, utilshdl->getMimeType(".json"), resp);
   });
 }
 
@@ -460,6 +484,7 @@ void WebServerHandler::handleInsertTalk(){
         request->send(HTTP_CODE_CONFLICT, utilscds->obtemTipoMime(".txt"), "Ja existe um comando de audio em processamento");
       } else {
           const char * mensagem = doc["mensagem"];
+          utilscds->adicionaNoArquivo("/talk.log", utilscds->obtemDataHoraTexto() + " - mensagem: " + String(mensagem) + "\n");
           utilscds->mensagemLog("%s", ("Mensagem: "+String(mensagem)).c_str());
           String feedName="talk";
           host +="->"+String(mensagem);
@@ -518,8 +543,10 @@ void WebServerHandler::handleInsertAsk() {
       #ifdef USE_AUDIO
         // A chamada ao ChatGPT (HTTPClient com timeout de 15s) e a fala da
         // resposta rodam no loop() principal, nao aqui - ver comentario em
-        // _pendingAudioAction no header.
+        // _pendingAudioAction no header. A resposta e logada em /ask.log logo
+        // apos ser recebida, ver PendingAudioAction::Ask no loop().
         const char * mensagem = doc["mensagem"];
+        utilscds->adicionaNoArquivo("/ask.log", utilscds->obtemDataHoraTexto() + " - mensagem: " + String(mensagem) + "\n");
         _pendingAudioPayload = mensagem;
         _pendingAudioAction = PendingAudioAction::Ask;
         request->send(HTTP_CODE_ACCEPTED, utilscds->obtemTipoMime(".txt"), ACCEPTED_PROCESSING);
@@ -1655,6 +1682,14 @@ ArduinoSensorPort * WebServerHandler::searchListSensor(int gpio) {
   return nullptr;
 }
 
+ArduinoSensorPort * WebServerHandler::searchListSensorById(int id) {
+  for(int i = 0; i < sensorListaEncadeada.size(); i++){
+    ArduinoSensorPort *p = sensorListaEncadeada.get(i);
+    if (id == p->id) return p;
+  }
+  return nullptr;
+}
+
 int WebServerHandler::searchList(String name, String language) {
   Application *app;
   for(int i = 0; i < applicationListaEncadeada.size(); i++){
@@ -1688,6 +1723,9 @@ void WebServerHandler::loop() {
         break;
       case PendingAudioAction::Ask: {
         String retorno = enviarMensagemParaChatGPT(payload);
+        if (!retorno.isEmpty()) {
+          utilscds->adicionaNoArquivo("/ask.log", utilscds->obtemDataHoraTexto() + " - mensagem: " + retorno + "\n");
+        }
         #ifdef USE_AUDIO
           if (!retorno.isEmpty()) utilscds->tocaFala(retorno.c_str());
         #endif
@@ -1717,6 +1755,9 @@ void WebServerHandler::loop() {
                                              "Segue em anexo o arquivo de log solicitado.",
                                              true, false, path.c_str());
         utilscds->mensagemLog(enviado ? "[DEBUG] Email enviado: %s" : "[ERRO] Falha ao enviar email: %s", filename.c_str());
+        // Guarda a resposta do envio (sucesso ou erro do servidor SMTP) logo
+        // apos o envio, pra diagnosticar quando o email nao chega de fato.
+        utilscds->adicionaNoArquivo("/email.log", utilscds->obtemDataHoraTexto() + " - " + utilscds->obtemUltimaRespostaEmail() + "\n");
       }
     #endif
   }
