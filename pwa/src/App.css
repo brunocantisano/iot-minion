@@ -87,7 +87,6 @@ body {
     flex-direction: column;
     align-items: center;
     gap: var(--space-4);
-    overflow: hidden;
 }
 
 .stage-card__climate {
@@ -135,7 +134,8 @@ body {
     position: relative;
     width: 440px;
     max-width: 100%;
-    overflow: hidden;
+    padding-bottom: 80px;
+    overflow-x: hidden;
     display: flex;
     justify-content: center;
 }
@@ -165,7 +165,14 @@ body {
     .stage-frame {
         transform: scale(0.78);
         transform-origin: top center;
-        margin-bottom: -78px;
+        margin-bottom: -95px;
+    }
+}
+
+@media (max-width: 360px) {
+    .stage-frame {
+        transform: scale(0.65);
+        margin-bottom: -150px;
     }
 }
 
