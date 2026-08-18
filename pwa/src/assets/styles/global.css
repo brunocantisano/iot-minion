@@ -1,3 +1,38 @@
+:root {
+    --color-yellow: #FFCD01;
+    --color-yellow-dark: #F2B705;
+    --color-yellow-soft: #FFE58A;
+    --color-blue: #2C5FA8;
+    --color-blue-dark: #1E4380;
+    --color-blue-soft: #DCE9FB;
+    --color-bg: #FFF8E7;
+    --color-bg-gradient: linear-gradient(180deg, #FFF8E7 0%, #FFEFC4 100%);
+    --color-card: #FFFFFF;
+    --color-text: #2B2620;
+    --color-text-soft: #6B6459;
+    --color-danger: #E4572E;
+    --color-success: #3FA34D;
+
+    --radius-sm: 12px;
+    --radius-md: 18px;
+    --radius-lg: 26px;
+    --radius-pill: 999px;
+
+    --shadow-sm: 0 2px 6px rgba(43, 38, 32, 0.08);
+    --shadow-md: 0 8px 20px rgba(43, 38, 32, 0.12);
+    --shadow-lg: 0 14px 32px rgba(43, 38, 32, 0.16);
+
+    --font-display: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+    --font-body: 'Nunito', system-ui, -apple-system, sans-serif;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -5,5 +40,21 @@
 }
 
 html, body, #root {
-    height: 100vh;
+    min-height: 100vh;
+}
+
+body {
+    font-family: var(--font-body);
+    color: var(--color-text);
+    background: var(--color-bg-gradient);
+    background-attachment: fixed;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+}
+
+button {
+    font-family: var(--font-body);
 }

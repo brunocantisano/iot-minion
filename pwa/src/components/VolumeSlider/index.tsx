@@ -38,23 +38,25 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
     }
   }
   return (
-    <main>
-      <section>
+    <main className="volume-slider">
+      <section className="volume-slider__row">
+        <span className="volume-slider__icon" role="img" aria-label="volume">{muted ? '🔇' : '🔊'}</span>
         <input
+          className="volume-slider__range"
           type="range"
           min={0}
           max={100}
           step={10}
           value={volume}
           onChangeCapture={(event) => {
-            const target = event.target as HTMLInputElement;            
+            const target = event.target as HTMLInputElement;
             setVolume(parseInt(target.value));
           }}
-          onChange={() => {                        
+          onChange={() => {
             callVolumeApi();
           }}
         />
-        <button onClick={(event) => {
+        <button className="volume-slider__mute" onClick={(event) => {
           setMuted((m) => !m);
           callVolumeApi();
         }}>
@@ -62,7 +64,7 @@ const VolumeSlider: React.FC<VolumeSliderMinionProps> = (props: VolumeSliderMini
         </button>
       </section>
       <section>
-        <p>Volume: {muted ? 0 : volume}</p>
+        <p className="volume-slider__value">Volume: {muted ? 0 : volume}</p>
       </section>
     </main>
   );

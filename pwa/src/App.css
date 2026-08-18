@@ -4,140 +4,261 @@
 
 body {
     overflow-x: hidden;
-    /* Hide horizontal scrollbar */
 }
 
 #page-body {
-    height: 100vh;
-}
-
-#page-body .temperature-container {
+    min-height: 100vh;
     display: flex;
-    align-items: center;
-    justify-content: center;
     flex-direction: column;
-    margin: 1rem 0 0 0;
 }
 
-#page-body .humidity-container {
+/* ---------- Header ---------- */
+
+.app-header {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-5);
+    background: linear-gradient(135deg, var(--color-yellow) 0%, var(--color-yellow-dark) 100%);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.app-header__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.app-header__emoji {
+    font-size: 1.75rem;
+    line-height: 1;
+}
+
+.app-header__brand h1 {
+    font-size: 1.35rem;
+    color: var(--color-blue-dark);
+    letter-spacing: 0.02em;
+}
+
+.app-header__version {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--color-blue-dark);
+    background: rgba(255, 255, 255, 0.55);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+}
+
+/* ---------- Main / cards ---------- */
+
+.app-main {
+    flex: 1;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4) var(--space-6);
+    display: flex;
     flex-direction: column;
-    margin: 1rem 0 0 0;
+    gap: var(--space-5);
 }
 
-#page-body .garagem-ipiranga {
+.card {
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-5);
+}
+
+.card__title {
+    font-size: 1.05rem;
+    color: var(--color-blue-dark);
+    margin-bottom: var(--space-4);
+    text-align: center;
+}
+
+/* ---------- Stage card (minion + hat + climate) ---------- */
+
+.stage-card {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-evenly;
-    margin: 1rem 0 0 0;
+    gap: var(--space-4);
+    overflow: hidden;
 }
 
-#logo {
+.stage-card__climate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: var(--space-3);
+}
+
+.climate-chip {
+    width: fit-content;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    background: var(--color-blue-soft);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+}
+
+@media (min-width: 480px) {
+    .stage-card__climate {
+        flex-direction: row;
+        justify-content: center;
+    }
+}
+
+.climate-chip__value {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-blue-dark);
+    font-size: 1.1rem;
+}
+
+.climate-chip__label {
+    font-size: 0.7rem;
+    color: var(--color-text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.stage-frame {
     position: relative;
-    width: 120px;
-    height: 60px;
+    width: 440px;
+    max-width: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
 }
 
-@media(min-width: 900px) {
-    #page-body {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        grid-template-rows: 25% 25% 25% 25%;
-        grid-template-areas: "temperature hat humidity""minion-button minion banana""switch-minion input switch-hat""logo logo logo";
+.hat-minion-container {
+    padding: 5% 0 0 0;
+}
+
+.grid-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.item1 {
+    position: relative;
+    z-index: 2;
+}
+
+.personagem {
+    width: 420px;
+    margin-top: -23px;
+    z-index: 1;
+}
+
+@media (max-width: 480px) {
+    .stage-frame {
+        transform: scale(0.78);
+        transform-origin: top center;
+        margin-bottom: -78px;
+    }
+}
+
+/* ---------- Controls card ---------- */
+
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+
+.controls-switches {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+    padding-top: var(--space-4);
+    border-top: 1px dashed #F1E4B8;
+}
+
+.control-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.control-item > *:first-child {
+    transition: transform 150ms ease;
+}
+
+.control-item:hover > *:first-child {
+    transform: translateY(-2px) scale(1.05);
+}
+
+.control-item:active > *:first-child {
+    transform: scale(0.96);
+}
+
+.control-item__label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-soft);
+    text-align: center;
+}
+
+/* the control components render their own margins meant for a full-bleed
+   layout; neutralize those so they sit centered inside the grid cell */
+.controls-grid .banana,
+.controls-grid .freezing,
+.controls-grid .music,
+.controls-grid .button-minion,
+.controls-switches .SwitchButtonMinion,
+.controls-switches .SwitchButtonHatMinion {
+    margin: 0;
+}
+
+/* ---------- Chat card ---------- */
+
+.chat-card__row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-top: var(--space-3);
+    flex-wrap: wrap;
+}
+
+/* ---------- Footer ---------- */
+
+.app-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-6);
+    padding: var(--space-5) var(--space-4) var(--space-6);
+}
+
+.app-footer__logo {
+    height: 40px;
+    width: auto;
+    max-width: 120px;
+    object-fit: contain;
+    opacity: 0.85;
+}
+
+@media (min-width: 640px) {
+    .app-main {
+        max-width: 720px;
     }
 
-    #page-body .temperature-container {
-        grid-area: temperature;
-    }
-
-    #page-body .hat-minion-container {
-        grid-area: hat;
-        padding: 5% 0 0 0;
-    }
-
-    #page-body .humidity-container {
-        grid-area: humidity;
-    }
-
-    #page-body .button-minion-container {
-        grid-area: minion-button;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #page-body .minion-container {
-        grid-area: minion;
-    }
-
-    #page-body .banana-container {
-        grid-area: banana;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #page-body .dancing-container {
-        grid-area: dancing;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #page-body .switch-minion-container {
-        grid-area: switch-minion;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #page-body .input-container {
-        grid-area: input;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #page-body .switch-hat-container {
-        grid-area: switch-hat;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #page-body .garagem-ipiranga {
-        grid-area: logo;
-    }
-
-    .item1 {
-        grid-area: myArea;
-    }
-
-    .personagem {
-        margin-left: 33px;
-        margin-top: -23px;
-        z-index: initial;
-    }
-
-
-    .grid-container {
-        display: grid;
-        grid-template-areas: 'myArea myArea myArea myArea myArea';
-        grid-gap: 0px;
-        /*background-color: #2196F3;*/
-        padding: 5px;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-    }
-
-    .grid-container>div {
-        /*background-color: rgba(255, 255, 255, 0.8);*/
-        text-align: center;        
-        align-items: center;
-        padding: 2px 0;
-        font-size: 15px;
+    .controls-grid {
+        grid-template-columns: repeat(4, 1fr);
     }
 }

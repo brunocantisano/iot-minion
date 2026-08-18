@@ -1,19 +1,50 @@
 #input-minion {
-   // width: 100vw;
-   padding: 0 1rem 0 2rem;
-   margin: 1rem 0 0 0;
-
+    padding: 0;
+    margin: 0;
 }
 
-form {
-   display: flex;
-   align-content: center;
-   justify-content: space-evenly;
+#input-minion form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #FFF8E7;
+    border-radius: 999px;
+    padding: 0.35rem 0.5rem 0.35rem 1.1rem;
+    border: 2px solid #FFE58A;
 }
 
-.phrase {
-   position: relative;
-   width: 90%;
-   vertical-align: top;
-   text-align: center;
+#input-minion .phrase {
+    flex: 1;
+    width: auto;
+}
+
+#input-minion .MuiInput-underline:before,
+#input-minion .MuiInput-underline:after {
+    display: none;
+}
+
+#input-minion .MuiFormLabel-root {
+    font-family: 'Nunito', sans-serif;
+    color: #6B6459;
+}
+
+#input-minion .MuiFormLabel-root.Mui-focused {
+    color: #2C5FA8;
+}
+
+#input-minion .MuiInputBase-input {
+    font-family: 'Nunito', sans-serif;
+    color: #2B2620;
+}
+
+#input-minion .MuiIconButton-root {
+    background: #FFCD01;
+    color: #2C5FA8;
+    padding: 0.5rem;
+    transition: background 150ms ease, transform 150ms ease;
+}
+
+#input-minion .MuiIconButton-root:hover {
+    background: #F2B705;
+    transform: scale(1.05);
 }

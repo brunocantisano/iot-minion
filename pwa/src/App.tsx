@@ -12,8 +12,6 @@ import { MinionTalk } from "./models/MinionTalk";
 import { MinionSpeechVolume } from './models/MinionSpeechVolume';
 import { Climate } from "./models/Climate";
 import { Temperature, Humidity } from 'react-environment-chart';
-import logo_garagem from 'https://ibb.co/bndL2Dn';
-import logo_ipiranga from 'https://ibb.co/T6sSYBS';
 import axios from 'axios';
 import './App.css';
 import './assets/styles/global.css';
@@ -23,11 +21,14 @@ import PushButtonListening from './components/PushButtonListening';
 import SpeechMinion from './components/SpeechMinion';
 import { useTimer } from 'use-timer';
 
+const logo_garagem = 'https://i.ibb.co/hv8HZwv/garagem-logo.gif';
+const logo_ipiranga = 'https://i.ibb.co/jmS2bv2/ipiranga.png';
+
 function App() {
   const [minionBehavior, setMinionBehavior] = useState<MinionBehavior>({ freezing: false, hungry: false, stress: false, wakeUp: false, listening: false });
   const [minionTalk, setMinionTalk] = useState<MinionTalk>({ message: "olá, tudo bem?" });
   const [minionSpeechVolume, setMinionSpeechVolume] = useState<MinionSpeechVolume>({ volume: 50 });
-  
+
   const [celsius, setCelsius] = useState(25);
   //const [fahrenheit, setFahrenheit] = useState(75);
   const [humidity, setHumidity] = useState(80);
@@ -67,7 +68,7 @@ function App() {
     try {
       let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/climate?type=humidity':'';
       if(rota !== '') {
-        let dados: any = await axios.get(rota,      
+        let dados: any = await axios.get(rota,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -75,7 +76,7 @@ function App() {
               'Authorization': 'Basic ' + process.env.REACT_APP_API_MINION_TOKEN
             }
           });
-        let data:Climate = dados.data; 
+        let data:Climate = dados.data;
         setHumidity(data.humidity);
         console.log('humidity: '+ humidity);
       }
@@ -83,7 +84,7 @@ function App() {
       console.log(`😱 Axios request failed: ${e}`);
     }
   }
- 
+
   useEffect(() => {
     setCelsius(celsius);
     setHumidity(humidity);
@@ -102,51 +103,86 @@ function App() {
   }
   return (
     <div id="page-body">
-      {/* <p>tempo: {time}</p> */}
-      <div className="hat-minion-container">
-        <div className="grid-container">
-          <div className="item1"><HatMinion stressed={minionBehavior.stress} /></div>
-          <div className="personagem"><Minion minionBehavior={minionBehavior} /></div>
+      <header className="app-header">
+        <div className="app-header__brand">
+          <span className="app-header__emoji" role="img" aria-label="minion">🍌</span>
+          <h1>Minion IoT</h1>
         </div>
-      </div>
-      <div className="banana-container">
-        <PushButtonFreezing minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
-      </div>
-      <div className="temperature-container">
-        <Temperature height={120} value={celsius} />
-        <span className="tooltipTemperatureHumidity">{celsius}°C</span>
-      </div>
-      <div className="button-minion-container">
-        <PushButtonBanana minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
-      </div>
-      <div className="humidity-container">
-        <Humidity tips={['seco', 'médio', 'úmido']} height={100} value={humidity} />
-        <span className="tooltipTemperatureHumidity">{humidity}%</span>
-      </div>
+        <span className="app-header__version">v{packageInfo.version}</span>
+      </header>
 
-      <div className="input-container">
-        <div className="grid-container">
-          <div className="item1">
-            <InputMinion minionTalk={minionTalk} callbackFromParent={changeTalk}/>
-            <SpeechMinion/>            
-            <VolumeSlider minionSpeechVolume={minionSpeechVolume} callbackFromParent={changeSpeechVolume}/>
+      <main className="app-main">
+        <section className="card stage-card">
+          <div className="stage-card__climate">
+            <div className="climate-chip">
+              <Temperature height={100} value={celsius} />
+              <span className="climate-chip__value">{celsius}°C</span>
+              <span className="climate-chip__label">Temperatura</span>
+            </div>
+            <div className="climate-chip">
+              <Humidity tips={['seco', 'médio', 'úmido']} height={90} value={humidity} />
+              <span className="climate-chip__value">{humidity}%</span>
+              <span className="climate-chip__label">Umidade</span>
+            </div>
           </div>
-          <div className="item2"><SwitchButtonMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} /></div>
-          <div className="item3"><PushButtonMinion /></div>
-          <div className="item4"><PushButtonListening minionBehavior={minionBehavior} callbackFromParent={changeBehavior} /></div>
-          <div className="item5"><SwitchButtonHatMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} /></div>
-        </div>
-      </div>
 
-      <div className="garagem-ipiranga">
-        <img className="logo-garagem" alt="logo da garagem" src={logo_garagem} />
-        <img id="logo" alt="logo da ipiranga" src={logo_ipiranga} />
-      </div>
-      <div className="garagem-ipiranga">
-        <span className="input-container">Versão: {packageInfo.version}</span>
-      </div>
+          <div className="stage-frame">
+            <div className="hat-minion-container">
+              <div className="grid-container">
+                <div className="item1"><HatMinion stressed={minionBehavior.stress} /></div>
+                <div className="personagem"><Minion minionBehavior={minionBehavior} /></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="card controls-card">
+          <h2 className="card__title">Brincar com o Minion</h2>
+          <div className="controls-grid">
+            <div className="control-item">
+              <PushButtonBanana minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
+              <span className="control-item__label">Banana</span>
+            </div>
+            <div className="control-item">
+              <PushButtonFreezing minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
+              <span className="control-item__label">Assustar</span>
+            </div>
+            <div className="control-item">
+              <PushButtonListening minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
+              <span className="control-item__label">Rádio</span>
+            </div>
+            <div className="control-item">
+              <PushButtonMinion />
+              <span className="control-item__label">Tocar som</span>
+            </div>
+          </div>
+          <div className="controls-switches">
+            <div className="control-item">
+              <SwitchButtonMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
+              <span className="control-item__label">Acordar</span>
+            </div>
+            <div className="control-item">
+              <SwitchButtonHatMinion minionBehavior={minionBehavior} callbackFromParent={changeBehavior} />
+              <span className="control-item__label">Chapéu</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="card chat-card">
+          <h2 className="card__title">Fale com o Minion</h2>
+          <InputMinion minionTalk={minionTalk} callbackFromParent={changeTalk} />
+          <div className="chat-card__row">
+            <SpeechMinion />
+            <VolumeSlider minionSpeechVolume={minionSpeechVolume} callbackFromParent={changeSpeechVolume} />
+          </div>
+        </section>
+      </main>
+
+      <footer className="app-footer">
+        <img className="app-footer__logo" alt="logo da garagem" src={logo_garagem} />
+        <img className="app-footer__logo app-footer__logo--ipiranga" alt="logo da ipiranga" src={logo_ipiranga} />
+      </footer>
     </div>
-
   );
 }
 

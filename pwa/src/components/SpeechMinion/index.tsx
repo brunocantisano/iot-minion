@@ -2,8 +2,9 @@ import React from 'react';
 import axios from 'axios';
 import useSpeechToText from 'react-hook-speech-to-text';
 import './styles.scss';
-import microphone from 'https://ibb.co/HT1PRySZ';
-import micrecording from 'https://ibb.co/W4TsgnFL';
+
+const microphone = 'https://i.ibb.co/23mMRr9J/microphone.png';
+const micrecording = 'https://i.ibb.co/PvStwx4d/mic-recording.png';
 
 const SpeechMinion: React.FC = () => {
   let rota: string = process.env.REACT_APP_URL ? process.env.REACT_APP_URL + '/ask':'';
@@ -43,12 +44,16 @@ const SpeechMinion: React.FC = () => {
   }
 
   return (
-    <div>
-      <button onClick={handleAsk} onClickCapture={isRecording ? stopSpeechToText : startSpeechToText}>
-        <img src={isRecording ? micrecording : microphone} width="32" height="32" alt="ask minion"/>
+    <div className="speech-minion">
+      <button
+        className={isRecording ? "speech-minion__mic speech-minion__mic--recording" : "speech-minion__mic"}
+        onClick={handleAsk}
+        onClickCapture={isRecording ? stopSpeechToText : startSpeechToText}
+      >
+        <img src={isRecording ? micrecording : microphone} width="24" height="24" alt="ask minion"/>
       </button>
-      <h6 className={isRecording?"blink":"notblink"}>{isRecording?"gravando":""}</h6>
-        {<p>{interimResult}</p>}
+      <h6 className={isRecording ? "blink speech-minion__status" : "notblink speech-minion__status"}>{isRecording ? "gravando" : ""}</h6>
+      {interimResult && <p className="speech-minion__interim">{interimResult}</p>}
     </div>
   );
 }
