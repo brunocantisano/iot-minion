@@ -1,0 +1,122 @@
+name: Deploy Minion Stuart to OCI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  DEPLOY_PATH: /home/opc/iot-minion
+
+jobs:
+  deploy:
+    name: Deploy via Docker Compose
+    runs-on: self-hosted
+
+    steps:
+      # 1. Checkout do repositório
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Debug info
+        run: |
+          echo "Whoami: $(whoami)"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+
+      # 2. Gerar .env a partir dos secrets do repositório
+      - name: Generate .env from secrets
+        run: |
+          mkdir -p "${{ env.DEPLOY_PATH }}"
+
+          cat > "${{ env.DEPLOY_PATH }}/.env" << EOF
+          REACT_APP_API_MINION_TOKEN=${{ secrets.API_MINION_TOKEN }}
+          REACT_APP_URL=${{ secrets.APP_URL }}
+          EOF
+
+          chmod 600 "${{ env.DEPLOY_PATH }}/.env"
+          echo "✅ .env gerado"
+
+      # 3. Sincronizar arquivos do repositório
+      - name: Sync project files
+        run: |
+          echo "Usuário: $(whoami)"
+          echo "Workspace: $GITHUB_WORKSPACE"
+          ls -la "$GITHUB_WORKSPACE"
+
+          sudo chown -R opc:opc "$GITHUB_WORKSPACE"
+          sudo chown -R opc:opc "${{ env.DEPLOY_PATH }}"
+
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env*' \
+            --exclude='*.log' \
+            --exclude='README.md' \
+            "$GITHUB_WORKSPACE/" "${{ env.DEPLOY_PATH }}/"
+
+      # 4. Build e restart dos containers
+      - name: Build and restart containers
+        working-directory: ${{ env.DEPLOY_PATH }}
+        run: |
+          docker compose down --remove-orphans
+          docker compose build --no-cache
+          docker compose up -d
+          echo "✅ Container iniciado"
+
+      # 5. Aguardar o container subir
+      - name: Wait for container
+        run: |
+          echo "Aguardando container iniciar..."
+          STATUS="false"
+          for i in $(seq 1 10); do
+            STATUS=$(docker inspect -f '{{.State.Running}}' minion_frontend 2>/dev/null || echo "false")
+            if [ "$STATUS" = "true" ]; then
+              echo "✅ Container minion_frontend rodando"
+              break
+            fi
+            echo "Tentativa $i/10..."
+            sleep 3
+          done
+
+          docker ps --filter "name=minion_frontend" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+          if [ "$STATUS" != "true" ]; then
+            echo "❌ Container minion_frontend não subiu"
+            docker compose -f "${{ env.DEPLOY_PATH }}/docker-compose.yml" logs --tail=50
+            exit 1
+          fi
+
+      # 6. Health check
+      - name: Health check
+        run: |
+          FRONTEND="000"
+          for i in $(seq 1 10); do
+            FRONTEND=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:3000 || echo "000")
+            if [[ "$FRONTEND" =~ ^(200|301|302)$ ]]; then
+              echo "✅ Frontend OK ($FRONTEND)"
+              exit 0
+            fi
+            echo "Tentativa $i/10: HTTP $FRONTEND"
+            sleep 3
+          done
+
+          echo "❌ Frontend não respondeu corretamente (último HTTP: $FRONTEND)"
+          docker compose -f "${{ env.DEPLOY_PATH }}/docker-compose.yml" logs --tail=50
+          exit 1
+
+      # 7. Limpar imagens antigas
+      - name: Cleanup old images
+        run: docker image prune -f
+
+      # 8. Resumo
+      - name: Deploy summary
+        run: |
+          echo "================================================"
+          echo "  ✅ Deploy concluído!"
+          echo "  🔀 Branch  : ${{ github.ref_name }}"
+          echo "  📦 Commit  : ${{ github.sha }}"
+          echo "  👤 Autor   : ${{ github.actor }}"
+          echo "================================================"
